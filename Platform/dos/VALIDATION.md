@@ -34,6 +34,26 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
   top/side screen boundary retention, and true lower-drain differentiation.
 * Five smoke-report parser tests verify that incomplete runs, missing full
   launches and zero-score original-table runs fail the runner.
+* **VGA mode 13h integration, 2026-11-07:** a single `CADET.EXE`
+  supports `/tandy`, `/vga`, and default BIOS auto-detection.
+  The mode-13 VGA renderer expands the existing 32768-byte four-bank
+  artwork into a 64000-byte linear framebuffer/background once at launch.
+  Both video paths retain identical original 0..15 RGBI artwork,
+  sprite coordinates, physics, controls, and scoring; Tandy retains
+  its original PSG and CRT hardware handling. VGA programs the DAC
+  and sends event tones to the PC speaker instead of Tandy PSG.
+  The DOSBox-X CI runs full 360-frame/1440-step gameplay in **both**
+  Tandy and VGA modes, with explicit switches and automatic detection.
+  `verify_video_modes.py` compares decoded Tandy and VGA screen
+  dumps pixel-for-pixel; the initial dual-mode CI run
+  [42401448271](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42401448271)
+  reported **64000 identical pixels**, matching score 3500,
+  seven scoring bumper hits, two full-charge launches and two balls
+  remaining. This verifies the chosen final emulated frame, **not**
+  every intermediate frame. Runtime speed, VGA hardware compatibility
+  and speaker audio need actual machine confirmation.
+  `verify_build.py` now tracks Tandy 32KB and VGA 64000-byte
+  far-buffer minimum memory requirements separately.
 * One verified [2026-11-07 GitHub Actions run](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42393901598):
   360 rendered frames and 1440 physics steps, score 3500, seven bumper hits,
   two full-charge launches, two balls remaining and ten slow frames
@@ -70,10 +90,16 @@ source-inspired adjustment. Original flipper impulse parity is not claimed.
 python Platform/dos/test_convert.py
 python Platform/dos/test_run_tests.py
 python Platform/dos/test_analyze_logs.py
+python Platform/dos/test_menu_font.py
+python Platform/dos/test_video_modes.py
 python Platform/dos/test_enhance_table.py
 python Platform/dos/build.py
 python Platform/dos/verify_build.py
-python Platform/dos/run_tests.py --emulator /path/to/dosbox-x --original
+python Platform/dos/run_tests.py --emulator /path/to/dosbox-x --original --video tandy --auto-video
+python Platform/dos/run_tests.py --emulator /path/to/dosbox-x --original --video vga
+python Platform/dos/verify_video_modes.py build/dos
+python Platform/dos/run_tests.py --emulator /path/to/dosbox-x --original --video vga --auto-video
+python Platform/dos/verify_video_modes.py build/dos
 ```
 
 Copy `Platform/dos/data/TABLE.DAT` and `TABLE.TGA` to `build/dos`
@@ -83,6 +109,20 @@ performs these steps and publishes the EXEs, matching data, previews
 and logs in one artifact.
 
 ## Required hardware follow-up
+
+**VGA compatibility physical check (2026-11-07):**
+Run `CADET /vga /record` on a conventional VGA PC with 256KB+
+of conventional RAM available beyond DOS/driver overhead (640KB
+recommended). Verify 320x200 centered art, left/right mouse and
+keyboard flippers, full launch, score, PC-speaker tones, 20 minutes
+of uninterrupted play, and clean restoration of the original video
+mode on Esc. Compare `CADET /tandy` on the actual Tandy/PCjr.
+Do **not** assume that emulator pixel parity proves physical VGA
+performance, sound quality, or mode switching. The VGA path intentionally
+uses 16 of its 256 palette indices; there is no full 256-color
+resource converter. The Tandy-specific CRTC shift is disabled on VGA.
+
+
 
 **Optional mouse flippers (2026-11-07):** `CADET.EXE` now detects a
 standard DOS `INT 33h` mouse driver at startup (after Tandy mode setup).
