@@ -304,7 +304,7 @@ int main(int argc,char **argv)
     assert(table_load(&t,"TABLE.DAT")); game_reset(&g,&t);
     puts("STAGE: imported pack loaded"); fflush(stdout);
     if(argc>1 && !strcmp(argv[1],"/original")) {
-        int v;
+        int v,bumper_count=0;
         /* F-002: hardware FLIGHT log 2026-11-07 frames 1432-1455
          * shows an actual ball passing the original right exterior rail
          * (x ~= 181 at y=100) and reaching x=235 before the SCREEN
@@ -334,7 +334,6 @@ int main(int argc,char **argv)
         /* Every visible source bumper must exist and respond. The last
          * three used to be filtered out as upper-layer geometry. Approach
          * each cap from its right edge on the complete imported table. */
-        int bumper_count=0;
         for(v=0;v<t.count;v++) if(t.edges[v].score) {
             int j,right=t.edges[v].x,top=t.edges[v].y,bottom=top;
             assert(v+7<t.count);
