@@ -113,9 +113,12 @@ void game_reset(Game *g,const Table *t)
 {
     int i,j;
     memset(g,0,sizeof(*g)); g->balls=3; g->noise=0xace1U;
-    for(i=0;i<2;i++) for(j=0;j<2;j++) {
+    for(i=0;i<2;i++) {
         const short *p=t->flipper+i*6;
-        make_edge(&g->flips[i][j],p[0],p[1],p[2+j*2],p[3+j*2]);
+        for(j=0;j<2;j++)
+            make_edge(&g->flips[i][j],p[0],p[1],p[2+j*2],p[3+j*2]);
+        make_edge(&g->flips[i][2],p[0],p[1],
+                  (p[2]+p[4])/2,(p[3]+p[5])/2);
     }
     feed(g,t);
 }
@@ -159,14 +162,6 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
         g->vx=(short)((g->x/FP-e->x)*3+g->vx/4);
     }
     if(e->score && !g->hit_delay) {
-        /* A very small tangential variation avoids repeated identical
-         * bumper orbits. Only performed on scored hits, never per frame. */
-        unsigned short n=g->noise;
-        n^=(unsigned short)(n<<7);
-        n^=(unsigned short)(n>>9);
-        n^=(unsigned short)(n<<8);
-        g->noise=n;
-        g->vx+=(short)((n&7)-3);
         g->score+=e->score; g->hits++; g->hit_delay=8; g->event=1;
     }
     return 1;
@@ -213,15 +208,18 @@ void game_step(Game *g,const Table *t,unsigned keys)
     }
     for(i=0;i<2;i++) {
         int key=1<<i,hit=0;
-        if(pressed&key) g->sweep[i]=4;
-        if(!(keys&key)) g->sweep[i]=0;
-        /* The switch between the resting and raised shapes is animated
-         * over four physics substeps. A late ball still meets the paddle,
-         * rather than slipping through after the first input substep. */
-        if(g->sweep[i]) hit=collide(g,&g->flips[i][0],192,1);
-        if(!hit) hit=collide(g,&g->flips[i][(keys&key)!=0],192,g->sweep[i]!=0);
-        if(hit) g->sweep[i]=0;
-        else if(g->sweep[i]) g->sweep[i]--;
+        if((keys^g->previous)&key) g->sweep[i]=3;
+        /* The original flipper is an angular swept capsule. Approximate it
+         * with rest, midpoint and raised edges over three substeps. No
+         * per-frame trigonometry, allocation or floating-point calculation. */
+        if(g->sweep[i]) {
+            int extending=(keys&key)!=0;
+            hit=collide(g,&g->flips[i][extending?0:1],192,extending);
+            if(!hit) hit=collide(g,&g->flips[i][2],192,extending);
+            g->sweep[i]--;
+        }
+        if(!hit)
+            collide(g,&g->flips[i][(keys&key)!=0],192,0);
     }
     if(g->y/FP>t->drain_y || g->x<0 || g->x>239*FP || g->y<0) {
         /* The bottom of the shooter lane shares the table's drain Y.
