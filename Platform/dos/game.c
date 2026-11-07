@@ -113,6 +113,7 @@ void game_reset(Game *g,const Table *t)
 {
     int i,j;
     memset(g,0,sizeof(*g)); g->balls=3;
+    g->plunger_rng=0xa5c3U; /* BIOS ticks supply a session seed on DOS. */
     for(i=0;i<2;i++) {
         const short *p=t->flipper+i*6;
         for(j=0;j<2;j++)
@@ -176,11 +177,22 @@ void game_step(Game *g,const Table *t,unsigned keys)
     if(g->nudge_delay) g->nudge_delay--;
     pressed=(int)(keys & ~g->previous);
     if(g->waiting) {
-        if(keys&KEY_LAUNCH) { if(g->charge<48) g->charge++; }
-        else if(g->previous&KEY_LAUNCH) {
-            /* Preserve the original imported table's reliable launch path.
-             * Variability comes from actual bumper/flipper contact geometry. */
-            g->waiting=0; g->vy=(short)(-100-g->charge/2); g->event=2;
+        if(keys&KEY_LAUNCH) {
+            if(g->charge<PLUNGER_MAX_CHARGE) g->charge++;
+        } else if(g->previous&KEY_LAUNCH) {
+            int base,variation;
+            /* TPlunger::PullbackTimer grows Boost during a 25ms repeat
+             * and its collision adds up to 10% random strength. Emulate
+             * the same charge/release principle with a gentler <=5% jitter,
+             * in Q6 and 16-bit integer arithmetic. Preserve the established
+             * full-power shooter trajectory and allow genuinely weak shots. */
+            g->plunger_rng=(unsigned short)(g->plunger_rng*25173U+13849U);
+            base=44+(g->charge*77)/PLUNGER_MAX_CHARGE;
+            variation=(base*(int)(g->plunger_rng&7U))/130;
+            g->waiting=0;
+            g->vx=0;
+            g->vy=(short)-(base+variation);
+            g->event=2;
         }
         g->previous=(short)keys;
         return;
