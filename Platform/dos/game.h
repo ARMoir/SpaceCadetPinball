@@ -11,6 +11,12 @@
  * projection leaves a larger center gap than a fast, 3D rotating paddle
  * can reliably cover. No help is applied when idle or tilted. */
 #define FLIPPER_TIP_ASSIST_PX 5
+/* F-008 universal anti-stuck: ~1.5 seconds of no positional progress,
+ * followed by ~1-second recovery stages at 72.8 physics steps/second. */
+#define UNSTICK_DETECT_TICKS 110
+#define UNSTICK_RETRY_TICKS 73
+#define UNSTICK_PROGRESS_PX 3
+#define UNSTICK_ESCAPE_PX 10
 /* About 1.3 seconds at 72.8 physics substeps/second. */
 #define PLUNGER_MAX_CHARGE 96
 #define KEY_LEFT 1
@@ -65,6 +71,11 @@ typedef struct {
     unsigned short nudges,kickbacks,tilts,boundary_hits,right_rail_saves,left_rail_saves;
     unsigned short flipper_contacts[2],flipper_power_contacts[2];
     unsigned short sling_rescues[2]; /* F-002: closed left/right sling ejects */
+    /* F-008: tiny fixed-point watchdog; no per-frame allocations. */
+    short stuck_x,stuck_y,stuck_minx,stuck_maxx,stuck_miny,stuck_maxy;
+    unsigned short stuck_ticks,stuck_stage_ticks;
+    unsigned char stuck_stage,stuck_progress;
+    unsigned short unstick_nudges,unstick_moves,unstick_relaunches;
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
     Edge tip_assist[2]; /* only active on descending balls with held flipper */
 } Game;
