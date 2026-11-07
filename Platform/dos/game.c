@@ -481,6 +481,24 @@ void game_step(Game *g,const Table *t,unsigned keys)
     if(g->in_shooter && g->x<shooter_inner_x*FP)
         g->in_shooter=0;
 
+    /* F-002: a ramp/one-way collision group may still be missing from the
+     * flattened SCP2 table. The top and side SCREEN limits are never
+     * legitimate ball drains in the original game; only the drain below
+     * the flippers should lose a ball. Contain rare exits at these outer
+     * limits with a passive 3/4-energy reflection, not a teleport or
+     * random kick. Imported nearby rails still do the normal collision. */
+    if(g->x<2*FP) {
+        g->x=2*FP;
+        if(g->vx<0) g->vx=(short)(-(long)g->vx*3/4);
+    } else if(g->x>237*FP) {
+        g->x=237*FP;
+        if(g->vx>0) g->vx=(short)(-(long)g->vx*3/4);
+    }
+    if(g->y<2*FP) {
+        g->y=2*FP;
+        if(g->vy<0) g->vy=(short)(-(long)g->vy*3/4);
+    }
+
     /* The original plunger can catch/relaunch weak shots returning down
      * the shooter tube. A simple X+-8 check at drain height missed the
      * diagonal lower end of that tube and let the ball leave the screen.
@@ -490,8 +508,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
               g->x>(t->launch_x-18)*FP &&
               g->y>=(t->drain_y-12)*FP) {
         feed(g,t);
-    } else if(g->y/FP>t->drain_y || g->x<0 ||
-              g->x>239*FP || g->y<0) {
+    } else if(g->y/FP>t->drain_y) {
         g->balls--; g->event=3;
         if(!g->balls) g->over=1;
         else {
