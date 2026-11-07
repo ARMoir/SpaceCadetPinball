@@ -57,6 +57,9 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   collision detection are absent. A substep caps movement to two pixels/axis.
 * Bumpers use eight-sided outlines. Static segments are two-sided capsules;
   original one-way edges and collision masks are not reproduced.
+* Missed shots that fall back down the narrow shooter lane near the plunger
+  return to launch without costing a ball. For now this uses an 8-pixel
+  corridor around the imported launch X at drain height, not a full 3D ramp.
 * Ramps, elevation/occlusion, holes, sinks, gates, kickouts and rollover/target
   rules are not implemented. Their initial artwork can still be visible.
   Ground-only filtering prevents upper-level rails becoming invisible walls.
@@ -72,7 +75,8 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 ## Tests and performance
 
 `TEST.EXE` runs the same core using actual 16-bit arithmetic: launch/release,
-wall reflection, bumper scoring, left/right flippers, drain/restart and a
+wall reflection, bumper scoring, shooter-lane return versus regular drain,
+left/right flippers, drain/restart and a
 20,000-step soak with the current table. It writes `TEST.OK` on success.
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (raw video memory)
 and `SMOKE.TXT`, and restores DOS. It exercises the backend but does not prove
