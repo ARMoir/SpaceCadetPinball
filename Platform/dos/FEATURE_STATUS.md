@@ -55,7 +55,7 @@ and frame timing remain unverified.
 | --- | --- | --- | --- |
 | World physics | Q6 fixed-point 2D ball, wall normals, gravity, speed clamps, collision bands | Original 3D/world-space position and height, spin, full material friction/elasticity, stochastic drag, continuous sweep, exact collision responses | F-002, F-006 |
 | Ramps and layers | Initial ramp art and selected projected ground rails | Physical ramp elevation, traversable upper/lower layers, occlusion masks, level-dependent rail collisions and accurate ramp exits | F-002 |
-| One-way rails and gates | Special upper-left passage and source-derived **left/right** exterior rail containment with shooter exemption | General original `TOneway`, gate orientation, open/closed state and per-group collision filtering | F-002 |
+| One-way rails and gates | Special upper-left passage, source-derived **left/right** exterior rail containment and **solid left/right slingshot hulls** that reject the ball from closed sling interiors | General original `TOneway`, gate orientation, open/closed state and per-group collision filtering | F-002 |
 | Flippers | Source rest/raised geometry; midpoint and seven-substep assisted motion, leverage-based impulse, plus 5px inward active-tip forgiveness for near-center descents | Original continuous angular sweep/velocity and exact front/back collision, trap/hold and original power curve; intentional easier-than-original gap handling | F-006 |
 | Shooter | Original plunger frames and re-catch of weak return | Original 25 ms boost progression, ~2.5 s charge curve, full ~10% boost variance and exact shooter chute transitions | F-003 |
 | Bumpers | Seven radial caps, basic initial scoring | Variable score state, independent component cooldowns, full original material/layer interaction | F-004 |
@@ -65,7 +65,8 @@ and frame timing remain unverified.
 | Audio | Synthetic PSG event beeps | Source samples, original soundtrack/music playback and full event sound mapping | F-007 |
 
 **Important:** The source-derived one-sided **left/right** exterior-rail
-guards and top/side screen safeguards are **temporary playability repairs**,
+guards, two filled slingshot collision hulls, and top/side screen
+safeguards are **temporary playability repairs**,
 not restored source collision groups. The right guard skips valid shooter
 travel. Both only cover the vertical intervals of their source rail segments.
 If the ball repeatedly tunnels, gets stuck or vanishes on real hardware,
@@ -127,7 +128,8 @@ machine**, and those prior symptoms are not claimed solved:
 | Unreachable center drains even with well-timed flippers | 5px invisible collision reach on each **held** raised toe; no assist on release or tilt, gap not fully closed | **Pending**: repeated center descents on physical hardware, check save frequency/CPU timing |
 | Ball wedged near the upper-left bumper | Radial contacts, separate neighboring static-wall correction | **Pending**: repeated full-strength launches and chute returns |
 | Ball seemed to disappear into the upper-left playfield | Top/side safety rail, event/flight tracing | **Pending**: confirm correct ramps and no hidden trapping |
-| High-speed ball flew to upper-right HUD boundary | One-sided source-projected right outer rail guard, `right_rail_saves` logs, shooter exemption | **Pending**: confirm ball remains inside playable table without unnatural bounce |
+| High-speed ball flew to upper-right HUD boundary | One-sided source-projected right outer rail guard, `right_rail_saves` logs, shooter exemption |
+| Ball becomes trapped inside right slingshot (and potentially left) | Solid collision-only triangular sling hulls from original closed outlines; outward ejection and separate `sling_right_rescues`/`sling_left_rescues` counters | **Pending**: real Tandy right-sling play test and 7 MHz cost check | **Pending**: confirm ball remains inside playable table without unnatural bounce |
 | Tandy V20 responsiveness and 3D art legibility | Fixed-point, dirty rectangles, offline shading, `/classic` | **Pending**: sustained play, input response, `slow_frames` and side-by-side CRT inspection |
 
 **Optional mouse flippers follow-up (2026-11-07):** When a compatible
