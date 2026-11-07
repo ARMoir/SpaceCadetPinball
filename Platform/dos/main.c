@@ -11,15 +11,17 @@
 static Table table;
 static Game game;
 
-/* F-002 /record flight recorder: only 14 seconds of state in a 256-frame
- * circular memory buffer. No disk writes in the active play loop, so even a
- * 7 MHz V20 pays only a few cheap stores per rendered frame when requested.
- * Use FLIGHT.TXT after Esc to diagnose a ball that vanishes near a ramp. */
+/* F-002/F-006 flight recorder: preserve ~14 seconds of gameplay state in
+ * 256 frames. This captures key/control state and passive vs powered flipper
+ * contacts, which a cumulative INPUT.TXT mask cannot explain. No file I/O
+ * occurs inside gameplay; /record writes the ring buffer only on exit. */
 typedef struct {
-    unsigned short frame;
+    unsigned short frame,late_frames;
+    unsigned long steps,score;
     short x,y,vx,vy;
     unsigned short border,flips[2],powered[2];
     unsigned char input,balls,waiting,in_shooter,event,charge;
+    unsigned char state,flipper_sweep[2];
 } FlightTrace;
 static FlightTrace flight[256];
 static unsigned flight_next,flight_used;
@@ -439,6 +441,12 @@ int main(int argc,char **argv)
         if(record) {
             FlightTrace *sample=&flight[flight_next];
             sample->frame=frame;
+            sample->late_frames=(unsigned short)slow_frames;
+            sample->steps=game.steps; sample->score=game.score;
+            sample->state=(unsigned char)((paused?1:0)|(view?2:0)|
+                                        (game.tilted?4:0)|(game.over?8:0));
+            sample->flipper_sweep[0]=game.sweep[0];
+            sample->flipper_sweep[1]=game.sweep[1];
             sample->x=game.x; sample->y=game.y;
             sample->vx=game.vx; sample->vy=game.vy;
             sample->input=(unsigned char)input;
@@ -555,18 +563,24 @@ int main(int argc,char **argv)
         report=fopen("FLIGHT.TXT","w");
         if(report) {
             unsigned j;
-            fprintf(report,"last %u rendered frames (~14 seconds maximum); positions and velocities Q6\n",flight_used);
-            fprintf(report,"FRAME XQ6 YQ6 VXQ6 VYQ6 BALLS READY TUBE EVENT CHARGE BORDER INPUT LEFT_HIT RIGHT_HIT LEFT_POWER RIGHT_POWER\n");
+            fprintf(report,"# CADET_FLIGHT schema=2 count=%u rate_hz=18.2 scale=64\n",flight_used);
+            fprintf(report,"# Q6 positions/velocities divide by 64; INPUT bits 1=Z 2=/ 4=SPACE 8=X 16=A 32=D\n");
+            fprintf(report,"# STATE bits 1=PAUSE 2=MENU 4=TILT 8=GAME_OVER; EVENT 0=none 1=bumper 2=launch 3=drain 4=kickback 5=tilt\n");
+            fprintf(report,"# Contact counters (LH RH LP RP), boundary and late-frame counts are cumulative; SWEEP is remaining active substeps.\n");
+            fprintf(report,"FRAME XQ6 YQ6 VXQ6 VYQ6 BALLS READY TUBE EVENT CHARGE BORDER INPUT LEFT_HIT RIGHT_HIT LEFT_POWER RIGHT_POWER STEPS SCORE LATE STATE LEFT_SWEEP RIGHT_SWEEP\n");
             for(j=0;j<flight_used;j++) {
                 unsigned ix=(flight_next+256-flight_used+j)&255;
                 const FlightTrace *sample=&flight[ix];
-                fprintf(report,"%u %d %d %d %d %u %u %u %u %u %u %u %u %u %u %u\n",
+                fprintf(report,"%u %d %d %d %d %u %u %u %u %u %u %u %u %u %u %u %lu %lu %u %u %u %u\n",
                         sample->frame,sample->x,sample->y,
                         sample->vx,sample->vy,
                         sample->balls,sample->waiting,sample->in_shooter,
                         sample->event,sample->charge,sample->border,
                         sample->input,sample->flips[0],sample->flips[1],
-                        sample->powered[0],sample->powered[1]);
+                        sample->powered[0],sample->powered[1],
+                        sample->steps,sample->score,sample->late_frames,
+                        sample->state,sample->flipper_sweep[0],
+                        sample->flipper_sweep[1]);
             }
             fclose(report);
         }
