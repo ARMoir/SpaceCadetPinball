@@ -193,6 +193,13 @@ void game_reset(Game *g,const Table *t)
             make_edge(&g->flips[i][j],p[0],p[1],p[2+j*2],p[3+j*2]);
         make_edge(&g->flips[i][2],p[0],p[1],
                   (p[2]+p[4])/2,(p[3]+p[5])/2);
+        /* A short extra contact surface at the inner *raised* toe gives
+         * the player a chance to reach near-center descents. It is never
+         * drawn, does not alter source geometry or table files, and only
+         * participates while that flipper is deliberately held up. */
+        make_edge(&g->tip_assist[i],p[4],p[5],
+                  p[4]+(i? -FLIPPER_TIP_ASSIST_PX:
+                             FLIPPER_TIP_ASSIST_PX),p[5]);
     }
     feed(g,t);
 }
@@ -584,6 +591,21 @@ void game_step(Game *g,const Table *t,unsigned keys)
             if(!hit)
                 hit=collide(g,&g->flips[i][(keys&key)!=0],192,
                             (keys&key)!=0?2:0);
+            /* F-006: active toe catch is a deliberately forgiving DOS
+             * playability adaptation, not an invisible permanent wall.
+             * Apply only to descending balls approaching from ABOVE a
+             * raised/held flipper. Released, tilted and returning balls
+             * retain the original drain and ordinary passive contacts.
+             * Cheap comparisons avoid extra 32-bit collision math for
+             * the overwhelming majority of physics ticks. */
+            if(!hit && (keys&key) && !g->in_shooter && g->vy>0 &&
+               g->y<=g->tip_assist[i].y*FP &&
+               g->y>=(g->tip_assist[i].y-4)*FP &&
+               g->x>=(minimum(g->tip_assist[i].x,
+                              g->tip_assist[i].ex)-3)*FP &&
+               g->x<=(maximum(g->tip_assist[i].x,
+                              g->tip_assist[i].ex)+3)*FP)
+                hit=collide(g,&g->tip_assist[i],192,2);
         }
         if(hit) {
             g->flipper_contacts[i]++;
