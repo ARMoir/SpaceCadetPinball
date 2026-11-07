@@ -86,6 +86,41 @@ int main(int argc,char **argv)
     fixture(); g.waiting=0; g.x=103*FP; g.y=161*FP; g.vy=40;
     game_step(&g,&t,KEY_LEFT);
     assert(g.vy<0 && g.balls==3); puts("STAGE: midpoint"); fflush(stdout);
+    /* F-006: favor player control over an unexpectedly large uncatchable
+     * projected center gap. Only a held, raised tip reaches five pixels
+     * farther into the middle; ordinary rest/drain physics stay intact.
+     * Neither a pressless ball nor a tilted paddle can get this save. */
+    for(i=0;i<2;i++) {
+        int catch_x=i?120:110;
+        unsigned key=i?KEY_RIGHT:KEY_LEFT;
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=catch_x*FP; g.y=148*FP; g.vy=50;
+        game_step(&g,&t,0);
+        assert(g.vy>0 && g.flipper_contacts[0]==0 &&
+               g.flipper_contacts[1]==0 && g.balls==3);
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=catch_x*FP; g.y=148*FP; g.vy=50;
+        game_step(&g,&t,key);
+        assert(g.vy<0 && g.flipper_power_contacts[i]>0 &&
+               g.balls==3);
+        fixture(); g.waiting=0; g.in_shooter=0; g.tilted=1;
+        g.x=catch_x*FP; g.y=148*FP; g.vy=50;
+        game_step(&g,&t,key);
+        assert(g.vy>0 && g.flipper_power_contacts[i]==0);
+    }
+    /* Even both activated flippers do not create a continuous invisible
+     * bridge: a straight-down ball exactly in the center can still drain. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=115*FP; g.y=148*FP; g.vy=50;
+    game_step(&g,&t,KEY_LEFT|KEY_RIGHT);
+    assert(g.vy>0 && !g.flipper_contacts[0] &&
+           !g.flipper_contacts[1]);
+    /* Do not catch a ball already underneath the raised toe. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=110*FP; g.y=152*FP; g.vy=50;
+    game_step(&g,&t,KEY_LEFT);
+    assert(g.vy>0 && !g.flipper_power_contacts[0]);
+    puts("STAGE: forgiving active center tips, idle drain and tilt"); fflush(stdout);
     /* A held raised flipper still collides on later steps. */
     fixture(); g.waiting=0; g.x=103*FP; g.y=149*FP; g.vy=40;
     game_step(&g,&t,KEY_LEFT);
