@@ -108,12 +108,31 @@ int main(int argc,char **argv)
     assert(table_load(&t,"TABLE.DAT")); game_reset(&g,&t);
     puts("STAGE: imported pack loaded"); fflush(stdout);
     if(argc>1 && !strcmp(argv[1],"/original")) {
+        int v;
+        /* Profile the imported curved shooter at its real 16-bit speeds.
+         * The conversion flattens elevation and some ramps, so speed can
+         * change which geometry gets hit. The known old speed is 124 Q6. */
+        for(v=119;v<=128;v++) {
+            game_reset(&g,&t);
+            g.waiting=0; g.vx=0; g.vy=(short)-v;
+            for(i=0;i<1400;i++) {
+                unsigned keys=i%80<40?KEY_LEFT:KEY_RIGHT;
+                game_step(&g,&t,keys);
+                if(g.waiting) break;
+            }
+            printf("TUNE: velocity=%d hits=%lu score=%lu steps=%d x=%d y=%d\\n",
+                   v,g.hits,g.score,i,g.x/FP,g.y/FP);
+            fflush(stdout);
+        }
+        game_reset(&g,&t);
         /* Regression: full-power launch must leave the shooter lane and
          * reach a scoring bumper in the supplied Windows Space Cadet pack. */
         for(i=0;i<3000;i++) {
             unsigned keys=(i<PLUNGER_MAX_CHARGE?KEY_LAUNCH:0)|
                           (i%80<40?KEY_LEFT:KEY_RIGHT);
             game_step(&g,&t,keys);
+            if(i==PLUNGER_MAX_CHARGE)
+                printf("RELEASE: vy=%d charge=%d rng=%u\\n",g.vy,g.charge,g.plunger_rng);
             if(g.waiting && i>PLUNGER_MAX_CHARGE+1) break;
         }
         printf("ORIGINAL: hits=%lu score=%lu steps=%d x=%d y=%d\\n",
