@@ -61,6 +61,97 @@ int main(int argc,char **argv)
     assert(integer_sqrt(0)==0 && integer_sqrt(1)==1);
     assert(integer_sqrt(65535UL)==255 && integer_sqrt(4294967295UL)==65535UL);
     assert(g.balls==3 && g.waiting);
+    /* F-008: frozen or jittering ball must recover, but ordinary gameplay,
+     * the shooter, near-flipper holds, and natural drains must not.
+     * Force the center to the same point before each physics tick to
+     * model overlapping wall corrections which erase actual travel. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=125*FP; g.y=70*FP; g.score=6400;
+    for(i=0;i<UNSTICK_DETECT_TICKS;i++) {
+        g.x=125*FP; g.y=70*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+        if(i<UNSTICK_DETECT_TICKS-1)
+            assert(!g.unstick_nudges && !g.unstick_moves);
+    }
+    assert(g.stuck_stage==1 && g.unstick_nudges==1 &&
+           g.unstick_moves==0 && g.vy<0 && g.balls==3);
+    for(i=0;i<UNSTICK_RETRY_TICKS;i++) {
+        g.x=125*FP; g.y=70*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(g.stuck_stage==2 && g.unstick_moves==1 &&
+           (g.x!=125*FP || g.y!=70*FP) && g.score==6400);
+    for(i=0;i<UNSTICK_RETRY_TICKS;i++) {
+        g.x=125*FP; g.y=70*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(g.stuck_stage==3 && g.unstick_moves==2);
+    for(i=0;i<UNSTICK_RETRY_TICKS;i++) {
+        g.x=125*FP; g.y=70*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(g.waiting && g.in_shooter && !g.over && g.balls==3 &&
+           g.score==6400 && g.unstick_nudges==1 &&
+           g.unstick_moves==2 && g.unstick_relaunches==1 &&
+           g.stuck_stage==0 && g.x==t.launch_x*FP &&
+           g.y==t.launch_y*FP);
+    puts("STAGE: 110-step detect, upward nudge, two safe moves and free relaunch");
+    fflush(stdout);
+    /* Moving 10+ pixels consistently after the first nudge cancels
+     * escalation, rather than unjustly refeeding a rescued live ball. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    for(i=0;i<UNSTICK_DETECT_TICKS;i++) {
+        g.x=125*FP; g.y=70*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(g.stuck_stage==1 && g.unstick_nudges==1);
+    for(i=0;i<6;i++) {
+        g.x=140*FP; g.y=70*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(g.stuck_stage==0 && !g.unstick_moves &&
+           !g.unstick_relaunches && g.balls==3);
+    /* Non-zero velocity is not sufficient if a collision repeatedly
+     * forces the ball back into the same two-pixel neighborhood. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    for(i=0;i<UNSTICK_DETECT_TICKS;i++) {
+        g.x=(short)((125+(i&1))*FP); g.y=70*FP;
+        g.vx=40; g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(g.stuck_stage==1 && g.unstick_nudges==1);
+    /* Do not treat intentionally held flippers, the shooter, kickback,
+     * or the lower drain as stuck balls. */
+    fixture();
+    for(i=0;i<UNSTICK_DETECT_TICKS+80;i++)
+        game_step(&g,&t,0);
+    assert(!g.unstick_nudges && !g.unstick_moves);
+    fixture(); g.waiting=0; g.in_shooter=1;
+    g.x=200*FP; g.y=55*FP;
+    for(i=0;i<UNSTICK_DETECT_TICKS+8;i++) {
+        g.x=200*FP; g.y=55*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(!g.unstick_nudges && !g.unstick_moves);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    for(i=0;i<UNSTICK_DETECT_TICKS+8;i++) {
+        g.x=90*FP; g.y=160*FP; g.vx=g.vy=0;
+        game_step(&g,&t,KEY_LEFT);
+    }
+    assert(!g.unstick_nudges && !g.unstick_moves);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.kick_delay=9;
+    for(i=0;i<8;i++) game_step(&g,&t,0);
+    assert(!g.unstick_nudges);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    for(i=0;i<UNSTICK_DETECT_TICKS+8;i++) {
+        g.x=115*FP; g.y=(t.drain_y-6)*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(!g.unstick_nudges && !g.unstick_relaunches);
+    fixture();
+    puts("STAGE: watchdog excludes intended hold/shooter/normal drain");
+    fflush(stdout);
     /* The original visibly pulls back over time. Fixed-point DOS charge
      * should continue over roughly 1.3 seconds, then stop at full pullback. */
     for(i=0;i<48;i++) game_step(&g,&t,KEY_LAUNCH);
