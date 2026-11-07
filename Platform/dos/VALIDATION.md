@@ -128,6 +128,33 @@ candidate should be cheap but its real 7.16 MHz cost is UNVERIFIED.
 Adjust `FLIPPER_TIP_ASSIST_PX` in `game.h` if testing shows an
 unfairly invisible catch or not enough improvement.
 
+**Universal stuck-ball recovery (F-008, 2026-11-07):**
+The original desktop `control::UnstuckBall` tries an upward throw
+outside flipper/plunger bounds, then relaunches if recovery fails.
+DOS now detects lack of real positional progress (both x/y travel
+within 3 pixels for **110 physics substeps**, about 1.5 seconds).
+A first rescue nudges upward/inward; further unresolved intervals of
+73 substeps permit up to two short **geometry-verified** local moves
+before a free same-ball plunger return. The watchdog backs off after
+six consecutive steps at least 10px from the initial trapped
+position. It exempts shooter travel, waiting balls, kickbacks,
+flipper capture areas and lower drains; pause/menu logic does not
+advance game physics. The 16-bit regression suite tests all three
+recovery stages, preserved score and balls, continuing normal play,
+fast velocity with near-zero actual progress, and the exclusions.
+`SMOKE.TXT` and `INPUT.TXT` now include three counters:
+`unstick_nudges`, `unstick_moves`, `unstick_relaunches`.
+
+**Hardware acceptance pending:** on the real 7.16 MHz V20, first
+confirm that previously trapped shots escape from the right sling
+and other collapsed-layer pockets without unnatural teleports.
+Hold a ball on a flipper, let a normal center drain occur, and
+perform a weak-shot shooter return to check that none triggers a
+false rescue. Use `CADET /record` to inspect the counters and
+`slow_frames`. If `unstick_relaunches` becomes common, the
+underlying collision geometry still needs fixing. Emulated tests
+do not establish actual V20 performance or exact original timing.
+
 ## Required hardware follow-up
 
 **VGA compatibility physical check (2026-11-07):**
