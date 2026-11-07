@@ -112,7 +112,7 @@ static void feed(Game *g,const Table *t)
 void game_reset(Game *g,const Table *t)
 {
     int i,j;
-    memset(g,0,sizeof(*g)); g->balls=3; g->noise=0xace1U;
+    memset(g,0,sizeof(*g)); g->balls=3;
     for(i=0;i<2;i++) {
         const short *p=t->flipper+i*6;
         for(j=0;j<2;j++)
