@@ -19,7 +19,7 @@ typedef struct {
     unsigned short frame,late_frames;
     unsigned long steps,score;
     short x,y,vx,vy;
-    unsigned short border,right_rail,flips[2],powered[2];
+    unsigned short border,right_rail,left_rail,flips[2],powered[2];
     unsigned char input,balls,waiting,in_shooter,event,charge;
     unsigned char state,flipper_sweep[2];
 } FlightTrace;
@@ -487,6 +487,7 @@ int main(int argc,char **argv)
             sample->event=(unsigned char)event;
             sample->border=game.boundary_hits;
             sample->right_rail=game.right_rail_saves;
+            sample->left_rail=game.left_rail_saves;
             flight_next=(flight_next+1)&255;
             if(flight_used<256) flight_used++;
         }
@@ -581,11 +582,11 @@ int main(int argc,char **argv)
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u\n",
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u\n",
                 frame,game.steps,game.score,game.hits,game.balls,slow_frames,
                 observed,launches,game.nudges,game.kickbacks,game.tilts,
                 full_launches,game.boundary_hits,game.right_rail_saves,
-                game.flipper_contacts[0],game.flipper_contacts[1],
+                game.left_rail_saves,game.flipper_contacts[0],game.flipper_contacts[1],
                 game.flipper_power_contacts[0],game.flipper_power_contacts[1]);
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=%d\n",
                 enhanced?"3d":"classic",enhanced);
@@ -595,20 +596,21 @@ int main(int argc,char **argv)
         report=fopen("FLIGHT.TXT","w");
         if(report) {
             unsigned j;
-            fprintf(report,"# CADET_FLIGHT schema=3 count=%u rate_hz=18.2 scale=64\n",flight_used);
+            fprintf(report,"# CADET_FLIGHT schema=4 count=%u rate_hz=18.2 scale=64\n",flight_used);
             fprintf(report,"# Q6 positions/velocities divide by 64; INPUT bits 1=Z 2=/ 4=SPACE 8=X 16=A 32=D\n");
             fprintf(report,"# STATE bits 1=PAUSE 2=MENU 4=TILT 8=GAME_OVER; EVENT 0=none 1=bumper 2=launch 3=drain 4=kickback 5=tilt\n");
             fprintf(report,"# Contact counters (LH RH LP RP), boundary and late-frame counts are cumulative; SWEEP is remaining active substeps.\n");
-            fprintf(report,"FRAME XQ6 YQ6 VXQ6 VYQ6 BALLS READY TUBE EVENT CHARGE BORDER RIGHT_RAIL INPUT LEFT_HIT RIGHT_HIT LEFT_POWER RIGHT_POWER STEPS SCORE LATE STATE LEFT_SWEEP RIGHT_SWEEP\n");
+            fprintf(report,"FRAME XQ6 YQ6 VXQ6 VYQ6 BALLS READY TUBE EVENT CHARGE BORDER RIGHT_RAIL LEFT_RAIL INPUT LEFT_HIT RIGHT_HIT LEFT_POWER RIGHT_POWER STEPS SCORE LATE STATE LEFT_SWEEP RIGHT_SWEEP\n");
             for(j=0;j<flight_used;j++) {
                 unsigned ix=(flight_next+256-flight_used+j)&255;
                 const FlightTrace *sample=&flight[ix];
-                fprintf(report,"%u %d %d %d %d %u %u %u %u %u %u %u %u %u %u %u %u %lu %lu %u %u %u %u\n",
+                fprintf(report,"%u %d %d %d %d %u %u %u %u %u %u %u %u %u %u %u %u %u %lu %lu %u %u %u %u\n",
                         sample->frame,sample->x,sample->y,
                         sample->vx,sample->vy,
                         sample->balls,sample->waiting,sample->in_shooter,
                         sample->event,sample->charge,sample->border,
-                        sample->right_rail,sample->input,sample->flips[0],sample->flips[1],
+                        sample->right_rail,sample->left_rail,
+                        sample->input,sample->flips[0],sample->flips[1],
                         sample->powered[0],sample->powered[1],
                         sample->steps,sample->score,sample->late_frames,
                         sample->state,sample->flipper_sweep[0],
