@@ -3,6 +3,7 @@
 /* C89, 16-bit int / 32-bit long. No floating point or DOS extender. */
 #define MAX_EDGES 640
 #define MAX_BUMPERS 8
+#define MAX_SLINGS 2 /* closed source-projected triangular sling outlines */
 #define BANDS 25
 #define BAND_EDGES 256
 #define FP 64
@@ -29,12 +30,21 @@ typedef struct { short left,right,top,bottom; } EdgeBounds;
 /* Source bumper caps are circular. SCP2 stores their eight outline edges;
  * derive a low-cost radial hit area once when the table is indexed. */
 typedef struct { short first,x,y,radius,score,boost; } Bumper;
+/* F-002: solid triangular slingshot cores, discovered from SCP2 closed
+ * source outlines at load time. Normal vectors are Q8 outward normals.
+ * Per-frame testing is just AABB rejection plus three dot products nearby. */
+typedef struct {
+    short first,count,left,right,top,bottom;
+    short x[3],y[3],nx[3],ny[3];
+} Sling;
 typedef struct {
     short count,launch_x,launch_y,drain_y,flipper[12];
     short kickback[4]; /* Source-projected left/right strike centers. */
     Edge edges[MAX_EDGES];
     EdgeBounds bounds[MAX_EDGES];
     Bumper bumpers[MAX_BUMPERS];
+    Sling slings[MAX_SLINGS];
+    short sling_count;
     short bumper_count,outer_right_rail,outer_left_rail; /* exterior source rails */
     Sprite sprites[5];
     Sprite plunger[8];
