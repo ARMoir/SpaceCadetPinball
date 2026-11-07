@@ -64,15 +64,33 @@ from H and checked by an automated font regression test.
    Both background files are raw 32768-byte Tandy mode-09h bank images
    (not Targa). Keep the executable and SCP2 `TABLE.DAT` from one build.
 
-Controls: **Z** left flipper, **/** right flipper, hold **Space** to pull the
-plunger back and release to launch (about 1.3 seconds to full power, with a
-small ~1% launch variation), **X** upward bump, **A** bump from the left,
-**D** bump from the right, **X** nudge up, **S** toggle sound on/off
-(shown in the
-right sidebar), **N** new game,
-**Esc** quit. Both flippers can be held together. There are three balls.
+Controls: **Z** or **left mouse button** for the left flipper,
+**/** or **right mouse button** for the right flipper. Any combination
+works simultaneously. Hold **Space** to pull back the plunger and release
+to launch (about 1.3 seconds to full power, with ~1% launch variation).
+**A** nudges from the left, **D** from the right, **X** nudges upward,
+**S** toggles sound, **N** starts a new game, and **Esc** exits.
+There are three balls. F1 also shows the mouse/keyboard flipper controls.
+
+**Optional DOS mouse controls:** load a standard DOS-compatible mouse
+driver (such as MOUSE.COM or CTMOUSE) **before** starting CADET. The game
+detects it using `INT 33h`. Without a mouse driver, no mouse polling
+occurs and Z and / work normally. The mouse cursor is not needed, and
+moving the pointer does not move the ball or paddle. Held buttons act
+like held keys; DOS mouse-driver press counters also catch quick clicks
+between the 18.2 Hz display frames. Mouse polling occurs only once per
+rendered frame, never in the 72.8 Hz physics steps.
+
+Start with `CADET /nomouse` to disable mouse detection and polling if
+your driver is incompatible or you want to compare real V20 performance.
+Emulator smoke tests intentionally disable optional mouse detection to
+keep their keyboard input reproducible. On the physical Tandy EX, a
+working serial-mouse driver is required; an attached mouse alone does
+not provide an `INT 33h` driver. Mouse support is still pending physical
+hardware verification.
 `/nosound` starts with sound disabled, and **S** can re-enable it during
 play. Switching sound off silences any currently playing tone immediately.
+`/nomouse` disables optional DOS mouse input without affecting the keyboard.
 `/noshake` disables optional hardware viewport shaking (use this if the
 display shifts incorrectly on actual hardware). The small one-character
 shake is done by a short MC6845 CRTC start-address offset and is restored
