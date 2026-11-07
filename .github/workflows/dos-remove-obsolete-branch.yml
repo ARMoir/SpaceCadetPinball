@@ -1,0 +1,24 @@
+name: Remove obsolete DOS fix branch
+on:
+  push:
+    branches:
+      - dos/tandy-native-prototype
+permissions:
+  contents: write
+jobs:
+  remove-merged-branch:
+    if: github.repository == 'ARMoir/SpaceCadetPinball'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify old branch then delete
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          old_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/dos/fix-shooter-lane-return" --jq '.object.sha')"
+          if [ "$old_sha" != "ac5c699e58dbb6cd11aecc1fbe56554cd4b0c3c1" ]; then
+            echo "Branch advanced since the consolidation; refusing deletion"
+            exit 1
+          fi
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/dos/fix-shooter-lane-return"
+          echo "Deleted verified obsolete branch"
