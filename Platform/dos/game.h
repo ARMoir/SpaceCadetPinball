@@ -64,6 +64,7 @@ typedef struct {
     unsigned long score,steps,hits;
     unsigned short nudges,kickbacks,tilts,boundary_hits,right_rail_saves,left_rail_saves;
     unsigned short flipper_contacts[2],flipper_power_contacts[2];
+    unsigned short sling_rescues[2]; /* F-002: closed left/right sling ejects */
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
     Edge tip_assist[2]; /* only active on descending balls with held flipper */
 } Game;
