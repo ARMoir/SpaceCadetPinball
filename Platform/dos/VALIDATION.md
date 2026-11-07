@@ -108,6 +108,26 @@ the DOSBox-X tests, or use the pinned GitHub Actions workflow, which
 performs these steps and publishes the EXEs, matching data, previews
 and logs in one artifact.
 
+**Forgiving center gap (F-006, 2026-11-07):** the imported
+raised flipper tips are about 18 pixels apart in projected DOS
+coordinates. The original has a real center drain; the precise
+original-vs-port drain rate is not measured. At the owner's request,
+the DOS port now slightly favors easier play over strict fidelity
+when continuous flipper rotation cannot be represented accurately.
+A five-pixel inward **collision-only** extension is precomputed per
+raised flipper, activated solely for a descending ball while that
+flipper is held. Synthetic 16-bit regression tests verify left and
+right near-center saves, unaffected idle drains, disabled saves
+during tilt, a still-open mid-gap with both flippers held, and no
+false catch from underneath. Unchanged game physics and art are used
+by both Tandy and VGA. The automated 360-frame runs still pass.
+Physical test remains **PENDING**: compare a few minutes of attempts
+to save descending near-center balls, including late key presses,
+released flippers, and holding both. The additional narrow collision
+candidate should be cheap but its real 7.16 MHz cost is UNVERIFIED.
+Adjust `FLIPPER_TIP_ASSIST_PX` in `game.h` if testing shows an
+unfairly invisible catch or not enough improvement.
+
 ## Required hardware follow-up
 
 **VGA compatibility physical check (2026-11-07):**
