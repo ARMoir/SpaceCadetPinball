@@ -92,7 +92,7 @@ should be checked in context, not copied without their event/state transitions.
 | **P1** | Nudge and tilt | Original `nudge.cpp` applies additive velocity and an inverse after 0.4 s; `pb.cpp` accumulates nudge pressure over time. DOS preserves that shape but uses its own impulses, nudge-heat thresholds and decay schedule. | **Partially faithful; tuning differs** | [F-005](#f-005-nudge-and-tilt-parameters) |
 | **P1** | Flipper physics | Original angular flippers collide throughout rotation. DOS preserves endpoints but uses rest/midpoint/raised fixed-point edges and only two art states. | **Performance-oriented approximation; fidelity still unverified** | [F-006](#f-006-flipper-and-collision-response) |
 | **P2** | Material physics / gravity | Original ball direction, spin, elasticity, smoothness, group masks and geometry are richer. DOS uses Q6, fixed restitution, 2D gravity, speed clamps and finite substeps. | **Known incomplete port** | [F-006](#f-006-flipper-and-collision-response) |
-| **P2** | Audio, layout and effects | Original sound and visual states are richer; DOS has PSG substitute sounds, a 16-color sidebar and cheap CRTC shake. | **Platform adaptation**, visual/audio parity not claimed | [F-007](#f-007-rendering-audio-and-frame-rate) |
+| **P2** | Audio, layout and effects | Original sound/visual states are richer. DOS has PSG substitutes and 16-color rendering; an optional offline-generated 3D-shaded TABLE3D.TGA retains the untouched classic art and identical collision data. The moving ball adds a tiny shadow/glint in an existing dirty rectangle. | **Presentation-only adaptation**, gameplay parity unchanged; CRT benefit unverified | [F-007](#f-007-rendering-audio-and-frame-rate) |
 
 **Verified progress, not full parity:** original-source table artwork, eight
 plunger frames and kickback strike centers are imported; seven bumper outlines
@@ -256,14 +256,33 @@ silently treat legacy exceptions as precedent for new ones.
   original update/render pipeline.
 - **DOS deviation:** palette reduction, low-res 16-color display, brief
   hardware CRTC shift, synthetic PSG tones and 18.2 Hz display loop with
-  four substeps. These also affect presentation/timing.
-- **Why / evidence:** available Tandy display and sound hardware plus V20
-  memory/CPU limits. DOSBox-X tests pass, real-hardware measurement is needed
-  for each claimed speed benefit.
-- **Tests today:** Tandy mode video smoke and cleanup; no definitive hardware
-  assessment of motion/sound/shake.
-- **Remedy:** preserve the original look/rules within the hardware format;
-  measure image quality, latency, sound and frame timing on the real Tandy.
+  four substeps. **2026-11-07 optional visual enhancement:** a PC-side
+  `enhance_table.py` produces `TABLE3D.TGA` from the original packed
+  `TABLE.TGA` plus the same source `TABLE.DAT` scored bumper positions.
+  It adds top-left gray-metal bevel highlights and lower-right neutral-gray
+  shading/cast shadows, without changing colorful lamps, sprite assets,
+  geometry, collision, projection, table dimensions, or fixed RGBI palette.
+  The untouched original background remains accessible via `CADET /classic`;
+  `CADET /3d` selects the enhanced look. The original 4x4 ball sprite gains
+  one highlight and three shadow pixels when rendered in 3D mode, entirely
+  within the *existing* 6x6 dirty region; sprite and gameplay data unchanged.
+- **Why / evidence:** owner requested more visible depth on their son's
+  first impression of the CRT playfield. Original game relies on art,
+  highlights and occlusion for a 3D impression. Baking effects offline
+  costs **zero extra runtime table-rendering instructions**. The ball
+  shadow/glint adds a few pixel writes on moving frames, so calling that
+  part zero-cost would be inaccurate. This is a cosmetic *option*, not
+  evidence of original artwork equivalence or hardware performance.
+- **Tests:** `test_enhance_table.py` validates nibble/bank fidelity,
+  32768-byte size, deterministic enhancement, unchanged colored pixels,
+  original source asset immutability and no changes outside the playfield.
+  DOSBox-X smoke exercises 3D default. /classic remains the lossless
+  original Tandy image; needs side-by-side CRT confirmation.
+- **Remedy:** measure actual CRT readability, especially colored targets and
+  near-flipper ball visibility, plus frame drops using /record. If the
+  enhanced style introduces distracting artifacts or a V20 slowdown,
+  prefer `/classic` and revise the offline shader, never gameplay
+  collision behavior for decorative depth.
 
 ## Required fidelity review for EVERY gameplay-affecting change
 
