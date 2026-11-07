@@ -25,6 +25,9 @@ typedef struct {
 typedef struct {
     short x,y,vx,vy,balls,waiting,over,charge,previous,hit_delay,event,nudge_delay;
     unsigned char sweep[2];
+    /* Set on ball feed, cleared once the ball enters the main playfield.
+     * Needed to distinguish an unsuccessful shooter return from a drain. */
+    unsigned char in_shooter;
     unsigned short plunger_rng;
     unsigned long score,steps,hits;
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
