@@ -48,6 +48,30 @@ class FlightTests(unittest.TestCase):
         self.assertIn("outer-right rail recoveries in window: 1",
                       "\\n".join(summary_lines(rows, columns)))
 
+    def test_both_outer_rails_in_schema4(self):
+        # Keep old schema 1/2/3 recordings readable, while ensuring the
+        # two separate source-rail counters from the current game parse.
+        lines = NEW.replace("schema=2", "schema=4").splitlines()
+        converted = []
+        row_index = 0
+        for line in lines:
+            if line.startswith("FRAME "):
+                line = line.replace("BORDER INPUT",
+                                    "BORDER RIGHT_RAIL LEFT_RAIL INPUT")
+            elif line[:1].isdigit():
+                fields = line.split()
+                fields[11:11] = [str(row_index), str(row_index)]
+                line = " ".join(fields)
+                row_index += 1
+            converted.append(line)
+        schema, columns, rows = parse_flight("\\n".join(converted))
+        self.assertEqual(schema, 4)
+        self.assertEqual(rows[-1]["RIGHT_RAIL"], 1)
+        self.assertEqual(rows[-1]["LEFT_RAIL"], 1)
+        notes = "\\n".join(summary_lines(rows, columns))
+        self.assertIn("outer-left rail recoveries in window: 1", notes)
+        self.assertIn("outer-right rail recoveries in window: 1", notes)
+
     def test_reject_partial_or_corrupted_flight(self):
         for body in ("", "garbage", OLD.replace("263 11584", "263 ?"),
                      OLD.replace("263 11584", "261 11584"),
