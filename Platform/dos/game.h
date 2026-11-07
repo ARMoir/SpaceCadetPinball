@@ -6,6 +6,10 @@
 #define BANDS 25
 #define BAND_EDGES 256
 #define FP 64
+/* F-006: five-pixel active flipper tip forgiveness. The original 2D
+ * projection leaves a larger center gap than a fast, 3D rotating paddle
+ * can reliably cover. No help is applied when idle or tilted. */
+#define FLIPPER_TIP_ASSIST_PX 5
 /* About 1.3 seconds at 72.8 physics substeps/second. */
 #define PLUNGER_MAX_CHARGE 96
 #define KEY_LEFT 1
@@ -51,6 +55,7 @@ typedef struct {
     unsigned short nudges,kickbacks,tilts,boundary_hits,right_rail_saves,left_rail_saves;
     unsigned short flipper_contacts[2],flipper_power_contacts[2];
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
+    Edge tip_assist[2]; /* only active on descending balls with held flipper */
 } Game;
 int table_load(Table *t, const char *path);
 int table_index(Table *t);
