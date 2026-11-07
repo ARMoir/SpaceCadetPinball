@@ -47,7 +47,7 @@ int main(int argc,char **argv)
     game_step(&g,&t,KEY_LEFT);
     assert(g.vy<0 && g.balls==3);
     /* A held raised flipper still collides on later steps. */
-    fixture(); g.waiting=0; g.x=103*FP; g.y=151*FP; g.vy=40;
+    fixture(); g.waiting=0; g.x=103*FP; g.y=149*FP; g.vy=40;
     game_step(&g,&t,KEY_LEFT);
     assert(g.vy<0);
     fixture(); g.waiting=0; g.x=50*FP; g.y=60*FP;
