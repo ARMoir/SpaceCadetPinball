@@ -29,6 +29,11 @@ def main():
         result=subprocess.run(commands,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
         (directory/(label+'.LOG')).write_bytes(result.stdout)
         if result.returncode or not (directory/marker).exists():
+            for name in ('TEST.LOG', label+'.LOG'):
+                path=directory/name
+                if path.exists():
+                    print(f'--- {name} ---')
+                    print(path.read_text(errors='replace')[-4000:])
             raise RuntimeError(f'{label} DOS test failed; see TEST.LOG and {label}.LOG')
     print((directory/'TEST.OK').read_text().strip())
     print((directory/'SMOKE.TXT').read_text().strip())
