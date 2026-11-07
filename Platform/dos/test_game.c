@@ -84,21 +84,21 @@ int main(int argc,char **argv)
      * projected interior wall must let a descending ball through, but
      * still prevent it coming back upward through the same throat. */
     fixture();
-    t.edges[0].x=64; t.edges[0].ex=76;
+    t.edges[0].x=94; t.edges[0].ex=104;
     t.edges[0].y=t.edges[0].ey=30;
     t.edges[0].tx=256; t.edges[0].ty=0;
-    t.edges[0].length=12*FP;
+    t.edges[0].length=10*FP;
     assert(table_index(&t));
-    g.waiting=0; g.x=70*FP; g.y=29*FP; g.vy=100;
+    g.waiting=0; g.x=100*FP; g.y=29*FP; g.vy=100;
     game_step(&g,&t,0);
     assert(g.vy>0 && g.y>29*FP);
     fixture();
-    t.edges[0].x=64; t.edges[0].ex=76;
+    t.edges[0].x=94; t.edges[0].ex=104;
     t.edges[0].y=t.edges[0].ey=30;
     t.edges[0].tx=256; t.edges[0].ty=0;
-    t.edges[0].length=12*FP;
+    t.edges[0].length=10*FP;
     assert(table_index(&t));
-    g.waiting=0; g.x=70*FP; g.y=31*FP+60; g.vy=-45;
+    g.waiting=0; g.x=100*FP; g.y=31*FP+60; g.vy=-45;
     game_step(&g,&t,0);
     assert(g.vy>=0);
     puts("STAGE: one-way chute"); fflush(stdout);
