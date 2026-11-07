@@ -1,5 +1,6 @@
 /* Native 8086 real-mode DOS / Tandy 1000 backend. */
 #include "game.h"
+#include "menu_art.h"
 #include <dos.h>
 #include <conio.h>
 #include <malloc.h>
@@ -23,9 +24,12 @@ static void __interrupt __far keyboard(void)
     /* XT/V20 make/break scancodes; extended prefixes are ignored. */
     if(scan!=0xe0 && scan!=0xe1) {
         unsigned code=scan&127;
-        /* The S toggle is edge-triggered: auto-repeat must not toggle it
-         * repeatedly while held. Other keys retain quick-tap latching. */
-        if(!(scan&128) && (code!=31 || !keys[code]))
+        /* Menu and toggle keys must fire only once per physical press.
+         * Flipper/launcher quick-tap latching stays unchanged. */
+        if(!(scan&128) &&
+           ((code!=1 && code!=28 && code!=31 && code!=49 &&
+             code!=50 && code!=59 && code!=60 && code!=61 &&
+             code!=72 && code!=80) || !keys[code]))
             pressed_keys[code]=1;
         keys[code]=(scan&128)?0:1;
     }
@@ -140,7 +144,27 @@ static const unsigned short font[]={
     23407,23402,23421,23213,23186,29351
 };
 
-static void text(int x,int y,const char *s)
+/* The original Windows layout has a decorated title box, then separate
+ * ball/score and message boxes. At 320x200 there are only 80 right-hand
+ * pixels; all panel graphics are dirty-rectangle redraws, not a screen
+ * refresh. The title is source-derived from splash_bitmap.bmp. */
+static void draw_title(void)
+{
+    int y,x;
+    for(y=0;y<MENU_ART_H;y++) {
+        unsigned a=address(242,4+y);
+        for(x=0;x<MENU_ART_W/2;x++)
+            video[a+x]=menu_art[y*(MENU_ART_W/2)+x];
+    }
+    for(x=241;x<=318;x++) {
+        pixel(x,2,7); pixel(x,58,7);
+    }
+    for(y=2;y<=58;y++) {
+        pixel(240,y,8); pixel(319,y,7);
+    }
+}
+
+static void text_color(int x,int y,const char *s,unsigned color)
 {
     int i,j,index;
     unsigned bits;
@@ -149,25 +173,76 @@ static void text(int x,int y,const char *s)
               ((*s>='A' && *s<='Z')?*s-'A'+10:-1);
         bits=index<0?0:font[index];
         for(j=0;j<5;j++) for(i=0;i<3;i++)
-            pixel(x+i,y+j,(bits&(1U<<(14-j*3-i)))?15:0);
+            if(bits&(1U<<(14-j*3-i))) pixel(x+i,y+j,color);
         x+=4; s++;
     }
 }
 
-static void hud(void)
+static void panel_frame(int x,int y,int w,int h)
 {
+    int i;
+    for(i=x;i<x+w;i++) { pixel(i,y,8); pixel(i,y+h-1,7); }
+    for(i=y;i<y+h;i++) { pixel(x,i,8); pixel(x+w-1,i,7); }
+}
+
+/* view: 0 = score, 1 = Game/Options menu, 2 = controls.
+ * The original top menu actions that are implemented by this DOS port are
+ * keyboard-operable; unsupported music, players and high scores are not
+ * falsely advertised as functional. */
+static void draw_panel(int view,int choice,int paused)
+{
+    static const char *items[]={"NEW GAME","PAUSE","SOUND","CONTROLS","EXIT"};
+    int i,y;
     char buf[24];
-    text(240,8,"SPACE CADET"); text(240,18,"DOS PROTOTYPE");
-    text(240,36,"SCORE"); sprintf(buf,"%010lu",game.score); text(240,44,buf);
-    sprintf(buf,"BALLS %d",game.balls); text(240,60,buf);
-    text(240,80,"Z LEFT"); text(240,88,"SLASH RIGHT");
-    text(240,100,"SPACE LAUNCH"); text(240,108,"HOLD RELEASE");
-    text(240,124,"N NEW GAME"); text(240,132,"ESC QUIT");
-    text(240,140,"X NUDGE");
-    text(240,156,game.over?"GAME OVER   ":game.waiting?"READY       ":"PLAY        ");
-    /* Redraw just this short status strip, clearing the old ON/OFF text. */
-    restore(240,172,48,5);
-    text(240,172,sound_enabled?"S SOUND ON":"S SOUND OFF");
+    restore(240,61,80,139);
+    if(view==1) {
+        panel_frame(241,63,78,110);
+        text_color(245,67,"GAME OPT HELP",13);
+        text_color(245,79,"MENU",14);
+        for(i=0;i<5;i++) {
+            y=92+i*15;
+            if(i==choice) {
+                pixel(244,y+2,14); pixel(245,y+2,14);
+            }
+            if(i==1) text_color(251,y,paused?"RESUME":"PAUSE",
+                                 i==choice?14:15);
+            else if(i==2) text_color(251,y,sound_enabled?
+                                     "SOUND ON":"SOUND OFF",i==choice?14:15);
+            else text_color(251,y,items[i],i==choice?14:15);
+        }
+        text_color(245,177,"UP DN ENTER",7);
+        text_color(245,188,"ESC BACK",7);
+    } else if(view==2) {
+        panel_frame(241,63,78,129);
+        text_color(245,68,"CONTROLS",13);
+        text_color(245,84,"Z LEFT FLIP",15);
+        text_color(245,96,"/ RIGHT FLIP",15);
+        text_color(245,108,"SPACE PLUNGER",15);
+        text_color(245,120,"X NUDGE",15);
+        text_color(245,132,"S SOUND",15);
+        text_color(245,144,"F2 NEW",15);
+        text_color(245,156,"F3 PAUSE",15);
+        text_color(245,177,"ENTER BACK",7);
+    } else {
+        panel_frame(241,63,78,30);
+        text_color(245,67,"BALL",13);
+        sprintf(buf,"%d",4-game.balls);
+        text_color(269,67,buf,15);
+        text_color(245,78,"SCORE",13);
+        sprintf(buf,"%010lu",game.score);
+        text_color(245,86,buf,15);
+        panel_frame(241,97,78,41);
+        text_color(245,101,"STATUS",13);
+        text_color(245,113,paused?"PAUSED":game.over?"GAME OVER":
+                      game.waiting?"READY":"IN PLAY",15);
+        text_color(245,126,paused?"F3 RESUME":game.over?"N NEW GAME":
+                      game.waiting?"SPACE LAUNCH":"BALL IN PLAY",7);
+        panel_frame(241,142,78,51);
+        text_color(245,147,"M MENU F3 PAUSE",15);
+        text_color(245,158,sound_enabled?"S SOUND ON":"S SOUND OFF",15);
+        text_color(245,170,"Z / FLIPPERS",15);
+        text_color(245,182,"ESC EXIT",7);
+    }
 }
 
 static void silence(void)
@@ -219,7 +294,9 @@ int main(int argc,char **argv)
     int old_new=0,event,next_x,next_y,ball_changed,ball_redraw;
     int plunger_x,plunger_y,old_plunger_x=-1,old_plunger_y=-1;
     int plunger_changed,plunger_redraw,plunger_charge;
-    unsigned char toggle_sound;
+    int view=0,choice=0,paused=0,exit_requested=0,ui_dirty=0;
+    unsigned char toggle_sound,toggle_menu,key_up,key_down;
+    unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_new;
     unsigned observed=0,launches=0;
     union REGS r;
     unsigned char old_mode;
@@ -243,11 +320,13 @@ int main(int argc,char **argv)
     mode(9);
     video=(unsigned char __far *)MK_FP(0xb800,0);
     _fmemcpy(video,background,32768U);
+    draw_title();
+    draw_panel(view,choice,paused);
     silence();
     old_keyboard=_dos_getvect(9);
     _disable(); _dos_setvect(9,keyboard); _enable();
     last=ticks();
-    while(!keys[1] && !pressed_keys[1] && (!smoke || frame<360)) {
+    while(!exit_requested && (!smoke || frame<360)) {
         now=ticks();
         if(now==last) continue;
         if((unsigned)(now-last)>1) slow_frames++;
@@ -259,29 +338,71 @@ int main(int argc,char **argv)
               ((keys[57]||pressed_keys[57])?KEY_LAUNCH:0)|
               ((keys[45]||pressed_keys[45])?KEY_NUDGE:0);
         pressed_keys[44]=pressed_keys[53]=pressed_keys[57]=pressed_keys[45]=0;
-        toggle_sound=pressed_keys[31]; /* S, scan code 1Fh */
-        pressed_keys[31]=0;
+        toggle_sound=pressed_keys[31]; /* S */
+        toggle_menu=pressed_keys[50]; /* M */
+        key_up=pressed_keys[72]; key_down=pressed_keys[80];
+        key_enter=pressed_keys[28]; key_esc=pressed_keys[1];
+        key_f1=pressed_keys[59]; key_f2=pressed_keys[60];
+        key_f3=pressed_keys[61]; key_new=pressed_keys[49];
+        pressed_keys[31]=pressed_keys[50]=pressed_keys[72]=0;
+        pressed_keys[80]=pressed_keys[28]=pressed_keys[1]=0;
+        pressed_keys[59]=pressed_keys[60]=pressed_keys[61]=0;
+        pressed_keys[49]=0;
         _enable();
-        if(toggle_sound) {
-            /* Mute *before* disabling writes, so a playing tone cannot
-             * linger. /nosound still performs no PSG writes at startup. */
-            if(sound_enabled) { silence(); sound_ticks=0; sound_enabled=0; }
-            else { sound_enabled=1; sound_ticks=0; }
-        }
+        ui_dirty=0;
         if(smoke) input=(frame%48<16?KEY_LAUNCH:0)|
                          (frame%20<10?KEY_LEFT:KEY_RIGHT)|(frame%90==0?KEY_NUDGE:0);
         observed|=input;
-        if((keys[49] || pressed_keys[49]) && !old_new) {
+        if(toggle_sound) {
+            /* Mute before disabling the PSG, so a held note cannot stick. */
+            if(sound_enabled) { silence(); sound_ticks=0; sound_enabled=0; }
+            else { sound_enabled=1; sound_ticks=0; }
+            ui_dirty=1;
+        }
+        if(toggle_menu) {
+            view=view?0:1;
+            ui_dirty=1;
+        }
+        if(key_f1) { view=2; ui_dirty=1; }
+        if(key_esc) {
+            if(view) { view=0; ui_dirty=1; }
+            else exit_requested=1;
+        }
+        if(view==1) {
+            if(key_up) { choice=(choice+4)%5; ui_dirty=1; }
+            if(key_down) { choice=(choice+1)%5; ui_dirty=1; }
+            if(key_enter) {
+                ui_dirty=1;
+                if(choice==0) key_new=1;
+                else if(choice==1) { paused=!paused; view=0; }
+                else if(choice==2) {
+                    if(sound_enabled) { silence(); sound_ticks=0; sound_enabled=0; }
+                    else { sound_enabled=1; sound_ticks=0; }
+                } else if(choice==3) view=2;
+                else exit_requested=1;
+            }
+        } else if(view==2 && key_enter) {
+            view=1; ui_dirty=1;
+        }
+        if(key_f3) { paused=!paused; ui_dirty=1; }
+        if(key_f2 || key_new) {
             game_reset(&game,&table);
             game.plunger_rng^=ticks();
+            paused=0; view=0; ui_dirty=1;
         }
-        pressed_keys[49]=0;
         old_new=keys[49];
         event=0;
-        for(i=0;i<4;i++) {
-            game_step(&game,&table,input);
-            if(game.event) { event=game.event; if(event==2) launches++; }
-        }
+        /* Keeping physics frozen is important for a faithful Game menu
+         * and for testing on a slow V20. No catch-up on resume. */
+        if(!view && !paused && !exit_requested) {
+            for(i=0;i<4;i++) {
+                game_step(&game,&table,input);
+                if(game.event) {
+                    event=game.event;
+                    if(event==2) launches++;
+                }
+            }
+        } else input=0;
         play_event(event);
         plunger_charge=game.waiting?game.charge:0;
         plunger_rect(plunger_charge,&plunger_x,&plunger_y);
@@ -341,8 +462,11 @@ int main(int argc,char **argv)
         old_x=next_x; old_y=next_y;
         if(!game.over && ball_redraw)
             sprite(&table.sprites[4],old_x+1,old_y+1);
-        if(toggle_sound || old_score!=game.score || old_balls!=game.balls || old_wait!=game.waiting || old_over!=game.over) {
-            hud(); old_score=game.score; old_balls=game.balls; old_wait=game.waiting; old_over=game.over;
+        if(ui_dirty || old_score!=game.score || old_balls!=game.balls ||
+           old_wait!=game.waiting || old_over!=game.over) {
+            draw_panel(view,choice,paused);
+            old_score=game.score; old_balls=game.balls;
+            old_wait=game.waiting; old_over=game.over;
         }
         previous_input=input;
     }
