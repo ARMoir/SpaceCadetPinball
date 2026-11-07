@@ -164,7 +164,7 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
         g->vy=(short)(-88-lever*2);
         g->vx=(short)((g->x/FP-e->x)*3+g->vx/4);
     }
-    if(e->score && !g->hit_delay) {
+    if(e->score && !g->hit_delay && !g->tilted) {
         g->score+=e->score; g->hits++; g->hit_delay=8; g->event=1;
     }
     return 1;
@@ -252,7 +252,11 @@ void game_step(Game *g,const Table *t,unsigned keys)
 {
     int i,b,pressed,px,py;
     g->steps++; g->event=0;
-    if(g->over) { g->previous=(short)keys; return; }
+    if(g->over) {
+        g->shake_frames=0; /* Never leave display offset during game over. */
+        g->previous=(short)keys;
+        return;
+    }
     if(g->hit_delay) g->hit_delay--;
     if(g->nudge_delay) g->nudge_delay--;
     if(g->shake_frames) g->shake_frames--;
