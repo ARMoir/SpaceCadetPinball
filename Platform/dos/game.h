@@ -27,7 +27,7 @@ typedef struct {
     Edge edges[MAX_EDGES];
     EdgeBounds bounds[MAX_EDGES];
     Bumper bumpers[MAX_BUMPERS];
-    short bumper_count;
+    short bumper_count,outer_right_rail; /* source-projected long outer wall */
     Sprite sprites[5];
     Sprite plunger[8];
     unsigned short band[BANDS][BAND_EDGES], band_count[BANDS];
@@ -44,7 +44,7 @@ typedef struct {
     short nudge_return_x,nudge_return_y,nudge_heat;
     unsigned short plunger_rng;
     unsigned long score,steps,hits;
-    unsigned short nudges,kickbacks,tilts,boundary_hits;
+    unsigned short nudges,kickbacks,tilts,boundary_hits,right_rail_saves;
     unsigned short flipper_contacts[2],flipper_power_contacts[2];
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
 } Game;
