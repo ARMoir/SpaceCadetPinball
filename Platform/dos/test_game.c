@@ -315,7 +315,7 @@ int main(int argc,char **argv)
             game_reset(&g,&t);
             assert(t.outer_right_rail>=0);
             rail=&t.edges[t.outer_right_rail];
-            assert(maximum(rail->x,rail->ex)>=190);
+            assert((rail->x>rail->ex?rail->x:rail->ex)>=190);
             g.waiting=0; g.in_shooter=0;
             g.x=185*FP; g.y=102*FP; g.vx=158; g.vy=33;
             game_step(&g,&t,0);
