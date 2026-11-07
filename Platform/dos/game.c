@@ -205,6 +205,7 @@ static int catch_kickback(Game *g,const Table *t)
         int cx=i? t->flipper[6]+54 : t->flipper[0]-55;
         if(g->kick_armed[i] && abs(px-cx)<=11) {
             g->kick_armed[i]=0;
+            g->kickbacks++;
             g->kick_side=(unsigned char)(i+1);
             g->kick_delay=9; /* 0.12s / 72.8Hz, short 8086-friendly wind-up */
             g->x=(short)(cx*FP); g->y=(short)(cy*FP);
@@ -237,10 +238,12 @@ static void apply_nudge(Game *g,int direction)
     g->nudge_return_ticks=29; /* About 0.4 seconds */
     g->nudge_delay=9; /* suppress key bounce; unlike old 1s lockout */
     g->shake_frames=20;
+    g->nudges++;
     g->nudge_heat=(short)minimum(100,g->nudge_heat+29);
     g->tilt_warning=(unsigned char)(g->nudge_heat>=45);
     if(g->nudge_heat>=78) {
         g->tilted=1;
+        g->tilts++;
         g->event=5;
     }
 }
