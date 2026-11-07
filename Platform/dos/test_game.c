@@ -102,6 +102,25 @@ int main(int argc,char **argv)
         game_step(&g,&t,KEY_LEFT);
         right_incoming_vx=g.vx;
         assert(abs(right_incoming_vx-left_incoming_vx)>12);
+        /* The mirrored right flipper must also add stronger power farther
+         * from its pivot rather than only fixing the left-hand paddle. */
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=146*FP; g.y=159*FP; g.vy=35;
+        game_step(&g,&t,KEY_RIGHT);
+        heel_vy=g.vy;
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=130*FP; g.y=167*FP; g.vy=35;
+        game_step(&g,&t,KEY_RIGHT);
+        tip_vy=g.vy;
+        printf("RIGHT LEVER heel=%d tip=%d\n",heel_vy,tip_vy);
+        fflush(stdout);
+        assert(heel_vy<0 && tip_vy<heel_vy-10);
+        /* More powerful shots must still bounce from ordinary rails:
+         * our four-pixel broad-phase margin covers <=2.75 px/step. */
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=97*FP; g.y=60*FP; g.vx=160;
+        game_step(&g,&t,0);
+        assert(g.vx<0 && g.x<100*FP);
         /* Launcher has its own 132 Q6 limit, while a moving flipper may
          * now drive the ball more strongly without being clipped to it. */
         fixture(); g.waiting=0; g.in_shooter=0;
