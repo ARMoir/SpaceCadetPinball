@@ -130,14 +130,32 @@ silently treat legacy exceptions as precedent for new ones.
   ramp/layer occlusion and source collision group masks.
 - **DOS deviation:** 521 projected 2D edges, omitted dynamic components,
   selective upper-left downhill bypass based on pixel coordinates, and
-  flattened upper bumper layers.
-- **Why / evidence:** real-mode performance/format limitations have been
-  assumed; no like-for-like V20 benchmark has yet shown source-defined one-way
-  segments or layer state is too costly.
-- **Tests today:** synthetic one-way throat and several imported trajectories.
-- **Remedy:** emit one-way direction and layer/group metadata from
-  `convert.py` into the pack; keep inexpensive per-edge integer filters.
-  Test passage in permitted direction, blocking in reverse, and ramp return.
+  flattened upper bumper layers. **2026-11-07 playability repair:** after
+  adjacent static-wall collisions, radial bumpers separate the ball again
+  so missing level masks cannot push it into the upper-left bumper cap.
+  Rare excursions past the *screen* top/side boundaries now reflect with
+  reduced energy instead of instantly draining; this outer containment is a
+  **temporary DOS safety rail**, not a substitute for source world-space
+  walls, ramps or source gate/layer states.
+- **Why / evidence:** the owner also observed a ball disappear into an
+  upper-left highlighted area after a bounce. Whether this was an off-screen
+  exit, collision mask/occlusion, or a gameplay drain is **unverified**.
+  The old code categorically treated off-screen top/side exits as drains,
+  which is unlike the actual below-flipper drain. The temporary containment
+  prioritizes preserving a playable ball while source collision-layer import
+  is incomplete. Real-mode performance/format limitations remain unmeasured.
+- **Tests:** synthetic one-way throat, all seven bumper contacts, a radial
+  penetration recovery at the upper-left cap, and top/side containment
+  versus true lower drain. `CADET /record` now captures the last 256
+  rendered frames to `FLIGHT.TXT` (ball Q6 position/velocity, tube flag,
+  charge, event, ball count and safety-rail contact counter), **buffered
+  in memory until Esc** so gameplay has no disk writes.
+- **Remedy:** import one-way direction and layer/group metadata from
+  `convert.py` into the pack; use inexpensive per-edge integer filters.
+  Test both passage directions, ramp return, and the marked upper-left
+  bounce area on real hardware. Once accurate source barriers prevent all
+  non-drain exits, evaluate whether the temporary screen safety rails can
+  be removed.
 
 ### F-003 Plunger charge and launch variation
 
