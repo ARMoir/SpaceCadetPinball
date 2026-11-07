@@ -22,7 +22,12 @@ of features that work, are simplified, or are **not implemented**, see
    enjoyable and reliable on real hardware; log original behavior, the
    specific playability regression or CPU/memory limit, evidence (hardware
    observation, if available), affected tests, and a restoration approach.
-   Never present an unmeasured gameplay workaround as an optimization.
+   **When original mechanics are not yet reproduced accurately and a
+   simplification must be chosen, err toward an easier, enjoyable player
+   experience rather than unforgiving misses caused by incomplete math.**
+   Preserve genuine skill and the ability to lose a ball; do not silently
+   invent unlimited saves. Never present an unmeasured gameplay workaround
+   as an optimization.
 
 ## Non-negotiable rules
 
@@ -289,6 +294,30 @@ silently treat legacy exceptions as precedent for new ones.
   edge has an ambiguous contact side. Playfield velocity is capped at
   176 Q6 vertically (160 horizontally) while the source-sensitive shooter
   path retains its existing 132/128 Q6 caps.
+- **F-006 active center-tip forgiveness (2026-11-07):** the owner
+  reports that balls fall through the middle so often they cannot
+  reasonably reach them, and explicitly requests favoring *easier* play
+  whenever simplified source logic is ambiguous. The imported source
+  geometry has raised tips around (107,149) and (125,149), leaving an
+  18-pixel visual gap; the 2D fixed-point collision and sampled flipper
+  sweep cannot reproduce the complete original angular reach or
+  continuous ball dynamics. This gap exists in the original pinball
+  table too, but actual loss rates cannot be ranked without repeated
+  matched gameplay on original and DOS versions. DOS now precomputes
+  a **five-pixel inward contact extension** on each raised flipper tip,
+  using the same existing capsule collision and ordinary held-flipper
+  power, only when the corresponding flipper is held and the ball is
+  descending onto its upper face. It is **not** drawn, does **not**
+  modify imported coordinates, the lower drain, scoring, or table files,
+  and is inactive when a flipper is released, the table tilts, or the
+  ball is still in the shooter. The exact center remains drainable even
+  with both flippers held. Only a small inboard positional/velocity
+  window performs the extra collision check. This is a deliberate
+  **easier-than-original-geometry playability concession**, not a claim
+  of faithful flipper physics. The assist length is
+  `FLIPPER_TIP_ASSIST_PX` in `game.h`, so real-hardware comparison can
+  tune or remove it without altering source data. Its speed and feel
+  are still **UNVERIFIED** on physical Tandy/VGA DOS machines.
 - **Why / evidence:** the owner reported on **real Tandy hardware** that
   flippers felt underpowered and repeated trajectories were too predictable.
   The old forced `vy=-88..-128` and universal `-132` limit made mechanically
@@ -299,7 +328,10 @@ silently treat legacy exceptions as precedent for new ones.
   until the owner tests a new build.
 - **Tests:** synthetic heel/tip leverage, different incoming momentum,
   midpoint sweep contact, moving/stationary flippers and shooter relaunch;
-  imported-table launch and long-running soak remain mandatory.
+  F-006 added symmetrical active near-center tip catches, idle drain,
+  mid-gap drain despite dual buttons, tilt lockout, and underside
+  negative checks. Imported-table launch, real flipper traces and
+  long-running soak remain mandatory.
 - **Remedy:** calibrate angular boost using original source parameters
   (attributes 803-805), preserve ramp/layer states, and add swept segment
   collision only where measured hardware tests show missed contacts.
