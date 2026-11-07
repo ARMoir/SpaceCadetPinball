@@ -43,11 +43,16 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_analyze_logs.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_enhance_table.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/build.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/verify_build.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item Platform/dos/data/TABLE.DAT,Platform/dos/data/TABLE.TGA,Platform/dos/data/IMPORT.json,Platform/dos/data/PREVIEW.png build/dos/
+          python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-Item build/dos/TABLE3D.TGA).Length -ne 32768) { throw 'Wrong enhanced artwork size' }
       - name: Run DOS core and Tandy video tests
         shell: pwsh
         run: python Platform/dos/run_tests.py --emulator .dos-tools/dosbox/mingw-build/mingw-sdl2/dosbox-x.exe --original
@@ -62,6 +67,7 @@ jobs:
             build/dos/*.MAP
             build/dos/TABLE.DAT
             build/dos/TABLE.TGA
+            build/dos/TABLE3D.TGA
             build/dos/IMPORT.json
             build/dos/README.TXT
             build/dos/*.LOG
