@@ -519,6 +519,28 @@ int main(int argc,char **argv)
             assert(g.flipper_power_contacts[1]==0);
         }
         puts("STAGE: real right-flipper playback contact"); fflush(stdout);
+        /* F-006 source geometry: raised tips (107,149) and (125,149)
+         * leave a center gap far larger than a 3px ball capsule.
+         * The new held-only 5px toe assists must save both approaches
+         * without changing the artwork or rescuing a released paddle. */
+        for(v=0;v<2;v++) {
+            int xx=v?120:112;
+            unsigned key=v?KEY_RIGHT:KEY_LEFT;
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=xx*FP; g.y=147*FP; g.vx=0; g.vy=50;
+            g.previous=(short)key; /* held, no new sweep transition */
+            game_step(&g,&t,key);
+            printf("REAL CENTER TIP %c: vy=%d power=%u\n",
+                   v?'R':'L',g.vy,g.flipper_power_contacts[v]);
+            fflush(stdout);
+            assert(g.vy<0 && g.flipper_power_contacts[v]>0 &&
+                   g.balls==3);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=xx*FP; g.y=147*FP; g.vx=0; g.vy=50;
+            game_step(&g,&t,0);
+            assert(g.vy>0 && !g.flipper_contacts[v]);
+        }
+        puts("STAGE: source geometry forgiving center tips"); fflush(stdout);
         /* Strike from the imported anchors, including offset entries.
          * For the first return arc, both sides must remain on the table. */
         for(v=0;v<2;v++) {
