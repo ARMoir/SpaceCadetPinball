@@ -18,8 +18,8 @@ static Game game;
 typedef struct {
     unsigned short frame;
     short x,y,vx,vy;
-    unsigned short border;
-    unsigned char balls,waiting,in_shooter,event,charge;
+    unsigned short border,flips[2],powered[2];
+    unsigned char input,balls,waiting,in_shooter,event,charge;
 } FlightTrace;
 static FlightTrace flight[256];
 static unsigned flight_next,flight_used;
@@ -441,6 +441,11 @@ int main(int argc,char **argv)
             sample->frame=frame;
             sample->x=game.x; sample->y=game.y;
             sample->vx=game.vx; sample->vy=game.vy;
+            sample->input=(unsigned char)input;
+            sample->flips[0]=game.flipper_contacts[0];
+            sample->flips[1]=game.flipper_contacts[1];
+            sample->powered[0]=game.flipper_power_contacts[0];
+            sample->powered[1]=game.flipper_power_contacts[1];
             sample->balls=(unsigned char)game.balls;
             sample->waiting=(unsigned char)game.waiting;
             sample->in_shooter=game.in_shooter;
@@ -538,10 +543,12 @@ int main(int argc,char **argv)
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u\n",
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u left_hits=%u right_hits=%u left_power=%u right_power=%u\n",
                 frame,game.steps,game.score,game.hits,game.balls,slow_frames,
                 observed,launches,game.nudges,game.kickbacks,game.tilts,
-                full_launches,game.boundary_hits);
+                full_launches,game.boundary_hits,
+                game.flipper_contacts[0],game.flipper_contacts[1],
+                game.flipper_power_contacts[0],game.flipper_power_contacts[1]);
         fclose(report);
     }
     if(record) {
@@ -549,15 +556,17 @@ int main(int argc,char **argv)
         if(report) {
             unsigned j;
             fprintf(report,"last %u rendered frames (~14 seconds maximum); positions and velocities Q6\n",flight_used);
-            fprintf(report,"FRAME XQ6 YQ6 VXQ6 VYQ6 BALLS READY TUBE EVENT CHARGE BORDER\n");
+            fprintf(report,"FRAME XQ6 YQ6 VXQ6 VYQ6 BALLS READY TUBE EVENT CHARGE BORDER INPUT LEFT_HIT RIGHT_HIT LEFT_POWER RIGHT_POWER\n");
             for(j=0;j<flight_used;j++) {
                 unsigned ix=(flight_next+256-flight_used+j)&255;
                 const FlightTrace *sample=&flight[ix];
-                fprintf(report,"%u %d %d %d %d %u %u %u %u %u %u\n",
+                fprintf(report,"%u %d %d %d %d %u %u %u %u %u %u %u %u %u %u %u\n",
                         sample->frame,sample->x,sample->y,
                         sample->vx,sample->vy,
                         sample->balls,sample->waiting,sample->in_shooter,
-                        sample->event,sample->charge,sample->border);
+                        sample->event,sample->charge,sample->border,
+                        sample->input,sample->flips[0],sample->flips[1],
+                        sample->powered[0],sample->powered[1]);
             }
             fclose(report);
         }
