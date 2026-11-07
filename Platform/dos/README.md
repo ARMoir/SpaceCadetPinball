@@ -118,9 +118,15 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   integer charge selecting the frame. Animation uses small dirty rectangles.
 * Original rest/raised flipper endpoints are retained. Collision checks also
   cover a midpoint during a three-substep fixed-point sweep, approximating
-  the original moving flipper without trigonometry. The artwork still has
-  only two states. Timing curves and accurate trapping are not yet reproduced.
-  Static lights do not animate.
+  the original moving flipper without trigonometry. **Powered contact now
+  adds a normal-direction impulse scaled by pivot distance to the reflected
+  incoming velocity**, rather than replacing it with a largely fixed shot.
+  Playfield shots can reach 176 Q6 vertically; the shooter retains its
+  tuned 132 Q6 cap. This prioritizes the hardware-reported need for more
+  lively, controllable flippers. It is source-inspired, not exact angular
+  physics; see [F-006](FIDELITY.md#f-006-flipper-and-collision-response).
+  The artwork still has only two states. Timing curves and accurate trapping
+  are not yet reproduced. Static lights do not animate.
 * Single ball/player, basic bumper scoring, drain/relaunch and restart only.
   Missions, jackpots, rank, bonus, skill-shot and multiball remain future work.
   A V20-friendly approximation of original nudge.cpp now applies additive
@@ -144,14 +150,16 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 `TEST.EXE` runs the same core using actual 16-bit arithmetic: progressive
 plunger pullback, weak and full launch, bounded variation, wall reflection,
 bumper scoring, shooter-lane return versus regular drain, left/right flippers,
-three-direction nudges and return impulses, tilt, both timed outlane kickbacks
-and single-use gating, drain/restart and a 20,000-step soak. It writes `TEST.OK` on success.
+contact-dependent flipper leverage and incoming-momentum response, more energetic
+playfield speed, three-direction nudges and return impulses, tilt, both timed
+outlane kickbacks and single-use gating, drain/restart and a 20,000-step soak. It writes `TEST.OK` on success.
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (raw video memory)
 and `SMOKE.TXT`, and restores DOS. It exercises the backend but does not prove
 physical key responsiveness or real V20 timing.
 `TEST /original` additionally checks all seven bumpers, both kickbacks at
 three entry offsets, original plunger frame positions, 12 partial-charge
-shooter-return trajectories and full-power scoring shots. Tilted flippers
+shooter-return trajectories, successful recharging/relaunching of a returned
+ball, and full-power scoring shots. Tilted flippers
 retain passive resting collisions. The deterministic smoke test must complete
 360 frames / 1440 steps and a fully charged launch; with `--original`, the
 runner also requires a bumper hit and at least 500 points. Python tests reject
