@@ -184,13 +184,13 @@ void game_step(Game *g,const Table *t,unsigned keys)
             /* TPlunger::PullbackTimer grows Boost during a 25ms repeat
              * and its collision adds up to 10% random strength. Preserve
              * the source's charged-release model, but limit the random
-             * component to about 2%: the projected DOS shooter geometry
+             * component to about 1%: the projected DOS shooter geometry
              * is much more sensitive to velocity than the original ramps.
-             * The 126..128 Q6 full-charge range reaches the playfield in
+             * The 128..129 Q6 full-charge range reaches the playfield in
              * our original-table emulator tests. No floating point. */
             g->plunger_rng=(unsigned short)(g->plunger_rng*25173U+13849U);
             base=44+(g->charge*84)/PLUNGER_MAX_CHARGE;
-            variation=(base*(int)(g->plunger_rng&3U))/155;
+            variation=(base*(int)(g->plunger_rng&3U))/256;
             g->waiting=0;
             g->vx=0;
             g->vy=(short)-(base+variation);
