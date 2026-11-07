@@ -105,16 +105,15 @@ static int ball_overlaps(const Sprite *s,int x,int y,int w,int h)
            y<s->y+s->h && y+h>s->y;
 }
 
-/* The original TPlunger animates its sprite as charge grows. The current
- * SCP1 pack has no imported plunger frames, so draw a minimal four-pixel
- * chrome plunger head and shaft under the real imported launcher position.
- * The rod moves downward over 12 screen pixels and uses no bitmap/frame
- * allocations. It is not a replacement for importing the original art. */
+/* The feed point from PINBALL.DAT is where the ball starts inside the
+ * tube, NOT where the plunger handle is rendered. The handle belongs at
+ * the bottom-right end of the tube near the drain line, as on the source
+ * playfield. Keep it a tiny dirty-rect sprite until original plunger frames
+ * are available in SCP1. */
 static void plunger_rect(int charge,int *x,int *y)
 {
-    *x=table.launch_x-2;
-    *y=table.launch_y+(table.sprites[4].h+1)/2+5+
-       charge*12/PLUNGER_MAX_CHARGE;
+    *x=table.launch_x+18;
+    *y=table.drain_y-13+charge*12/PLUNGER_MAX_CHARGE;
 }
 
 static void draw_plunger(int x,int y)
