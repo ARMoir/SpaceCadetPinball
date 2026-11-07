@@ -44,6 +44,22 @@ int main(int argc,char **argv)
     game_step(&g,&t,KEY_NUDGE); assert(g.vy<0 && g.vx>0 && g.nudge_delay==72);
     game_step(&g,&t,0); game_step(&g,&t,KEY_NUDGE);
     assert(g.nudge_delay==70);
+    /* A failed launch may roll back past the shared drain height.
+     * It must return to the plunger without consuming a ball. */
+    fixture(); g.waiting=0; g.x=(t.launch_x+2)*FP;
+    g.y=(t.drain_y+1)*FP; g.vy=32;
+    game_step(&g,&t,0);
+    assert(g.balls==3 && g.waiting && !g.over && g.event==0);
+    assert(g.x==t.launch_x*FP && g.y==t.launch_y*FP);
+    assert(g.vx==0 && g.vy==0 && g.charge==0);
+    game_step(&g,&t,KEY_LAUNCH);
+    game_step(&g,&t,0);
+    assert(!g.waiting && g.vy<0 && g.event==2);
+    /* The adjacent main playfield still drains normally. */
+    fixture(); g.waiting=0; g.x=(t.launch_x-12)*FP;
+    g.y=(t.drain_y+1)*FP; g.vy=32;
+    game_step(&g,&t,0);
+    assert(g.balls==2 && g.waiting && g.event==3);
     fixture();
     for(i=0;i<3;i++) {
         g.waiting=0; g.y=192*FP; g.x=110*FP;
@@ -72,7 +88,7 @@ int main(int argc,char **argv)
         assert(abs(g.vx)<1024 && abs(g.vy)<1024);
     }
     f=fopen("TEST.OK","w"); assert(f);
-    fputs("PASS: launch, reflection, bumper score, both flippers, drain, restart, 20000-step soak\n",f);
+    fputs("PASS: launch, reflection, bumper score, both flippers, shooter return, drain, restart, 20000-step soak\n",f);
     fclose(f); puts("All DOS core tests passed.");
     return 0;
 }
