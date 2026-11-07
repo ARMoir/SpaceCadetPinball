@@ -23,7 +23,11 @@ artwork, and behavior wherever practical. Start from the source and optimize
 implementation (fixed-point math, precomputed geometry, bounded collision
 checks, and efficient Tandy rendering) before changing mechanics. If restoring
 source behavior conflicts with actual hardware playability, use the smallest
-playable adaptation and document the difference and its evidence.
+playable adaptation and document the difference and its evidence. Where the
+original behavior cannot be reproduced accurately with simplified DOS
+mechanics, choose the **more forgiving, fun** interpretation rather than
+making the player lose balls because of the approximation. Keep the
+possibility of genuine missed shots and normal drains.
 
 Before each DOS code or data change, consult the standing
 [**fidelity audit, source references and exception register**](FIDELITY.md)
@@ -253,8 +257,20 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   tuned 132 Q6 cap. This prioritizes the hardware-reported need for more
   lively, controllable flippers. It is source-inspired, not exact angular
   physics; see [F-006](FIDELITY.md#f-006-flipper-and-collision-response).
-  The artwork still has only two states. Timing curves and accurate trapping
-  are not yet reproduced. Static lights do not animate.
+  **Center-gap forgiveness (F-006):** the imported raised flipper tips
+  remain about 18 pixels apart. Because the 2D sampled flipper sweep can
+  miss shots that the original continuously rotating geometry might reach,
+  DOS adds five pixels of *collision-only* inward toe reach when each
+  flipper is deliberately held. A descending ball can bounce off this
+  small extension just above the active raised tip, but released/tilted
+  flippers retain normal geometry. The very center can **still drain**
+  even with both buttons held. The tip extensions are never rendered,
+  do not affect the art or `TABLE.DAT`, and use the existing impulse
+  calculation rather than random saves. They are deliberately easier,
+  not exact original flipper physics; hardware feel/CPU cost still need
+  testing. The adjustable constant is `FLIPPER_TIP_ASSIST_PX`.
+  The artwork still has only two states. Timing curves and accurate
+  trapping are not yet reproduced. Static lights do not animate.
 * Single ball/player, basic bumper scoring, drain/relaunch and restart only.
   Missions, jackpots, rank, bonus, skill-shot and multiball remain future work.
   A V20-friendly approximation of original nudge.cpp now applies additive
@@ -278,7 +294,8 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 `TEST.EXE` runs the same core using actual 16-bit arithmetic: progressive
 plunger pullback, weak and full launch, bounded variation, wall reflection,
 bumper scoring, shooter-lane return versus regular drain, left/right flippers,
-contact-dependent flipper leverage and incoming-momentum response, more energetic
+contact-dependent flipper leverage and incoming-momentum response,
+active flipper tip forgiveness with no idle/tilt saves, more energetic
 playfield speed, three-direction nudges and return impulses, tilt, both timed
 outlane kickbacks and single-use gating, drain/restart and a 20,000-step soak. It writes `TEST.OK` on success.
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (32768 bytes
