@@ -10,6 +10,19 @@
 
 static Table table;
 static Game game;
+
+/* F-002 /record flight recorder: only 14 seconds of state in a 256-frame
+ * circular memory buffer. No disk writes in the active play loop, so even a
+ * 7 MHz V20 pays only a few cheap stores per rendered frame when requested.
+ * Use FLIGHT.TXT after Esc to diagnose a ball that vanishes near a ramp. */
+typedef struct {
+    unsigned short frame;
+    short x,y,vx,vy;
+    unsigned short border;
+    unsigned char balls,waiting,in_shooter,event,charge;
+} FlightTrace;
+static FlightTrace flight[256];
+static unsigned flight_next,flight_used;
 static unsigned char __far *background;
 static unsigned char __far *video;
 static volatile unsigned char keys[128];
@@ -423,6 +436,20 @@ int main(int argc,char **argv)
         /* Match the unpowered resting collision surface during tilt. */
         if(game.tilted) input&=~(KEY_LEFT|KEY_RIGHT);
         play_event(event);
+        if(record) {
+            FlightTrace *sample=&flight[flight_next];
+            sample->frame=frame;
+            sample->x=game.x; sample->y=game.y;
+            sample->vx=game.vx; sample->vy=game.vy;
+            sample->balls=(unsigned char)game.balls;
+            sample->waiting=(unsigned char)game.waiting;
+            sample->in_shooter=game.in_shooter;
+            sample->charge=(unsigned char)game.charge;
+            sample->event=(unsigned char)event;
+            sample->border=game.boundary_hits;
+            flight_next=(flight_next+1)&255;
+            if(flight_used<256) flight_used++;
+        }
         /* Visible shake comes from the CRTC, never a memory-wide screen
          * redraw. The offset alternates briefly and resets on pause/menu. */
         camera_shift(!view && !paused && !exit_requested &&
@@ -511,10 +538,29 @@ int main(int argc,char **argv)
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u\n",
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u\n",
                 frame,game.steps,game.score,game.hits,game.balls,slow_frames,
-                observed,launches,game.nudges,game.kickbacks,game.tilts,full_launches);
+                observed,launches,game.nudges,game.kickbacks,game.tilts,
+                full_launches,game.boundary_hits);
         fclose(report);
+    }
+    if(record) {
+        report=fopen("FLIGHT.TXT","w");
+        if(report) {
+            unsigned j;
+            fprintf(report,"last %u rendered frames (~14 seconds maximum); positions and velocities Q6\n",flight_used);
+            fprintf(report,"FRAME XQ6 YQ6 VXQ6 VYQ6 BALLS READY TUBE EVENT CHARGE BORDER\n");
+            for(j=0;j<flight_used;j++) {
+                unsigned ix=(flight_next+256-flight_used+j)&255;
+                const FlightTrace *sample=&flight[ix];
+                fprintf(report,"%u %d %d %d %d %u %u %u %u %u %u\n",
+                        sample->frame,sample->x,sample->y,
+                        sample->vx,sample->vy,
+                        sample->balls,sample->waiting,sample->in_shooter,
+                        sample->event,sample->charge,sample->border);
+            }
+            fclose(report);
+        }
     }
     puts("Space Cadet DOS prototype. Original assets; simplified physics/rules.");
     return 0;
