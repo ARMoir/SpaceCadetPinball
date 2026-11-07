@@ -88,7 +88,7 @@ should be checked in context, not copied without their event/state transitions.
 | **P0** | Kickback rules | Original kickback component uses ~0.7 s timer plus ~0.1 s follow-up, with left/right Hazard Target triplets and gate state transitions. DOS currently arms each side automatically for one use per ball, catches near an imported strike center, holds ~0.12 s, then fires a fixed upward/inward impulse. Imported strike positions are an improvement but the rules are **not** preserved. | **Unapproved behavioral approximation**, not a measured performance necessity | [F-001](#f-001-kickback-activation-and-timing) |
 | **P0** | Collision layers / one-way gates | Original has world-space collision groups, ramps and one-way/gate components. DOS projects collisions into one 2D plane and hard-codes an upper-left downhill-only screen-coordinate exception. The import inventory records omitted one-way gates, targets, sinks and ramps. | **Incomplete** with a temporary geometry workaround | [F-002](#f-002-collision-layer-and-one-way-projection) |
 | **P1** | Plunger timing and variance | Original `TPlunger` has eight visual states, 25 ms increments, boost accumulation (approximately 2.5 s to full charge for the Windows configuration), and up to 10% randomized boost. DOS correctly imports eight original frames but charges in ~1.3 s with ~1% jitter to compensate for simplified shooter physics. | **Partially faithful; unapproved behavioral approximation** | [F-003](#f-003-plunger-charge-and-launch-variation) |
-| **P1** | Bumper collisions / scoring | Original material/collision response and scoring can change with state. DOS fits eight-sided hit edges to all seven visible caps, flattens three elevated bumpers, and uses static 500/1500 values with shared hit delay. | **Incomplete** and visually guided approximation | [F-004](#f-004-bumper-projection-and-scoring) |
+| **P1** | Bumper collisions / scoring | Original bumper response is radial and scoring can change with state. DOS precomputes one radial hit surface per imported eight-edge cap to prevent inward polygon trapping, but still flattens three elevated bumpers and uses static 500/1500 scores with shared hit delay. | **Improved contact fidelity; scoring/layers incomplete** | [F-004](#f-004-bumper-projection-and-scoring) |
 | **P1** | Nudge and tilt | Original `nudge.cpp` applies additive velocity and an inverse after 0.4 s; `pb.cpp` accumulates nudge pressure over time. DOS preserves that shape but uses its own impulses, nudge-heat thresholds and decay schedule. | **Partially faithful; tuning differs** | [F-005](#f-005-nudge-and-tilt-parameters) |
 | **P1** | Flipper physics | Original angular flippers collide throughout rotation. DOS preserves endpoints but uses rest/midpoint/raised fixed-point edges and only two art states. | **Performance-oriented approximation; fidelity still unverified** | [F-006](#f-006-flipper-and-collision-response) |
 | **P2** | Material physics / gravity | Original ball direction, spin, elasticity, smoothness, group masks and geometry are richer. DOS uses Q6, fixed restitution, 2D gravity, speed clamps and finite substeps. | **Known incomplete port** | [F-006](#f-006-flipper-and-collision-response) |
@@ -161,14 +161,28 @@ silently treat legacy exceptions as precedent for new ones.
 - **Status / priority:** OPEN, P1.
 - **Original:** `TBumper.cpp` visual/threshold state and source
   `control.cpp` per-component score progression.
-- **DOS deviation:** fitted octagonal collision outlines with fixed initial
-  500/1500 point awards; higher-layer caps are flattened into one collision
-  plane; common hit-delay replaces independent component states.
-- **Why / evidence:** playable coverage within 16-bit constraints; scoring
-  simplification has not been shown necessary for performance.
-- **Tests today:** all seven caps can score one initial hit.
-- **Remedy:** preserve per-bumper original score state/cooldown, material
-  behavior and collision-layer metadata; test successive hits and rule changes.
+- **DOS deviation:** 2026-11-07 update: the original eight-edge outlines
+  are still the imported representation and visible artwork is unchanged,
+  but each closed bumper group is indexed once as a **radial collision
+  primitive**. The old generic two-sided capsules could push a penetrating
+  ball inward, especially at the upper-left bumper near a rail.
+  The new radius is derived from the imported cap's maximum extent plus the
+  ball contact radius (not yet the source world-space material radius).
+  All seven are still flattened to one collision plane with fixed initial
+  500/1500 scores and a shared cooldown.
+- **Why / evidence:** the owner reported the ball trapped almost immediately
+  at the upper-left bumper on the real Tandy after the stronger flipper
+  update. Circular normal/correction is closer to the original `TBumper`
+  interaction and is inexpensive (precompute at load, square bounds then
+  integer sqrt only for contact candidates). **Hardware fix unverified.**
+  Scoring simplification has not been justified by measurements.
+- **Tests:** seven independent scoring contacts; targeted penetration and
+  inbound hits at the upper-left imported cap, with radial separation and
+  outbound reflection. Full gameplay/smoke and speed checks remain mandatory.
+- **Remedy:** import actual source bumper radius and material parameters when
+  collision layers are implemented; keep the radial normal but restore
+  per-bumper source scoring state/cooldown. Confirm no remaining trapping on
+  real V20 hardware.
 
 ### F-005 Nudge and tilt parameters
 
