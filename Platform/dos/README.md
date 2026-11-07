@@ -2,8 +2,14 @@
 
 This is a separate C89, 16-bit real-mode target for an NEC V20 / 8088-class
 Tandy 1000. It does not use SDL, Windows, a DOS extender, an FPU, XMS or EMS.
-The desktop version is unchanged. This is an initial playable prototype,
-not a feature-complete port or a verified 7.16 MHz hardware release.
+The desktop version is unchanged. This is a playable experimental prototype,
+**not** a feature-complete port or a final hardware-certified release.
+
+**Final project handoff:** [FEATURE_STATUS.md](FEATURE_STATUS.md) lists
+exactly what works, what is simplified, what is **not implemented**, and
+what still needs physical V20 testing. [VALIDATION.md](VALIDATION.md) records
+automated checks and hardware observations. Feature work is paused unless
+a real playability problem justifies another change.
 
 ## Project priorities: playability first, authenticity a very close second
 
@@ -139,7 +145,9 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 * Physics runs in projected screen coordinates (Q6), not the original 3D world.
   Gravity, speed limits, restitution and flipper impulses are tuned constants.
   Spin, material-specific behavior, stochastic drag and continuous swept
-  collision detection are absent. A substep caps movement to two pixels/axis.
+  collision detection are absent. The shooter speed limits reach about
+  2.06 pixels/substep vertically; powered playfield motion can reach about
+  2.75 pixels/substep, before collision corrections.
 * All seven source bumper caps have original artwork and imported eight-edge
   footprints. In F-004, the runtime now precomputes one **radial hit surface**
   per cap, with a consistent outward normal. This follows the original
@@ -170,7 +178,7 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 * The plunger uses eight original frames at their imported positions, with
   integer charge selecting the frame. Animation uses small dirty rectangles.
 * Original rest/raised flipper endpoints are retained. Collision checks also
-  cover a midpoint during a three-substep fixed-point sweep, approximating
+  cover a midpoint during a seven-substep fixed-point sweep, approximating
   the original moving flipper without trigonometry. **Powered contact now
   adds a normal-direction impulse scaled by pivot distance to the reflected
   incoming velocity**, rather than replacing it with a largely fixed shot.
@@ -240,7 +248,9 @@ stationary flippers are not repainted unnecessarily. No per-frame allocation,
 floating point, full-screen blit, or full-table collision scan is used.
 Build maps and executable headers are checked by `verify_build.py`.
 
-See `VALIDATION.md` for measured results and remaining hardware checks.
+See [`VALIDATION.md`](VALIDATION.md) for measured emulator results and
+remaining hardware checks, and [`FEATURE_STATUS.md`](FEATURE_STATUS.md)
+for the complete inventory of missing original Space Cadet features.
 
 ## Format and source references
 
