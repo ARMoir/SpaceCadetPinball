@@ -234,6 +234,26 @@ int main(int argc,char **argv)
     game_step(&g,&t,0);
     assert(g.vy>=0);
     puts("STAGE: one-way chute"); fflush(stdout);
+    /* F-002: a missing high ramp/rail group must not silently drain a
+     * valid ball through the top or sides of the SCREEN. Only the true
+     * lower playfield drain can consume a ball. A passive reflection
+     * should keep these corner escape paths on the visible table. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=72*FP; g.y=-FP; g.vy=-100;
+    game_step(&g,&t,0);
+    assert(g.y==2*FP && g.vy>0 && g.balls==3 &&
+           !g.waiting && g.boundary_hits==1);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=-FP; g.y=40*FP; g.vx=-100;
+    game_step(&g,&t,0);
+    assert(g.x==2*FP && g.vx>0 && g.balls==3 &&
+           !g.waiting && g.boundary_hits==1);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=239*FP; g.y=50*FP; g.vx=100;
+    game_step(&g,&t,0);
+    assert(g.x==237*FP && g.vx<0 && g.balls==3 &&
+           !g.waiting && g.boundary_hits==1);
+    puts("STAGE: top/side safety rails preserve balls"); fflush(stdout);
     /* A failed launch may roll back past the shared drain height.
      * It must return to the plunger without consuming a ball. */
     fixture(); g.waiting=0; g.x=(t.launch_x+2)*FP;
