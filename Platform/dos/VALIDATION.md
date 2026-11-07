@@ -7,10 +7,12 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 
 * Open Watcom 2, pinned `2026-11-01-Build`, Windows x64 host.
   Both binaries build warning-free with `-bt=dos -0 -ms -os -s -w4 -we`.
-* CADET.EXE (2026-11-07 F-006 flipper update): 27,478 bytes,
-  plain DOS MZ with no appended extender; DGROUP 51,392 bytes.
-  MZ minimum load allocation + PSP + 32KB background: 108,214 bytes.
-  This is a checked lower bound, not a peak heap measurement.
+* The F-006 flipper baseline on 2026-11-07 was a 27,478-byte
+  plain DOS MZ, DGROUP 51,392 bytes, with a 108,214-byte minimum
+  image/PSP/background allocation (not peak heap). **These numbers are
+  a historical baseline**, not the current size after adding in-memory
+  flight tracing; read the latest Actions `verify_build.py` output for
+  current EXE/DGROUP/memory checks. The 16-bit loader remains real mode.
 * Five host converter tests: all screen pixels round-trip through the four
   Tandy banks; padding, nibble order, bitmap orientation, malformed/truncated
   inputs, attributes, segment generation, and generated diagnostic pack.
@@ -24,7 +26,9 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
   tip-vs-pivot contacts on **both** flippers, retained incoming horizontal
   momentum, a faster wall reflection, and the moving midpoint contact.
   Tilted paddles retain passive collisions; a synthetic wall test verifies
-  kickback returns cannot bypass walls.
+  kickback returns cannot bypass walls. The later F-002/F-004
+  regression suite adds radial upper-left bumper penetration/rebound,
+  top/side screen boundary retention, and true lower-drain differentiation.
 * Five smoke-report parser tests verify that incomplete runs, missing full
   launches and zero-score original-table runs fail the runner.
 * CADET /smoke at fixed 1200 emulator cycles/ms: 360 frames, 1440 substeps,
@@ -63,8 +67,25 @@ PSG sound, exit/relaunch and DOS keyboard restoration. Measure late-frame
 count with `CADET /record`; examine ball motion and input latency, not only FPS.
 Do not label this prototype hardware-verified until these checks are complete.
 
-Flattened walls can still trap a ball, including around the upper-left chute;
-these scoring/containment tests do not certify every trajectory or mission.
+The owner observed **two upper-left playability failures** on a real Tandy:
+a ball trapped next to the upper-left bumper, and a separate apparent
+disappearance after entering the highlighted upper-left region.
+The latest F-004 correction reassembles the eight-sided imported bumper
+outlines into radial contacts and resolves them after nearby static rails.
+The F-002 containment also prevents top/side exits being counted as drains;
+only the bottom drain consumes a ball. Both are source-inspired or temporary
+playability adaptations with documented fidelity gaps, **not yet verified
+on the physical computer**.
+
+For any repeat occurrence, run `CADET /record` and press Esc as soon as the
+ball behaves unexpectedly. Send `INPUT.TXT` and `FLIGHT.TXT`. The latter
+contains the last 256 rendered frames (about 14 seconds) of Q6 ball flight,
+state and boundary counters, buffered without gameplay disk writes. This
+can distinguish an off-screen exit/ball drain from an on-screen collision
+trap without relying on a screenshot alone.
+
+Flattened collision groups, omitted ramps, and one-way gates can still trap
+a ball in the upper-left chute; these tests do not certify every trajectory.
 
 Remaining gameplay gaps and original-vs-simplified boundaries are in
 [README.md](README.md). The mandatory [fidelity audit and exception register](FIDELITY.md)
