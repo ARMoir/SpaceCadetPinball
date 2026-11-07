@@ -469,6 +469,7 @@ static void contain_slingshots(Game *g,const Table *t)
             g->vy=-24; /* tip/upper side: avoid sitting on the ridge */
         g->vx=(short)maximum(-160,minimum(160,g->vx));
         g->vy=(short)maximum(-176,minimum(176,g->vy));
+        g->sling_rescues[i]++;
         px=g->x; py=g->y;
     }
 }
