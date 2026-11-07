@@ -167,20 +167,21 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
          * The previous DOS code instead replaced both velocity components
          * with nearly the same scripted shot at each contact.
          * Keep the reflected/incoming momentum and add a contact-normal
-         * impulse. An upward-facing front hit is powered; an underside
-         * collision stays passive, like the source flipper's back face.
-         * Q6 / Q8 integers only; no sqrt or trig on normal line contact. */
+         * impulse. During a moving sweep the ball may lie exactly on an
+         * interpolated contact line: orient the active impulse toward the
+         * playfield rather than using an arbitrary zero-distance side.
+         * Stationary flipper contact remains passive.
+         * Q6 / Q8 integers only; no trig on normal line contact. */
         int lever=(int)(along*20/e->length);
-        int power;
+        int power,nfx=nx,nfy=ny;
         if(lever<0) lever=0;
         if(lever>20) lever=20;
-        if(ny<0) {
-            power=90+lever*4;
-            g->vx+=(short)((long)power*nx/256);
-            g->vy+=(short)((long)power*ny/256);
-            g->vx=(short)maximum(-160,minimum(160,g->vx));
-            g->vy=(short)maximum(-176,minimum(176,g->vy));
-        }
+        if(nfy>0) { nfx=-nfx; nfy=-nfy; }
+        power=90+lever*4;
+        g->vx+=(short)((long)power*nfx/256);
+        g->vy+=(short)((long)power*nfy/256);
+        g->vx=(short)maximum(-160,minimum(160,g->vx));
+        g->vy=(short)maximum(-176,minimum(176,g->vy));
     }
     if(e->score && !g->hit_delay && !g->tilted) {
         g->score+=e->score; g->hits++; g->hit_delay=8; g->event=1;
