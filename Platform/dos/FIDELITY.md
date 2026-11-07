@@ -99,6 +99,7 @@ Original code locations (read alongside any proposed DOS implementation):
 | Kickbacks, targets and gates | [`TKickback.cpp`](../../SpaceCadetPinball/TKickback.cpp), [`control.cpp`](../../SpaceCadetPinball/control.cpp), [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp) | [`game.c`](game.c), [`convert.py`](convert.py) |
 | Bumpers / scoring | [`TBumper.cpp`](../../SpaceCadetPinball/TBumper.cpp), [`control.cpp`](../../SpaceCadetPinball/control.cpp) | [`game.c`](game.c), [`convert.py`](convert.py) |
 | Nudge / tilt | [`nudge.cpp`](../../SpaceCadetPinball/nudge.cpp), [`pb.cpp`](../../SpaceCadetPinball/pb.cpp) | [`game.c`](game.c), [`main.c`](main.c) |
+| Stuck ball recovery | [`control.cpp`](../../SpaceCadetPinball/control.cpp), `control::UnstuckBall`; [`TBall.h`](../../SpaceCadetPinball/TBall.h) `StuckCounter` | [`game.c`](game.c), `watch_stuck` / `stuck_clear_at` |
 | Resource import / projection | [`loader.cpp`](../../SpaceCadetPinball/loader.cpp), [`proj.cpp`](../../SpaceCadetPinball/proj.cpp) | [`convert.py`](convert.py), [`data/IMPORT.json`](data/IMPORT.json) |
 
 The original game also uses resource-driven component rules. Source constants
@@ -113,6 +114,7 @@ should be checked in context, not copied without their event/state transitions.
 | **P1** | Plunger timing and variance | Original `TPlunger` has eight visual states, 25 ms increments, boost accumulation (approximately 2.5 s to full charge for the Windows configuration), and up to 10% randomized boost. DOS correctly imports eight original frames but charges in ~1.3 s with ~1% jitter to compensate for simplified shooter physics. | **Partially faithful; unapproved behavioral approximation** | [F-003](#f-003-plunger-charge-and-launch-variation) |
 | **P1** | Bumper collisions / scoring | Original bumper response is radial and scoring can change with state. DOS precomputes one radial hit surface per imported eight-edge cap to prevent inward polygon trapping, but still flattens three elevated bumpers and uses static 500/1500 scores with shared hit delay. | **Improved contact fidelity; scoring/layers incomplete** | [F-004](#f-004-bumper-projection-and-scoring) |
 | **P1** | Nudge and tilt | Original `nudge.cpp` applies additive velocity and an inverse after 0.4 s; `pb.cpp` accumulates nudge pressure over time. DOS preserves that shape but uses its own impulses, nudge-heat thresholds and decay schedule. | **Partially faithful; tuning differs** | [F-005](#f-005-nudge-and-tilt-parameters) |
+| **P0** | Trapped ball / anti-stuck | The original defines `control::UnstuckBall`: exclude flipper/plunger capture zones, throw upward, eventually relaunch. DOS uses a small position-progress watchdog and staged, verified local moves before a free relaunch. | **Source-inspired playability safety net; exact source trigger/timing not established** | [F-008](#f-008-universal-trapped-ball-recovery) |
 | **P1** | Flipper physics | Original angular flippers collide throughout rotation. DOS preserves endpoints but uses rest/midpoint/raised fixed-point edges and only two art states. | **Performance-oriented approximation; fidelity still unverified** | [F-006](#f-006-flipper-and-collision-response) |
 | **P2** | Material physics / gravity | Original ball direction, spin, elasticity, smoothness, group masks and geometry are richer. DOS uses Q6, fixed restitution, 2D gravity, speed clamps and finite substeps. | **Known incomplete port** | [F-006](#f-006-flipper-and-collision-response) |
 | **P2** | Audio, layout and effects | Original sound/visual states are richer. DOS has PSG substitutes and 16-color rendering; an optional offline-generated 3D-shaded TABLE3D.TGA retains the untouched classic art and identical collision data. The moving ball adds a tiny shadow/glint in an existing dirty rectangle. | **Presentation-only adaptation**, gameplay parity unchanged; CRT benefit unverified | [F-007](#f-007-rendering-audio-and-frame-rate) |
@@ -453,6 +455,67 @@ silently treat legacy exceptions as precedent for new ones.
   enhanced style introduces distracting artifacts or a V20 slowdown,
   prefer `/classic` and revise the offline shader, never gameplay
   collision behavior for decorative depth.
+
+### F-008 Universal trapped-ball recovery
+
+- **Status / priority:** OPEN, P0 playability safeguard; 7.16 MHz V20
+  timing/impact unverified.
+- **Original:** `SpaceCadetPinball/control.cpp` defines
+  `control::UnstuckBall(TBall&, int)`. When the ball is outside the
+  two flipper control bounds and plunger control bounds, the routine
+  initially calls `throw_ball` upward along `{0,-1,0}` with strength
+  90 while `StuckCounter <= 20`; beyond that it disables the ball
+  and invokes `PlungerRelaunchBall` at zero delay.
+  `SpaceCadetPinball/TBall.h` contains `StuckCounter`. The precise
+  source-side detection/update/call path **was not established** in the
+  inspected code; this documents the recovery philosophy, not a proven
+  identical Windows runtime timer.
+- **DOS behavior:** `game.c::watch_stuck` evaluates actual Q6 ball
+  position after collisions, once per physics substep (~72.8 Hz).
+  Staying within a **3px-wide** x and y travel envelope for **110
+  steps (~1.5 seconds)** triggers a short upward plus inward velocity
+  correction. It does not rely on velocity alone, so collision jitter
+  that reports nonzero speed but no displacement is still detected.
+  If the ball remains near the original trapped site for **73 more
+  steps (~1 second)**, try a verified-clear local 2-3px upward/inward
+  reposition. The watchdog may make one more verified-clear small move
+  after another 73 steps, and performs a **free same-ball plunger
+  relaunch** after another 73 steps if the ball still cannot escape.
+  Each candidate is checked against the packed table's static wall
+  bands, radial bumper caps, closed solid sling hulls and safe screen/
+  drain margins. If no local candidate is clear, do not teleport into
+  another obstacle; proceed toward the eventual free relaunch.
+  Six consecutive substeps at least **10px away** from the trapped
+  anchor cancel escalation.
+- **Intentional exclusions:** disabled for waiting/over balls, live
+  shooter-tube travel, held kickback wind-up, both original-flipper
+  rest/raised capture envelopes, the plunger vicinity and the normal
+  lower drain. Paused/menu gameplay does not advance `game_step`.
+  This preserves intentional paddle traps and legitimate losses.
+- **Gameplay tradeoff:** DOS has only projected 2D physics and omits
+  original ramps, gates and some collision groups. The staged watchdog
+  intentionally favors reliable, forgiving play rather than leaving
+  a ball imprisoned by an approximation. It **does not** add score,
+  consume a ball, reset kickback/rule state, change art or table pack,
+  or randomly jump to the center. The low-cost progress tracker uses
+  a few integer fields; candidate edge testing occurs only on rare
+  recovery attempts. Conventional-memory headroom and real V20 timing
+  must be checked; no physical measurement yet.
+- **Diagnostics:** `/record` writes cumulative
+  `unstick_nudges`, `unstick_moves`, `unstick_relaunches` into
+  `INPUT.TXT`; `/smoke` writes the same counters to `SMOKE.TXT`.
+- **Tests:** synthetic stuck/jitter loops with zero or nonzero velocity;
+  110-step detection, 73-step safe moves, eventual free relaunch with
+  unchanged balls/score; healthy escape cancels stages; exclusions for
+  shooter, waiting plunger, kickback, flipper captures and drain.
+  Existing imported table trajectories, 20k soak and both Tandy/VGA
+  playback/visual parity must continue passing.
+- **Acceptance/remedy:** verify several real stalls and deliberate
+  flipper catches on the physical 7.16 MHz V20; check that rescues are
+  rare, graceful and do not hide a repeated geometry bug. If needed,
+  tune `UNSTICK_*` thresholds with recorded evidence or restore the
+  original component-specific approach when full layer/gate data
+  becomes available. **Hardware success is UNVERIFIED.**
 
 ## Required fidelity review for EVERY gameplay-affecting change
 
