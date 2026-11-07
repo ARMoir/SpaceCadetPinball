@@ -22,6 +22,10 @@ Windows `PINBALL.DAT` data, not memory, when judging original behavior.
 2. **Original accuracy a very close second.** Start from the source code and
    preserve its mechanics wherever doing so still plays well. Favor source-
    inspired corrections over arbitrary impulses, random paths, or shortcuts.
+   **Owner's 2026-11-07 preference:** where original mechanics are missing
+   and a simplified gameplay decision is genuinely ambiguous, favor a
+   forgiving, enjoyable player experience. Keep real skill and the chance
+   to drain; document any easing as an explicit fidelity exception.
 3. **Every tradeoff must be traceable.** Record the source behavior and the
    Tandy-specific rationale in `Platform/dos/FIDELITY.md`, especially if
    playability requires different mechanics. A user-observed hardware problem
