@@ -306,6 +306,34 @@ int main(int argc,char **argv)
             bumper_count++; v+=7;
         }
         assert(bumper_count==7);
+        assert(t.bumper_count==7);
+        /* F-004: each closed scoring cap should use a radial normal,
+         * not eight interior-facing two-sided capsule edges. A near-center
+         * entry at the upper-left bumper must be pushed OUT of the cap
+         * and rebound without staying trapped between polygon segments. */
+        {
+            const Bumper *cap=&t.bumpers[3];
+            long dx,dy,dist2;
+            assert(cap->x/FP>=72 && cap->x/FP<=81);
+            assert(cap->y/FP>=17 && cap->y/FP<=25);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(cap->x+cap->radius/4);
+            g.y=cap->y;
+            g.vx=-80; g.vy=0;
+            game_step(&g,&t,0);
+            dx=(long)g.x-cap->x; dy=(long)g.y-cap->y;
+            dist2=dx*dx+dy*dy;
+            assert(dist2 >= (long)(cap->radius-32)*(cap->radius-32));
+            assert(g.vx>0 && g.hits==1 && g.balls==3);
+            /* Approaching from the right should bounce on the exterior
+             * of the same source bumper, not reverse toward its center. */
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(cap->x+cap->radius+FP/2);
+            g.y=cap->y; g.vx=-100; g.vy=0;
+            for(j=0;j<12 && !g.hits;j++) game_step(&g,&t,0);
+            assert(g.hits==1 && g.vx>0);
+        }
+        puts("STAGE: radial upper-left bumper escape"); fflush(stdout);
         /* Strike from the imported anchors, including offset entries.
          * For the first return arc, both sides must remain on the table. */
         for(v=0;v<2;v++) {
