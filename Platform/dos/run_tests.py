@@ -35,6 +35,10 @@ def main():
     p.add_argument('--directory',type=Path,default=Path('build/dos'))
     p.add_argument('--cycles',type=int,default=1200)
     p.add_argument('--original',action='store_true',help='Check full launch reaches a bumper in the original table')
+    p.add_argument('--video',choices=('tandy','vga'),default='tandy',
+                   help='Test actual Tandy 09h or VGA 13h memory layout')
+    p.add_argument('--auto-video',action='store_true',
+                   help='Use BIOS video auto-detection instead of an explicit switch')
     a=p.parse_args()
     directory=a.directory.resolve()
     summary=[
@@ -42,7 +46,10 @@ def main():
         "start_utc="+datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "commit="+os.environ.get("GITHUB_SHA","local/unset"),
         "emulator="+a.emulator.name,
-        "hardware=DOSBox-X Tandy emulation, NOT a physical V20 benchmark",
+        "hardware=DOSBox-X "+("VGA 13h" if a.video=="vga" else "Tandy 09h")+
+            " emulation, NOT a physical hardware benchmark",
+        "video="+a.video,
+        "video_selection="+("auto" if a.auto_video else "explicit"),
         "video_cycles_per_ms="+str(a.cycles),
         "original_table="+str(int(a.original)),
     ]
@@ -60,9 +67,11 @@ def main():
         conf=Path(__file__).with_name('dosbox.conf').resolve()
         env=dict(os.environ,SDL_VIDEODRIVER='dummy',SDL_AUDIODRIVER='dummy')
         test_command='test.exe'+(' /original' if a.original else '')+' > TEST.LOG'
+        video_switch='' if a.auto_video else ' /'+a.video
         for label,cycles,command,marker in [('CORE',100000,test_command,'TEST.OK'),
-                                         ('VIDEO',a.cycles,'cadet.exe /smoke','SMOKE.TXT')]:
+                                         ('VIDEO',a.cycles,'cadet.exe /smoke'+video_switch,'SMOKE.TXT')]:
             commands=[str(a.emulator.resolve()),'-conf',str(conf),'-fastlaunch','-exit',
+                      '-set','dosbox machine='+('svga_s3' if a.video=='vga' else 'tandy'),
                       '-set',f'cpu cycles=fixed {cycles}',
                       '-c',f'mount c "{directory}"','-c','c:',
                       '-c',command,'-c','exit']
@@ -87,18 +96,29 @@ def main():
         report=(directory/'SMOKE.TXT').read_text().strip()
         print(report)
         counters=validate_smoke(report, original=a.original)
+        expected_vga=int(a.video=='vga')
+        if counters.get('video_vga')!=expected_vga:
+            raise RuntimeError('Game chose wrong video mode; expected VGA=%d' % expected_vga)
         summary.append("smoke_gameplay="+" ".join(k+"="+str(v) for k,v in counters.items()))
         raw=(directory/'SCREEN.BIN').read_bytes()
-        if len(raw)!=32768:
-            raise RuntimeError('Incorrect video memory size')
+        if len(raw)!=(64000 if a.video=='vga' else 32768):
+            raise RuntimeError('Incorrect video memory size for '+a.video)
         pixels=[]
         for y in range(200):
             row=[]
             for x in range(320):
-                v=raw[(y&3)*8192+(y>>2)*160+x//2]
-                row.append(v&15 if x&1 else v>>4)
+                if a.video=='vga':
+                    color=raw[y*320+x]
+                else:
+                    value=raw[(y&3)*8192+(y>>2)*160+x//2]
+                    color=value&15 if x&1 else value>>4
+                if color>=16:
+                    raise RuntimeError('VGA image has unexpected non-RGBI palette pixels')
+                row.append(color)
             pixels.append(row)
-        png(directory/'SMOKE.png',pixels)
+        png(directory/('SMOKE-VGA.png' if a.video=='vga' else 'SMOKE.png'),pixels)
+        # Retain both display dumps for pixel-for-pixel parity validation.
+        (directory/('SCREEN-VGA.BIN' if a.video=='vga' else 'SCREEN-TANDY.BIN')).write_bytes(raw)
         summary.append("result=PASS")
     except Exception as exc:
         summary.append('result=FAIL error='+type(exc).__name__+': '+str(exc))
