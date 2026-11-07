@@ -63,8 +63,11 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 * Ramps, elevation/occlusion, holes, sinks, gates, kickouts and rollover/target
   rules are not implemented. Their initial artwork can still be visible.
   Ground-only filtering prevents upper-level rails becoming invisible walls.
-* Two flipper states with a simplified rising-edge kick; no full angular
-  sweep, timing curve or accurate trapping. Static lights do not animate.
+* Original rest/raised flipper endpoints are retained. Collision checks also
+  cover a midpoint during a three-substep fixed-point sweep, approximating
+  the original moving flipper without trigonometry. The artwork still has
+  only two states. Timing curves and accurate trapping are not yet reproduced.
+  Static lights do not animate.
 * Single ball/player, basic bumper scoring, drain/relaunch and restart only.
   Missions, jackpots, rank, bonus, skill-shot and multiball remain future work.
   Nudge is a fixed impulse with cooldown; the original tilt rules are absent.
@@ -88,8 +91,10 @@ observed control bits and launch count, for manual keyboard/cleanup checks.
 
 The small memory model keeps code and near data individually below 64KB;
 the immutable background is one 32KB far allocation. Only changed ball and
-flipper rectangles are restored. Collision candidates use 13 vertical bands
-with bounds checks before fixed-point dot products. No per-frame allocation,
+flipper rectangles are restored. Collision candidates use 25 narrower 8-pixel vertical bands and
+precomputed per-edge bounds before fixed-point dot products. Moving sprites
+are drawn scanline-by-scanline without per-pixel video address division;
+stationary flippers are not repainted unnecessarily. No per-frame allocation,
 floating point, full-screen blit, or full-table collision scan is used.
 Build maps and executable headers are checked by `verify_build.py`.
 
