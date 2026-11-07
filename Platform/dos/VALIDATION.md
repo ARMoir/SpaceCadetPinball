@@ -288,3 +288,16 @@ references, P0/P1 remediation priorities and the technical reasons for
 documented deviations. This validation records passing test cases,
 **not approval of the approximations, full-feature parity, or final
 hardware verification**.
+
+## Source-aligned module refactor (2026-11-07)
+
+[SOURCE_MAP.md](SOURCE_MAP.md) maps each new fragment to the original C++
+source, its matches/divergences and the existing F-### exceptions.
+The refactor preserves the exact C statement stream in `main.c` and
+`game.c` after expanding the implementation fragments; the SCP2
+table parser/indexer is separately compiled as `table.c`. The plunger
+and flipper portions remain *inline at their old positions*, with no
+additional hot-path call. `test_source_layout.py` checks this contract.
+Open Watcom MZ/DGROUP checks, DOSBox-X both video modes and Tandy/VGA
+frame parity are required before calling the refactor validated.
+Actual 7.16 MHz V20 performance remains **UNVERIFIED** until tested.

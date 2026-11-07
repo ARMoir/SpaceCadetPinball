@@ -153,6 +153,19 @@ physical PC are **not yet verified**. The BIOS chooses the initial
 video mode, and both styles restore the previous text/graphics mode
 when exiting normally.
 
+## Source-aligned implementation
+
+See [SOURCE_MAP.md](SOURCE_MAP.md) for original C++ counterparts, where each
+DOS routine matches or diverges, and which F-### fidelity exceptions remain.
+`table.c` compiles independently; the physics modules (`ball_collision.inc`,
+`flipper.inc`, `plunger.inc`, `bumper.inc`, `kickback.inc`, `nudge.inc`,
+`unstuck.inc` and others) are C89 implementation fragments included once
+through `game.c`. Input/video/audio/HUD modules similarly belong to
+`main.c`. These are deliberate **single-translation-unit** groups to
+preserve V20 hot-path call overhead, state layout, statement order and
+behavior. Do not compile `.inc` files separately. `FIDELITY.md`
+remains the authoritative behavioral exception register.
+
 ## Optional static faux-3D enhancement (F-007)
 
 The 16-color original background remains **byte-for-byte unchanged** in

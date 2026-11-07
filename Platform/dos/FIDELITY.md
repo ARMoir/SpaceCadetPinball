@@ -105,6 +105,18 @@ Original code locations (read alongside any proposed DOS implementation):
 The original game also uses resource-driven component rules. Source constants
 should be checked in context, not copied without their event/state transitions.
 
+**Source-aligned 2026-11-07 refactor:** [SOURCE_MAP.md](SOURCE_MAP.md) now
+maps the DOS function bodies to original C++ files and lists MATCHES,
+DIVERGES, MISSING and UNVERIFIED details. `table.c` is a separate
+setup-only C89 compilation unit. Collision, flippers, plunger, bumpers,
+kickback, nudge, anti-stuck and control are now named implementation
+fragments included once by `game.c`; DOS input/video/HUD/audio are included
+once by `main.c`. The C statements and order were verified unchanged after
+expanding those fragments, including the inline flipper/plunger branches.
+No gameplay rule, format, Q6 constant, sprite, or per-tick function call
+was intentionally altered. F-001 through F-008 remain open. This is
+**source organization**, not a proof of upstream parity or real V20 timing.
+
 ## Audit of the current prototype
 
 | Priority | Area | Original behavior versus current DOS | Fidelity status | Register |
@@ -117,7 +129,7 @@ should be checked in context, not copied without their event/state transitions.
 | **P0** | Trapped ball / anti-stuck | The original defines `control::UnstuckBall`: exclude flipper/plunger capture zones, throw upward, eventually relaunch. DOS uses a small position-progress watchdog and staged, verified local moves before a free relaunch. | **Source-inspired playability safety net; exact source trigger/timing not established** | [F-008](#f-008-universal-trapped-ball-recovery) |
 | **P1** | Flipper physics | Original angular flippers collide throughout rotation. DOS preserves endpoints but uses rest/midpoint/raised fixed-point edges and only two art states. | **Performance-oriented approximation; fidelity still unverified** | [F-006](#f-006-flipper-and-collision-response) |
 | **P2** | Material physics / gravity | Original ball direction, spin, elasticity, smoothness, group masks and geometry are richer. DOS uses Q6, fixed restitution, 2D gravity, speed clamps and finite substeps. | **Known incomplete port** | [F-006](#f-006-flipper-and-collision-response) |
-| **P2** | Audio, layout and effects | Original sound/visual states are richer. DOS has PSG substitutes and 16-color rendering; an optional offline-generated 3D-shaded TABLE3D.TGA retains the untouched classic art and identical collision data. The moving ball adds a tiny shadow/glint in an existing dirty rectangle. | **Presentation-only adaptation**, gameplay parity unchanged; CRT benefit unverified | [F-007](#f-007-rendering-audio-and-frame-rate) |
+| **P2** | Audio, layout and effects | Original sound/visual states are richer. DOS has PSG substitutes and 16-color rendering; an optional offline-generated 3D-shaded TABLE3D.TGA retains the untouched classic art and identical collision data. The moving ball uses its imported original sprite without the later-removed dynamic shadow/glint. | **Presentation-only adaptation**, gameplay parity unchanged; CRT benefit unverified | [F-007](#f-007-rendering-audio-and-frame-rate) |
 
 **Verified progress, not full parity:** original-source table artwork, eight
 plunger frames and kickback strike centers are imported; seven bumper outlines
@@ -486,7 +498,7 @@ silently treat legacy exceptions as precedent for new ones.
   source-side detection/update/call path **was not established** in the
   inspected code; this documents the recovery philosophy, not a proven
   identical Windows runtime timer.
-- **DOS behavior:** `game.c::watch_stuck` evaluates actual Q6 ball
+- **DOS behavior:** `unstuck.inc::watch_stuck` (included by `game.c`) evaluates actual Q6 ball
   position after collisions, once per physics substep (~72.8 Hz).
   Staying within a **3px-wide** x and y travel envelope for **110
   steps (~1.5 seconds)** triggers a short upward plus inward velocity
