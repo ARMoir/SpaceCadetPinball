@@ -100,10 +100,14 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   Gravity, speed limits, restitution and flipper impulses are tuned constants.
   Spin, material-specific behavior, stochastic drag and continuous swept
   collision detection are absent. A substep caps movement to two pixels/axis.
-* Bumpers use eight-sided outlines fitted to the visible sprite caps. All seven
-  are active on the single plane, including the three elevated launch bumpers;
-  this is a deliberate approximation of their original layered collisions. Most static segments are still two-sided
-  capsules; collision groups are not reproduced. The upper-left skill-shot
+* All seven source bumper caps have original artwork and imported eight-edge
+  footprints. In F-004, the runtime now precomputes one **radial hit surface**
+  per cap, with a consistent outward normal. This follows the original
+  `TBumper` circular contact principle and prevents the old eight two-sided
+  segments from pushing the ball into their shared interior. The three
+  elevated launch bumpers are still flattened into one plane, so the source
+  collision-layer behavior is incomplete. Most remaining static segments are
+  two-sided capsules; collision groups are not reproduced. The upper-left skill-shot
   throat now has a small downhill-only passage, approximating the original
   TOneway gates so a ball does not get trapped by flattened ramp walls.
   Other original gates and one-way edges still need an explicit data import.
