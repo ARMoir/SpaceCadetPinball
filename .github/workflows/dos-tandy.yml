@@ -75,6 +75,9 @@ jobs:
             build/dos/SMOKE.TXT
             build/dos/RUN_SUMMARY.TXT
             Platform/dos/analyze_logs.py
+            Platform/dos/FEATURE_STATUS.md
+            Platform/dos/FIDELITY.md
+            Platform/dos/VALIDATION.md
             build/dos/*.png
       - name: Upload failed-build diagnostic logs (not a playable CADET.zip)
         if: failure()
