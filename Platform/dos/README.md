@@ -5,13 +5,18 @@ Tandy 1000. It does not use SDL, Windows, a DOS extender, an FPU, XMS or EMS.
 The desktop version is unchanged. This is an initial playable prototype,
 not a feature-complete port or a verified 7.16 MHz hardware release.
 
-## P0 priority: fidelity to the original game
+## Project priorities: playability first, authenticity a very close second
 
-**The original Space Cadet game is the gameplay specification.** Keep the
-original rules, triggers, collision behavior, scoring, charge timing, gate
-states, and art wherever possible. Optimize the implementation (fixed-point
-arithmetic, precomputed geometry, bounded collision checks and cheap Tandy
-drawing), **not the game rules**.
+**First priority:** make Space Cadet smooth, reliable, playable, and fun on the
+real Tandy 1000 EX with a 7.16 MHz V20. Ball motion, flipper strength, input
+response, shooter return, and stable frame timing must work on the machine.
+
+**Very close second:** preserve original Space Cadet logic, rules, physics,
+artwork, and behavior wherever practical. Start from the source and optimize
+implementation (fixed-point math, precomputed geometry, bounded collision
+checks, and efficient Tandy rendering) before changing mechanics. If restoring
+source behavior conflicts with actual hardware playability, use the smallest
+playable adaptation and document the difference and its evidence.
 
 Before each DOS code or data change, consult the standing
 [**fidelity audit, source references and exception register**](FIDELITY.md)
@@ -21,9 +26,10 @@ source, reason, measurement (or explicitly **UNVERIFIED**), tests, and return
 path in the same change. Reference its **F-###** entry in the commit summary.
 An unported feature or unmeasured workaround is not a justified optimization.
 
-**Priority order:** P0 kickback target/gate rules and original collision
-directions/layers; P1 plunger timing/variation, bumper progression,
-nudge/tilt calibration and flippers; P2 enhancements and presentation.
+**Work order:** prioritize hardware-reported weaknesses such as underpowered
+flippers, repeated ball paths, missed contacts, stuck balls, and launcher
+recovery. Next, restore the highest-impact original rules (P0 kickback/gate and
+collision-layer behavior, then P1 plunger, bumpers, nudging and flippers).
 A successful emulator build does not establish hardware performance or parity.
 
 ## Build and play
