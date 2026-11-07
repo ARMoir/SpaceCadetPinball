@@ -222,6 +222,30 @@ The positive regressions and emulated build pass, but physical Tandy
 playability and timing are **not yet re-verified**. Source 3D/layer
 collision remains incomplete.
 
+**Right and left slingshot anti-trap fix (2026-11-07, F-002):**
+The source table has two closed 14-segment sling outlines, about
+x=76–91/y=118–143 and x=141–156/y=118–143. Instead of
+treating their outlines as conflicting two-sided capsules, DOS now
+recognizes each closed source shape at table-index time and uses one
+solid convex 3-face collision hull with outward Q8 normals. Only
+those two perimeter chains are removed from generic edge indexing.
+Each physics step keeps the ball center outside the filled hull
+(including its 3px collision radius); nearby approaches receive
+normal outward reflections rather than arbitrary random kicks.
+The first broad-phase test is a short bounding-box check. The art,
+SCP2 format, lower drains, flippers, lamps and VGA/Tandy rendering
+remain unchanged. `INPUT.TXT` reports `sling_left_rescues` and
+`sling_right_rescues` if `CADET /record` is used.
+
+The 16-bit imported-table regression checks both original sling
+hulls, source-perimeter exclusion from collision bands, direct
+center escape, and 7 approach directions/speeds per side over
+repeated steps. This tests the user's problematic right side
+explicitly. Emulated pass does **not** yet prove that the physical
+Tandy trajectory and visual appearance are completely resolved.
+Re-test several right-sling entries at full speed and watch for
+unnatural bounces or V20 slow frames.
+
 Flattened collision groups, omitted ramps, and one-way gates can still trap
 a ball in the upper-left chute; these tests do not certify every trajectory.
 
