@@ -75,11 +75,56 @@ int main(int argc,char **argv)
     printf("RAISED: x=%d y=%d vx=%d vy=%d\\n",g.x,g.y,g.vx,g.vy); fflush(stdout);
     assert(g.vx!=0 || g.vy!=40);
     puts("STAGE: raised"); fflush(stdout);
-    fixture(); g.waiting=0; g.x=50*FP; g.y=60*FP;
-    game_step(&g,&t,KEY_NUDGE); assert(g.vy<0 && g.vx>0 && g.nudge_delay==72);
+    /* Directional source-like nudges add velocity and reverse it after
+     * ~0.4s; key bounce is suppressed, but repeated bumps build tilt. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=50*FP; g.y=60*FP; g.vx=4; g.vy=10;
+    game_step(&g,&t,KEY_NUDGE);
+    assert(g.vy<0 && g.vx==4 && g.nudge_delay==9 &&
+           g.nudges==1 && g.shake_frames);
     game_step(&g,&t,0); game_step(&g,&t,KEY_NUDGE);
-    assert(g.nudge_delay==70);
-    puts("STAGE: flippers and nudge passed"); fflush(stdout);
+    assert(g.nudges==1 && g.nudge_delay==7);
+    for(i=0;i<30;i++) game_step(&g,&t,0);
+    assert(g.nudge_return_ticks==0);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=50*FP; g.y=60*FP;
+    game_step(&g,&t,KEY_NUDGE_LEFT);
+    assert(g.vx>0 && g.nudges==1);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=50*FP; g.y=60*FP;
+    game_step(&g,&t,KEY_NUDGE_RIGHT);
+    assert(g.vx<0 && g.nudges==1);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=50*FP; g.y=60*FP;
+    for(i=0;i<3;i++) {
+        int j;
+        game_step(&g,&t,KEY_NUDGE_LEFT);
+        game_step(&g,&t,0);
+        for(j=0;j<9;j++) game_step(&g,&t,0);
+    }
+    assert(g.tilted && g.tilts==1 && g.nudges==3);
+    puts("STAGE: source-like nudge and tilt passed"); fflush(stdout);
+    /* Left kickback captures, winds up, fires into the table and disarms.
+     * A second entry cannot trigger another save on the same ball. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=(t.flipper[0]-55)*FP; g.y=(t.drain_y-19)*FP; g.vy=32;
+    game_step(&g,&t,0);
+    assert(g.kick_delay==9 && g.kick_side==1 && !g.kick_armed[0] &&
+           g.kick_armed[1] && g.kickbacks==1 && g.balls==3);
+    for(i=0;i<9;i++) game_step(&g,&t,0);
+    assert(g.kick_delay==0 && g.vx>0 && g.vy<0 &&
+           g.event==4 && g.shake_frames>0);
+    g.kick_grace=0; g.x=(t.flipper[0]-55)*FP;
+    g.y=(t.drain_y-19)*FP; g.vy=32;
+    game_step(&g,&t,0);
+    assert(!g.kick_delay && g.kickbacks==1);
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.x=(t.flipper[6]+54)*FP; g.y=(t.drain_y-19)*FP; g.vy=32;
+    game_step(&g,&t,0);
+    assert(g.kick_delay==9 && g.kick_side==2 && g.kickbacks==1);
+    for(i=0;i<9;i++) game_step(&g,&t,0);
+    assert(g.kick_delay==0 && g.vx<0 && g.vy<0);
+    puts("STAGE: both kickbacks passed"); fflush(stdout);
     /* The original upper-left skill-shot passage is one-way. The
      * projected interior wall must let a descending ball through, but
      * still prevent it coming back upward through the same throat. */
@@ -139,6 +184,7 @@ int main(int argc,char **argv)
     g.y=(t.drain_y+1)*FP; g.vy=32;
     game_step(&g,&t,0);
     assert(g.balls==2 && g.waiting && g.event==3);
+    assert(g.kick_armed[0] && g.kick_armed[1] && !g.tilted);
     fixture();
     for(i=0;i<3;i++) {
         g.waiting=0; g.y=192*FP; g.x=110*FP;
@@ -194,7 +240,7 @@ int main(int argc,char **argv)
         assert(abs(g.vx)<1024 && abs(g.vy)<1024);
     }
     f=fopen("TEST.OK","w"); assert(f);
-    fputs("PASS: plunger charge, one-way chute, wide shooter return, playfield drain, launch variation, reflection, bumper score, flippers, restart, 20000-step soak\n",f);
+    fputs("PASS: plunger, one-way chute, shooter return, three-way nudge, tilt, timed kickbacks, drain, ball reset, 20000-step soak\n",f);
     fclose(f); puts("All DOS core tests passed.");
     return 0;
 }
