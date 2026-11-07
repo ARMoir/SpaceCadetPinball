@@ -82,9 +82,13 @@ The 16-color original background remains **byte-for-byte unchanged** in
 `TABLE.TGA`. `TABLE3D.TGA` is generated **offline** by
 [`enhance_table.py`](enhance_table.py): existing gray ramps/rails gain
 top-left highlights and down-right shading, and the seven source-derived
-bumper caps receive subtle bevels/cast shadows. Colored lamps and target
-art remain unchanged, and no perspective warp or new collision geometry
-is introduced. `TABLE.DAT`, original ball/flipper/plunger sprite data,
+bumper caps receive subtle bevels/cast shadows. **The second, stronger offline
+shading pass** adds clearer top-left metallic rims, darker lower-right rail
+undersides, short contact shadows on existing gray metal near flipper guides
+and shooter-lane hardware, and brighter domes/deeper undersides on the seven
+original bumper caps. It only recolors pixels that were already gray or
+white in the source image. Colored lamps and target art remain unchanged,
+and no perspective warp or new collision geometry is introduced. `TABLE.DAT`, original ball/flipper/plunger sprite data,
 gameplay state and scoring are identical between looks.
 
 The enhanced ball gets a small shadow and one highlight pixel, drawn only
