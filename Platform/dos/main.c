@@ -101,6 +101,34 @@ static int ball_overlaps(const Sprite *s,int x,int y,int w,int h)
            y<s->y+s->h && y+h>s->y;
 }
 
+/* The original TPlunger animates its sprite as charge grows. The current
+ * SCP1 pack has no imported plunger frames, so draw a minimal four-pixel
+ * chrome plunger head and shaft under the real imported launcher position.
+ * The rod moves downward over 12 screen pixels and uses no bitmap/frame
+ * allocations. It is not a replacement for importing the original art. */
+static void plunger_rect(int charge,int *x,int *y)
+{
+    *x=table.launch_x-2;
+    *y=table.launch_y+(table.sprites[4].h+1)/2+5+
+       charge*12/PLUNGER_MAX_CHARGE;
+}
+
+static void draw_plunger(int x,int y)
+{
+    int j;
+    for(j=1;j<8;j++) {
+        pixel(x+1,y+j,7);
+        pixel(x+2,y+j,8);
+    }
+    for(j=0;j<4;j++) pixel(x+j,y,15);
+}
+
+static int rect_overlaps(int x,int y,int w,int h,
+                         int x2,int y2,int w2,int h2)
+{
+    return x<x2+w2 && x+w>x2 && y<y2+h2 && y+h>y2;
+}
+
 /* Original tiny UI font, 3x5. Table art and moving sprites come from the pack. */
 static const unsigned short font[]={
     31599,11415,29671,29647,23497,31183,31215,29257,31727,31695,
@@ -183,6 +211,8 @@ int main(int argc,char **argv)
     unsigned long old_score=~0UL,slow_frames=0;
     int i,smoke=0,record=0,old_x=-10,old_y=-10,old_balls=-1,old_wait=-1,old_over=-1;
     int old_new=0,event,next_x,next_y,ball_changed,ball_redraw;
+    int plunger_x,plunger_y,old_plunger_x=-1,old_plunger_y=-1;
+    int plunger_changed,plunger_redraw,plunger_charge;
     unsigned observed=0,launches=0;
     union REGS r;
     unsigned char old_mode;
@@ -201,6 +231,7 @@ int main(int argc,char **argv)
     if(!background) { puts("Not enough conventional memory (32KB background)."); return 1; }
     if(!load_background()) { _ffree(background); puts("Missing/invalid TABLE.TGA (32768 bytes)."); return 1; }
     game_reset(&game,&table);
+    game.plunger_rng^=ticks(); /* New game is no longer seeded identically. */
     memset(&r,0,sizeof(r)); r.h.ah=15; int86(0x10,&r,&r); old_mode=r.h.al;
     mode(9);
     video=(unsigned char __far *)MK_FP(0xb800,0);
@@ -225,7 +256,10 @@ int main(int argc,char **argv)
         if(smoke) input=(frame%48<16?KEY_LAUNCH:0)|
                          (frame%20<10?KEY_LEFT:KEY_RIGHT)|(frame%90==0?KEY_NUDGE:0);
         observed|=input;
-        if((keys[49] || pressed_keys[49]) && !old_new) game_reset(&game,&table);
+        if((keys[49] || pressed_keys[49]) && !old_new) {
+            game_reset(&game,&table);
+            game.plunger_rng^=ticks();
+        }
         pressed_keys[49]=0;
         old_new=keys[49];
         event=0;
@@ -234,6 +268,13 @@ int main(int argc,char **argv)
             if(game.event) { event=game.event; if(event==2) launches++; }
         }
         play_event(event);
+        plunger_charge=game.waiting?game.charge:0;
+        plunger_rect(plunger_charge,&plunger_x,&plunger_y);
+        plunger_changed=(old_plunger_y<0 ||
+                         plunger_y!=old_plunger_y ||
+                         plunger_x!=old_plunger_x);
+        if(plunger_changed && old_plunger_y>=0)
+            restore(old_plunger_x,old_plunger_y,4,8);
         next_x=game.x/FP-table.sprites[4].w/2-1;
         next_y=game.y/FP-table.sprites[4].h/2-1;
         /* Positions are Q6 but only whole screen pixels are displayed.
@@ -241,6 +282,15 @@ int main(int argc,char **argv)
          * This also prevents an 18 Hz erase/repaint flash at the plunger. */
         ball_changed=(next_x!=old_x || next_y!=old_y || old_over!=game.over);
         ball_redraw=ball_changed;
+        if(plunger_changed &&
+           (rect_overlaps(next_x,next_y,
+                          table.sprites[4].w+2,table.sprites[4].h+2,
+                          plunger_x,plunger_y,4,8) ||
+            (old_plunger_y>=0 &&
+             rect_overlaps(next_x,next_y,
+                           table.sprites[4].w+2,table.sprites[4].h+2,
+                           old_plunger_x,old_plunger_y,4,8))))
+            ball_redraw=1;
         if(ball_changed)
             restore(old_x,old_y,table.sprites[4].w+2,table.sprites[4].h+2);
         for(i=0;i<2;i++) {
@@ -264,6 +314,15 @@ int main(int argc,char **argv)
                               table.sprites[4].w+2,table.sprites[4].h+2)))
                 ball_redraw=1;
         }
+        /* The old ball restore may erase the stationary plunger; only
+         * repaint if their rectangles actually overlap. Paint ball last. */
+        plunger_redraw=plunger_changed ||
+           (ball_changed &&
+            rect_overlaps(old_x,old_y,
+                          table.sprites[4].w+2,table.sprites[4].h+2,
+                          plunger_x,plunger_y,4,8));
+        if(plunger_redraw) draw_plunger(plunger_x,plunger_y);
+        old_plunger_x=plunger_x; old_plunger_y=plunger_y;
         old_x=next_x; old_y=next_y;
         if(!game.over && ball_redraw)
             sprite(&table.sprites[4],old_x+1,old_y+1);
