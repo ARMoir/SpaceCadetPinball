@@ -23,7 +23,6 @@ typedef struct {
 typedef struct {
     short x,y,vx,vy,balls,waiting,over,charge,previous,hit_delay,event,nudge_delay;
     unsigned char sweep[2];
-    unsigned short noise;
     unsigned long score,steps,hits;
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
 } Game;
