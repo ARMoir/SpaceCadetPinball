@@ -5,6 +5,9 @@ import os
 from pathlib import Path
 import subprocess
 import re
+from hashlib import sha256
+from datetime import datetime, timezone
+from time import monotonic
 from convert import png
 
 
@@ -34,41 +37,75 @@ def main():
     p.add_argument('--original',action='store_true',help='Check full launch reaches a bumper in the original table')
     a=p.parse_args()
     directory=a.directory.resolve()
-    for name in ('TEST.OK','SMOKE.TXT','SCREEN.BIN','TEST.LOG'):
-        (directory/name).unlink(missing_ok=True)
-    conf=Path(__file__).with_name('dosbox.conf').resolve()
-    env=dict(os.environ,SDL_VIDEODRIVER='dummy',SDL_AUDIODRIVER='dummy')
-    test_command='test.exe'+(' /original' if a.original else '')+' > TEST.LOG'
-    for label,cycles,command,marker in [('CORE',100000,test_command,'TEST.OK'),
-                                     ('VIDEO',a.cycles,'cadet.exe /smoke','SMOKE.TXT')]:
-        commands=[str(a.emulator.resolve()),'-conf',str(conf),'-fastlaunch','-exit',
-                  '-set',f'cpu cycles=fixed {cycles}',
-                  '-c',f'mount c "{directory}"','-c','c:',
-                  '-c',command,'-c','exit']
-        result=subprocess.run(commands,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
-        (directory/(label+'.LOG')).write_bytes(result.stdout)
-        if result.returncode or not (directory/marker).exists():
-            for name in ('TEST.LOG', label+'.LOG'):
-                path=directory/name
-                if path.exists():
-                    print(f'--- {name} ---')
-                    print(path.read_text(errors='replace')[-4000:])
-            raise RuntimeError(f'{label} DOS test failed; see TEST.LOG and {label}.LOG')
-    print((directory/'TEST.OK').read_text().strip())
-    report=(directory/'SMOKE.TXT').read_text().strip()
-    print(report)
-    validate_smoke(report, original=a.original)
-    raw=(directory/'SCREEN.BIN').read_bytes()
-    if len(raw)!=32768:
-        raise RuntimeError('Incorrect video memory size')
-    pixels=[]
-    for y in range(200):
-        row=[]
-        for x in range(320):
-            v=raw[(y&3)*8192+(y>>2)*160+x//2]
-            row.append(v&15 if x&1 else v>>4)
-        pixels.append(row)
-    png(directory/'SMOKE.png',pixels)
+    summary=[
+        "CADET_RUN_SUMMARY schema=1",
+        "start_utc="+datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "commit="+os.environ.get("GITHUB_SHA","local/unset"),
+        "emulator="+a.emulator.name,
+        "hardware=DOSBox-X Tandy emulation, NOT a physical V20 benchmark",
+        "video_cycles_per_ms="+str(a.cycles),
+        "original_table="+str(int(a.original)),
+    ]
+    for asset in ("CADET.EXE","TEST.EXE","TABLE.DAT","TABLE.TGA"):
+        target=directory/asset
+        if target.is_file():
+            summary.append("%s bytes=%d sha256=%s" % (
+                asset,target.stat().st_size,sha256(target.read_bytes()).hexdigest()))
+        else:
+            summary.append(asset+" MISSING")
+    try:
+        for name in ('TEST.OK','SMOKE.TXT','SCREEN.BIN','TEST.LOG',
+                     'CORE.LOG','VIDEO.LOG','SMOKE.png','RUN_SUMMARY.TXT'):
+            (directory/name).unlink(missing_ok=True)
+        conf=Path(__file__).with_name('dosbox.conf').resolve()
+        env=dict(os.environ,SDL_VIDEODRIVER='dummy',SDL_AUDIODRIVER='dummy')
+        test_command='test.exe'+(' /original' if a.original else '')+' > TEST.LOG'
+        for label,cycles,command,marker in [('CORE',100000,test_command,'TEST.OK'),
+                                         ('VIDEO',a.cycles,'cadet.exe /smoke','SMOKE.TXT')]:
+            commands=[str(a.emulator.resolve()),'-conf',str(conf),'-fastlaunch','-exit',
+                      '-set',f'cpu cycles=fixed {cycles}',
+                      '-c',f'mount c "{directory}"','-c','c:',
+                      '-c',command,'-c','exit']
+            started=monotonic()
+            result=subprocess.run(commands,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
+            (directory/(label+'.LOG')).write_bytes(result.stdout)
+            ok=(not result.returncode and (directory/marker).exists())
+            summary.append("%s_phase=%s exit_code=%d marker=%d host_seconds=%.2f cycles_per_ms=%d" % (
+                label,"PASS" if ok else "FAIL",result.returncode,
+                int((directory/marker).exists()),monotonic()-started,cycles))
+            if not ok:
+                for name in ('TEST.LOG', label+'.LOG'):
+                    path=directory/name
+                    if path.exists():
+                        print(f'--- {name} ---')
+                        print(path.read_text(errors='replace')[-4000:])
+                raise RuntimeError(f'{label} DOS test failed; see TEST.LOG and {label}.LOG')
+        core_report=(directory/'TEST.OK').read_text().strip()
+        if not core_report.startswith("PASS"):
+            raise RuntimeError("Core marker missing PASS completion")
+        print(core_report)
+        report=(directory/'SMOKE.TXT').read_text().strip()
+        print(report)
+        counters=validate_smoke(report, original=a.original)
+        summary.append("smoke_gameplay="+" ".join(k+"="+str(v) for k,v in counters.items()))
+        raw=(directory/'SCREEN.BIN').read_bytes()
+        if len(raw)!=32768:
+            raise RuntimeError('Incorrect video memory size')
+        pixels=[]
+        for y in range(200):
+            row=[]
+            for x in range(320):
+                v=raw[(y&3)*8192+(y>>2)*160+x//2]
+                row.append(v&15 if x&1 else v>>4)
+            pixels.append(row)
+        png(directory/'SMOKE.png',pixels)
+        summary.append("result=PASS")
+    except Exception as exc:
+        summary.append('result=FAIL error='+type(exc).__name__+': '+str(exc))
+        raise
+    finally:
+        summary.append('finish_utc='+datetime.now(timezone.utc).isoformat(timespec='seconds'))
+        (directory/'RUN_SUMMARY.TXT').write_text('\n'.join(summary)+'\n',encoding='utf-8')
 
 
 if __name__=='__main__':
