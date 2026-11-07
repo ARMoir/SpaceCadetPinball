@@ -26,6 +26,8 @@ def validate_smoke(report, original=False):
         raise RuntimeError('Smoke test never completed a fully charged launch')
     if original and (counters['hits'] < 1 or counters['score'] < 500):
         raise RuntimeError('Space Cadet smoke test did not reach a scoring bumper')
+    if counters.get('moving_ball_shadow') != 0:
+        raise RuntimeError('Moving ball must use its original sprite without a shadow/glint overlay')
     return counters
 
 

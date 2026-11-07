@@ -220,18 +220,6 @@ static void sprite(const Sprite *s,int x,int y)
     }
 }
 
-/* Faux-3D ball detail, active only with enhanced artwork. The floor
- * shadow lies inside the existing 6x6 dirty rectangle surrounding the
- * original 4x4 ball sprite. Just three dark pixels and one bright glint
- * when that ball already needs redrawing. Source sprite/collision unchanged.
- * F-007: cosmetic playability experiment for the actual Tandy CRT. */
-static void ball_shadow(int bx,int by)
-{
-    pixel(bx+2,by+4,0);
-    pixel(bx+3,by+4,8);
-    pixel(bx+4,by+3,0);
-}
-
 /* A stationary flipper only needs repainting if the old ball was erased
  * over it. Otherwise leave its pixels alone until the key state changes. */
 static int ball_overlaps(const Sprite *s,int x,int y,int w,int h)
@@ -719,9 +707,10 @@ int main(int argc,char **argv)
         old_plunger_w=plunger_sprite->w; old_plunger_h=plunger_sprite->h;
         old_x=next_x; old_y=next_y;
         if(!game.over && ball_redraw) {
-            if(enhanced) ball_shadow(old_x+1,old_y+1);
+            /* F-007: preserve the source-derived round metallic ball.
+             * Extra shadow/glint pixels distorted its tiny silhouette on
+             * the Tandy CRT. Both art modes draw the sprite unchanged. */
             sprite(&table.sprites[4],old_x+1,old_y+1);
-            if(enhanced) pixel(old_x+2,old_y+2,15);
         }
         {
             int flags=(game.tilted?1:0)|(game.tilt_warning?2:0)|
@@ -756,8 +745,8 @@ int main(int argc,char **argv)
                 mouse_available,vga_mode,
                 game.sling_rescues[0],game.sling_rescues[1],
                 game.unstick_nudges,game.unstick_moves,game.unstick_relaunches);
-        fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=%d\n",
-                enhanced?"3d":"classic",enhanced);
+        fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=0\n",
+                enhanced?"3d":"classic");
         fclose(report);
     }
     if(record) {

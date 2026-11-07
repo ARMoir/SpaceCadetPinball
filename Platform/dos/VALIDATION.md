@@ -69,11 +69,15 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
   nibble/bank packing, fixed 16-color palette, unchanged colored lights,
   no geometry warp, deterministic output and preservation of the original
   background. DOSBox-X smoke tests exercise the enhanced default.
-  `CADET /classic` selects the original artwork and removes the tiny
-  dynamic ball shadow/glint; `CADET /3d` forces the enhanced artwork.
-  The 3D effect's perceived depth, CRT readability and tiny ball-overlay
-  rendering cost still need **physical V20 hardware confirmation**.
-  Static shading is fully precomputed and adds no work to the physics loop.
+  `CADET /classic` selects the original artwork; `CADET /3d` forces
+  the enhanced artwork. Both now render the unmodified, source-derived
+  metallic ball sprite, with the former shadow/glint overlay removed
+  following physical Tandy feedback that it looked less round. Smoke
+  validation requires `moving_ball_shadow=0` in either video mode, and
+  `test_run_tests.py` covers absent/re-enabled overlay reports.
+  The corrected ball's CRT appearance and hardware frame timing remain
+  **UNVERIFIED** pending a new V20 test. Static artwork shading remains
+  fully precomputed and adds no work to the physics loop.
 
 The emulator cycle setting is a repeatable test load, **not** a conversion to
 7.16 MHz NEC V20 performance. Timing and sound on a real Tandy are unverified.

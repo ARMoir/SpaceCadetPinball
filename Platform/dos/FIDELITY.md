@@ -382,9 +382,9 @@ silently treat legacy exceptions as precedent for new ones.
   shading/cast shadows, without changing colorful lamps, sprite assets,
   geometry, collision, projection, table dimensions, or fixed RGBI palette.
   The untouched original background remains accessible via `CADET /classic`;
-  `CADET /3d` selects the enhanced look. The original 4x4 ball sprite gains
-  one highlight and three shadow pixels when rendered in 3D mode, entirely
-  within the *existing* 6x6 dirty region; sprite and gameplay data unchanged.
+  `CADET /3d` selects the enhanced look. The original 4x4 ball sprite is
+  rendered unchanged in both modes following the silhouette correction
+  described below; sprite and gameplay data are unchanged.
 - **F-007 offline art revision (2026-11-07):** strengthen the existing
   `enhance_table.py` effect for the **default** `TABLE3D.TGA` only:
   brighter upper-left edge rims on painted metallic rails, darker
@@ -395,8 +395,9 @@ silently treat legacy exceptions as precedent for new ones.
   and leaves the original fixed 16-color palette, all colored light
   pixels, `TABLE.TGA`, `TABLE.DAT`, sprite assets, and all 16-bit C
   gameplay/rendering code unchanged. It adds **zero runtime operations**.
-  The previously existing tiny moving-ball glint/shadow is unchanged.
-  The source screenshot comparison remains unverified on the physical CRT.
+  At the time of this offline pass, the moving-ball glint/shadow was
+  unchanged; it was subsequently removed as documented below. The source
+  screenshot comparison remains unverified on the physical CRT.
 - **F-007 optical-height illusion revision (2026-11-07):** added a
   third offline-only shading pass to the default `TABLE3D.TGA` generator.
   It infers a tiered **visual height mask** from the original painted
@@ -436,18 +437,33 @@ silently treat legacy exceptions as precedent for new ones.
   color or gameplay-frame differences on the emulator.
   **Hardware VGA speed, CRT/monitor output and PC-speaker sound
   are still UNVERIFIED**; DOSBox timing is not a benchmark.
+- **F-007 ball silhouette correction (2026-11-07):** physical Tandy CRT
+  feedback found the optional three dark floor-shadow pixels and one
+  forced white glint made the original tiny ball look less round. Remove
+  both runtime overlays from `main.c`, but preserve the source-derived
+  4x4 ball sprite from `convert.py` (Windows `PINBALL.DAT`), its existing
+  6x6 restore region, collision, coordinates and redraw conditions.
+  The original sprite is now identical under `/classic`, `/3d`,
+  Tandy 09h and VGA 13h. `SMOKE.TXT` keeps the diagnostic field
+  `moving_ball_shadow=0` for compatibility. This removes four
+  cosmetic pixel writes on each moving frame, with no extra memory
+  and no gameplay change. Prior physical feedback supports removal;
+  the corrected silhouette and frame timing on real hardware are
+  **UNVERIFIED** pending a new CRT test.
 - **Why / evidence:** owner requested more visible depth on their son's
   first impression of the CRT playfield. Original game relies on art,
   highlights and occlusion for a 3D impression. Baking effects offline
-  costs **zero extra runtime table-rendering instructions**. The ball
-  shadow/glint adds a few pixel writes on moving frames, so calling that
-  part zero-cost would be inaccurate. This is a cosmetic *option*, not
-  evidence of original artwork equivalence or hardware performance.
+  costs **zero extra runtime table-rendering instructions**. The earlier
+  moving-ball overlay incurred pixel writes, which the silhouette fix
+  removes. This is a cosmetic *option*, not evidence of original artwork
+  equivalence or hardware performance.
 - **Tests:** `test_enhance_table.py` validates nibble/bank fidelity,
   32768-byte size, deterministic enhancement, unchanged colored pixels,
   original source asset immutability and no changes outside the playfield,
   plus positive coverage for stronger rail bevels, bumper dome lighting,
-  and nearby contact shadows.
+  and nearby contact shadows. `test_run_tests.py` checks that smoke
+  output explicitly reports no dynamic ball overlay, including rejection
+  of absent or re-enabled overlays.
   DOSBox-X smoke exercises 3D default. /classic remains the lossless
   original Tandy image; needs side-by-side CRT confirmation.
 - **Remedy:** measure actual CRT readability, especially colored targets and

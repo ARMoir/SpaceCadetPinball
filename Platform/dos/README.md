@@ -63,8 +63,9 @@ from H and checked by an automated font regression test.
    GitHub Actions already runs this step and packages both looks.
 5. Copy **`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, and `TABLE3D.TGA`** into
    the same DOS directory. `CADET` uses the enhanced background by default;
-   `CADET /classic` loads the original unmodified background, with no ball
-   shadow or glint. `CADET /3d` requests the enhanced style explicitly.
+   `CADET /classic` loads the original unmodified background.
+   `CADET /3d` requests the enhanced style explicitly. Both modes now
+   preserve the source-derived metallic ball without extra shadow pixels.
    If `TABLE3D.TGA` is missing, the game automatically uses `TABLE.TGA`.
    **Both video backends use exactly these same raw 32768-byte Tandy-bank
    source images.** VGA expands the selected image once at startup, into
@@ -173,12 +174,13 @@ Colored lamps and target art remain unchanged, and no perspective warp
 or new collision geometry is introduced. `TABLE.DAT`, original ball/flipper/plunger sprite data,
 gameplay state and scoring are identical between looks.
 
-The enhanced ball gets a small shadow and one highlight pixel, drawn only
-when the ball was already moving and being repainted. Those pixels fit in
-the existing 6x6 dirty rectangle; no screen-wide redrawing or added
-simulation step. Static artwork introduces **no extra work during gameplay**.
-The 4-pixel ball decoration has a tiny runtime cost and still needs
-measurement for brightness and perceived motion on the real CRT.
+The original 4x4 metallic ball sprite is drawn **unchanged in both styles**.
+The former 3-pixel floor shadow and 1-pixel glint were removed after physical
+Tandy feedback showed they made the low-resolution ball look less round.
+This preserves the original sprite's silhouette, uses the same existing 6x6
+dirty rectangle, and removes those extra per-frame pixel writes. Static
+artwork introduces **no extra work during gameplay**. The corrected ball's
+appearance on the real CRT still needs a follow-up check.
 
 Compare the same shot in `CADET /classic` versus `CADET /3d`. Use
 `CADET /record /classic` or `CADET /record /3d` to capture timing and
