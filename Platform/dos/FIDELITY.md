@@ -137,6 +137,20 @@ silently treat legacy exceptions as precedent for new ones.
   reduced energy instead of instantly draining; this outer containment is a
   **temporary DOS safety rail**, not a substitute for source world-space
   walls, ramps or source gate/layer states.
+  **2026-11-07 right-edge hardware finding:** owner-provided
+  `FLIGHT(2).TXT` at frames 1432-1455 records a fast ball moving from
+  x=164 to x=235 across the imported outer right rail (x about 181 at
+  y=100), requiring two emergency screen-edge recoveries at frames 1440
+  and 1455. It neither nudged nor tilted. The two-sided projected capsule
+  edges sometimes let a fast ball escape the physical boundary of the
+  table. DOS now chooses the source-projected long exterior right edge
+  during `table_index`, then applies a **one-sided normal reflection**
+  *only if* the ball has already crossed that edge after regular wall
+  collisions, with an approximate 2px clearance. This avoids bouncing
+  into the HUD, without teleporting the ball to the launcher or
+  introducing randomness. `right_rail_saves` is separately counted
+  from the older `boundary_hits` screen fallback. This is a safety
+  adaptation, not original collision-layer semantics.
 - **Why / evidence:** the owner also observed a ball disappear into an
   upper-left highlighted area after a bounce. Whether this was an off-screen
   exit, collision mask/occlusion, or a gameplay drain is **unverified**.
@@ -146,16 +160,22 @@ silently treat legacy exceptions as precedent for new ones.
   is incomplete. Real-mode performance/format limitations remain unmeasured.
 - **Tests:** synthetic one-way throat, all seven bumper contacts, a radial
   penetration recovery at the upper-left cap, and top/side containment
-  versus true lower drain. `CADET /record` now captures the last 256
+  versus true lower drain. Original-table right-rail regression starts
+  outside the imported source edge near the actual logged y=102,
+  requires a safe inward reflection rather than a screen fallback,
+  and confirms an inboard ball isn't disturbed.
+  `CADET /record` now captures the last 256
   rendered frames to `FLIGHT.TXT` (ball Q6 position/velocity, tube flag,
   charge, event, ball count and safety-rail contact counter), **buffered
   in memory until Esc** so gameplay has no disk writes.
 - **Remedy:** import one-way direction and layer/group metadata from
   `convert.py` into the pack; use inexpensive per-edge integer filters.
-  Test both passage directions, ramp return, and the marked upper-left
-  bounce area on real hardware. Once accurate source barriers prevent all
-  non-drain exits, evaluate whether the temporary screen safety rails can
-  be removed.
+  Test both passage directions, ramp return, both exterior rail sides,
+  and the marked upper-left bounce area on real hardware. Compare
+  horizontal/tangential velocity before/after real right-rail impacts;
+  the guard must preserve normal shots in the shooter and on the playfield.
+  Once accurate source barriers prevent all non-drain exits, evaluate
+  whether the temporary source-rail and screen safety rails can be removed.
 
 ### F-003 Plunger charge and launch variation
 
