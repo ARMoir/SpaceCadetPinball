@@ -80,6 +80,28 @@ int main(int argc,char **argv)
     game_step(&g,&t,0); game_step(&g,&t,KEY_NUDGE);
     assert(g.nudge_delay==70);
     puts("STAGE: flippers and nudge passed"); fflush(stdout);
+    /* The original upper-left skill-shot passage is one-way. The
+     * projected interior wall must let a descending ball through, but
+     * still prevent it coming back upward through the same throat. */
+    fixture();
+    t.edges[0].x=64; t.edges[0].ex=76;
+    t.edges[0].y=t.edges[0].ey=30;
+    t.edges[0].tx=256; t.edges[0].ty=0;
+    t.edges[0].length=12*FP;
+    assert(table_index(&t));
+    g.waiting=0; g.x=70*FP; g.y=29*FP; g.vy=100;
+    game_step(&g,&t,0);
+    assert(g.vy>0 && g.y>29*FP);
+    fixture();
+    t.edges[0].x=64; t.edges[0].ex=76;
+    t.edges[0].y=t.edges[0].ey=30;
+    t.edges[0].tx=256; t.edges[0].ty=0;
+    t.edges[0].length=12*FP;
+    assert(table_index(&t));
+    g.waiting=0; g.x=70*FP; g.y=31*FP+60; g.vy=-45;
+    game_step(&g,&t,0);
+    assert(g.vy>=0);
+    puts("STAGE: one-way chute"); fflush(stdout);
     /* A failed launch may roll back past the shared drain height.
      * It must return to the plunger without consuming a ball. */
     fixture(); g.waiting=0; g.x=(t.launch_x+2)*FP;
@@ -88,6 +110,27 @@ int main(int argc,char **argv)
     assert(g.balls==3 && g.waiting && !g.over && g.event==0);
     assert(g.x==t.launch_x*FP && g.y==t.launch_y*FP);
     assert(g.vx==0 && g.vy==0 && g.charge==0);
+    assert(g.in_shooter);
+    /* The diagonal lower tube returns from well to the right of
+     * launch_x; the old +/-8 check failed and drained this shot. */
+    fixture(); g.waiting=0;
+    g.x=(t.launch_x+18)*FP; g.y=(t.drain_y-12)*FP;
+    g.vy=32;
+    game_step(&g,&t,0);
+    assert(g.waiting && g.balls==3 && g.in_shooter);
+    /* A ball that reached the main playfield must drain normally. */
+    fixture(); g.waiting=0;
+    g.x=(t.launch_x-22)*FP; g.y=(t.launch_y-30)*FP;
+    game_step(&g,&t,0);
+    assert(!g.in_shooter);
+    g.x=(t.launch_x+18)*FP; g.y=(t.drain_y+1)*FP;
+    g.vy=32;
+    game_step(&g,&t,0);
+    assert(g.waiting && g.balls==2 && g.in_shooter);
+    fixture(); g.waiting=0;
+    g.x=(t.launch_x+2)*FP; g.y=(t.drain_y+1)*FP;
+    g.vy=32;
+    game_step(&g,&t,0);
     game_step(&g,&t,KEY_LAUNCH);
     game_step(&g,&t,0);
     assert(!g.waiting && g.vy<0 && g.event==2);
@@ -151,7 +194,7 @@ int main(int argc,char **argv)
         assert(abs(g.vx)<1024 && abs(g.vy)<1024);
     }
     f=fopen("TEST.OK","w"); assert(f);
-    fputs("PASS: original-style plunger pullback, weak/full power, launch variation, reflection, bumper score, flippers, shooter return, drain, restart, 20000-step soak\n",f);
+    fputs("PASS: plunger charge, one-way chute, wide shooter return, playfield drain, launch variation, reflection, bumper score, flippers, restart, 20000-step soak\n",f);
     fclose(f); puts("All DOS core tests passed.");
     return 0;
 }
