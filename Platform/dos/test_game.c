@@ -37,7 +37,7 @@ int main(int argc,char **argv)
     puts("STAGE: charged"); fflush(stdout);
     game_step(&g,&t,0);
     full_vy=g.vy;
-    assert(!g.waiting && full_vy<=-121 && full_vy>=-127 &&
+    assert(!g.waiting && full_vy<=-126 && full_vy>=-128 &&
            g.event==2 && g.vx==0);
     puts("STAGE: launch released"); fflush(stdout);
     fixture();
