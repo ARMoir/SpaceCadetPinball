@@ -330,7 +330,37 @@ int main(int argc,char **argv)
             game_step(&g,&t,0);
             assert(g.right_rail_saves==0 && g.boundary_hits==0);
         }
-        puts("STAGE: source-right-rail escape guard passed"); fflush(stdout);
+        /* Mirror the containment check against the SOURCE left exterior,
+         * rather than allowing an invisible x=2 screen edge to rescue it. */
+        {
+            const Edge *rail;
+            game_reset(&g,&t);
+            assert(t.outer_left_rail>=0);
+            rail=&t.edges[t.outer_left_rail];
+            assert((rail->x<rail->ex?rail->x:rail->ex)<=42);
+            g.waiting=0; g.in_shooter=0;
+            g.x=20*FP; g.y=102*FP; g.vx=-145; g.vy=30;
+            game_step(&g,&t,0);
+            printf("REAL LEFT RAIL: x=%d y=%d vx=%d screen=%u rail=%u\n",
+                   g.x/FP,g.y/FP,g.vx,g.boundary_hits,g.left_rail_saves);
+            fflush(stdout);
+            assert(g.left_rail_saves==1 && g.x/FP>=48 &&
+                   g.vx>0 && g.boundary_hits==0 &&
+                   g.right_rail_saves==0 && g.balls==3);
+            /* Inboard shots should never be snapped to the rail. */
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=112*FP; g.y=102*FP; g.vx=-10; g.vy=4;
+            game_step(&g,&t,0);
+            assert(g.left_rail_saves==0 && g.right_rail_saves==0);
+            /* Crucially, a ball climbing the valid SHOOTER lane to the
+             * right of the playfield must not hit our right rail guard. */
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=1;
+            g.x=185*FP; g.y=102*FP; g.vx=0; g.vy=-50;
+            game_step(&g,&t,0);
+            assert(g.in_shooter && g.right_rail_saves==0 &&
+                   g.left_rail_saves==0 && g.balls==3);
+        }
+        puts("STAGE: source left/right rail envelope and shooter passed"); fflush(stdout);
         /* Every visible source bumper must exist and respond. The last
          * three used to be filtered out as upper-layer geometry. Approach
          * each cap from its right edge on the complete imported table. */
