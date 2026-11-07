@@ -299,6 +299,24 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   re-test the actual right sling and performance on your V20.
   Other missing ramp/layer collisions may still trap the ball; nudge
   with X, A, or D if necessary, but repeated nudges can tilt.
+* **Universal anti-stuck watchdog (F-008):** follows the original
+  `control::UnstuckBall` strategy (exclude the flippers/plunger, first
+  throw upward, eventually relaunch) while using a lighter Q6 position
+  detector. A ball whose actual travel stays inside a 3-pixel window for
+  about **1.5 seconds** gets a gentle upward/inward nudge. If it remains
+  trapped, retry at one-second intervals with up to two small 2-3px
+  inward/upward moves **only when the candidate position is clear** of
+  indexed walls, radial bumpers and solid sling cores. If neither
+  approach works, a last-resort free plunger return preserves the
+  remaining-ball count and score. Waiting balls, live shooter travel,
+  kickback holds, flipper capture areas and normal lower drains are
+  exempt; physics is frozen in menus/pauses as before. Sustained travel
+  away from the trapped position cancels escalation. Moving normally
+  incurs only a handful of integer comparisons per physics step;
+  geometry checks run only during rare recovery attempts.
+  `CADET /record` logs `unstick_nudges`, `unstick_moves` and
+  `unstick_relaunches` in `INPUT.TXT`. Timing and perceived behavior
+  on the real Tandy/V20 still need verification.
 * Short synthesized Tandy PSG tones replace original samples and music.
 * Whole-table view prioritizes memory and frame cost over fine visual detail.
 
@@ -311,7 +329,10 @@ contact-dependent flipper leverage and incoming-momentum response,
 active flipper tip forgiveness with no idle/tilt saves, more energetic
 playfield speed, three-direction nudges and return impulses, tilt, both timed
 outlane kickbacks and single-use gating, solid slingshot center
-recognition/anti-trapping, drain/restart and a 20,000-step soak. It writes `TEST.OK` on success.
+recognition/anti-trapping, **universal stuck-ball detection, upward
+release, verified local relocation, free same-ball relaunch, and
+negative checks for shooter/flipper/normal drain**, drain/restart
+and a 20,000-step soak. It writes `TEST.OK` on success.
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (32768 bytes
 in Tandy mode, 64000 in VGA mode) and `SMOKE.TXT`, and restores DOS.
 The CI runner tests Tandy auto-detection, forced VGA, and VGA auto-detection
