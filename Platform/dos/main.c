@@ -16,6 +16,20 @@ static volatile unsigned char keys[128];
 static volatile unsigned char pressed_keys[128];
 static void (__interrupt __far *old_keyboard)(void);
 static int sound_enabled=1, sound_ticks;
+static int shake_enabled=1,video_shift=0;
+
+/* Shift the 6845 start-address by one unit for a short screen jolt.
+ * This shifts the visible image in hardware without copying 32 KB of
+ * graphics. Always restore zero on pause/exit; /noshake disables it on
+ * systems with unusual video hardware. */
+static void camera_shift(int offset)
+{
+    if(!shake_enabled) offset=0;
+    if(video_shift==offset) return;
+    outp(0x3d4,13);
+    outp(0x3d5,offset);
+    video_shift=offset;
+}
 
 static void __interrupt __far keyboard(void)
 {
@@ -218,9 +232,9 @@ static void draw_panel(int view,int choice,int paused)
         text_color(245,84,"Z LEFT FLIP",15);
         text_color(245,96,"/ RIGHT FLIP",15);
         text_color(245,108,"SPACE PLUNGER",15);
-        text_color(245,120,"X NUDGE",15);
-        text_color(245,132,"S SOUND",15);
-        text_color(245,144,"F2 NEW",15);
+        text_color(245,120,"A D SIDE BUMP",15);
+        text_color(245,132,"X UP BUMP",15);
+        text_color(245,144,"S SOUND F2 NEW",15);
         text_color(245,156,"F3 PAUSE",15);
         text_color(245,177,"ENTER BACK",7);
     } else {
@@ -234,9 +248,16 @@ static void draw_panel(int view,int choice,int paused)
         panel_frame(241,97,78,41);
         text_color(245,101,"STATUS",13);
         text_color(245,113,paused?"PAUSED":game.over?"GAME OVER":
-                      game.waiting?"READY":"IN PLAY",15);
-        text_color(245,126,paused?"F3 RESUME":game.over?"N NEW GAME":
-                      game.waiting?"SPACE LAUNCH":"BALL IN PLAY",7);
+                      game.tilted?"TILT":game.tilt_warning?"WARNING":
+                      game.kick_delay?"KICKING":game.waiting?"READY":"IN PLAY",
+                      game.tilted?12:15);
+        if(!paused && !game.over && !game.waiting) {
+            sprintf(buf,"KICK %c %c",game.kick_armed[0]?'L':'-',
+                                  game.kick_armed[1]?'R':'-');
+            text_color(245,126,buf,7);
+        } else
+            text_color(245,126,paused?"F3 RESUME":game.over?"N NEW GAME":
+                      "SPACE LAUNCH",7);
         panel_frame(241,142,78,51);
         text_color(245,147,"M MENU F3 PAUSE",15);
         text_color(245,158,sound_enabled?"S SOUND ON":"S SOUND OFF",15);
@@ -256,7 +277,8 @@ static void play_event(int event)
     unsigned divisor;
     if(!sound_enabled) return;
     if(!event) { if(sound_ticks && !--sound_ticks) silence(); return; }
-    divisor=event==1?180:event==2?320:600;
+    divisor=event==1?180:event==2?320:event==4?230:
+            event==5?760:600;
     outp(0xc0,0x80|(divisor&15)); outp(0xc0,divisor>>4); outp(0xc0,0x94);
     sound_ticks=2;
 }
@@ -295,6 +317,7 @@ int main(int argc,char **argv)
     int plunger_x,plunger_y,old_plunger_x=-1,old_plunger_y=-1;
     int plunger_changed,plunger_redraw,plunger_charge;
     int view=0,choice=0,paused=0,exit_requested=0,ui_dirty=0;
+    int old_flags=-1;
     unsigned char toggle_sound,toggle_menu,key_up,key_down;
     unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_new;
     unsigned observed=0,launches=0;
@@ -305,7 +328,8 @@ int main(int argc,char **argv)
         if(!strcmp(argv[i],"/smoke")) smoke=1;
         else if(!strcmp(argv[i],"/record")) record=1;
         else if(!strcmp(argv[i],"/nosound")) sound_enabled=0;
-        else { puts("Usage: CADET [/smoke] [/record] [/nosound]"); return 1; }
+        else if(!strcmp(argv[i],"/noshake")) shake_enabled=0;
+        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
     if(!table_load(&table,"TABLE.DAT")) {
@@ -336,8 +360,11 @@ int main(int argc,char **argv)
         input=((keys[44]||pressed_keys[44])?KEY_LEFT:0)|
               ((keys[53]||pressed_keys[53])?KEY_RIGHT:0)|
               ((keys[57]||pressed_keys[57])?KEY_LAUNCH:0)|
-              ((keys[45]||pressed_keys[45])?KEY_NUDGE:0);
+              ((keys[45]||pressed_keys[45])?KEY_NUDGE:0)|
+              ((keys[30]||pressed_keys[30])?KEY_NUDGE_LEFT:0)|
+              ((keys[32]||pressed_keys[32])?KEY_NUDGE_RIGHT:0);
         pressed_keys[44]=pressed_keys[53]=pressed_keys[57]=pressed_keys[45]=0;
+        pressed_keys[30]=pressed_keys[32]=0;
         toggle_sound=pressed_keys[31]; /* S */
         toggle_menu=pressed_keys[50]; /* M */
         key_up=pressed_keys[72]; key_down=pressed_keys[80];
@@ -404,6 +431,10 @@ int main(int argc,char **argv)
             }
         } else input=0;
         play_event(event);
+        /* Visible shake comes from the CRTC, never a memory-wide screen
+         * redraw. The offset alternates briefly and resets on pause/menu. */
+        camera_shift(!view && !paused && !exit_requested &&
+                     ((game.shake_frames/4)&1)?1:0);
         plunger_charge=game.waiting?game.charge:0;
         plunger_rect(plunger_charge,&plunger_x,&plunger_y);
         plunger_changed=(old_plunger_y<0 ||
@@ -462,23 +493,33 @@ int main(int argc,char **argv)
         old_x=next_x; old_y=next_y;
         if(!game.over && ball_redraw)
             sprite(&table.sprites[4],old_x+1,old_y+1);
-        if(ui_dirty || old_score!=game.score || old_balls!=game.balls ||
-           old_wait!=game.waiting || old_over!=game.over) {
-            draw_panel(view,choice,paused);
-            old_score=game.score; old_balls=game.balls;
-            old_wait=game.waiting; old_over=game.over;
+        {
+            int flags=(game.tilted?1:0)|(game.tilt_warning?2:0)|
+                      (game.kick_delay?4:0)|
+                      (game.kick_armed[0]?8:0)|
+                      (game.kick_armed[1]?16:0);
+            if(ui_dirty || old_score!=game.score || old_balls!=game.balls ||
+               old_wait!=game.waiting || old_over!=game.over ||
+               old_flags!=flags) {
+                draw_panel(view,choice,paused);
+                old_flags=flags;
+            }
         }
+        old_score=game.score; old_balls=game.balls;
+        old_wait=game.waiting; old_over=game.over;
         previous_input=input;
     }
     _disable(); _dos_setvect(9,old_keyboard); _enable();
+    camera_shift(0);
     silence();
     if(smoke || record) dump_screen();
     mode(old_mode); _ffree(background);
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u\n",
-                frame,game.steps,game.score,game.hits,game.balls,slow_frames,observed,launches);
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u\n",
+                frame,game.steps,game.score,game.hits,game.balls,slow_frames,
+                observed,launches,game.nudges,game.kickbacks,game.tilts);
         fclose(report);
     }
     puts("Space Cadet DOS prototype. Original assets; simplified physics/rules.");
