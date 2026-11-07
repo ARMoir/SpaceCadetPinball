@@ -46,7 +46,7 @@ def main():
         "video_cycles_per_ms="+str(a.cycles),
         "original_table="+str(int(a.original)),
     ]
-    for asset in ("CADET.EXE","TEST.EXE","TABLE.DAT","TABLE.TGA"):
+    for asset in ("CADET.EXE","TEST.EXE","TABLE.DAT","TABLE.TGA","TABLE3D.TGA"):
         target=directory/asset
         if target.is_file():
             summary.append("%s bytes=%d sha256=%s" % (
