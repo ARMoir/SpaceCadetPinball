@@ -24,6 +24,7 @@ int main(int argc,char **argv)
     int i;
     FILE *f;
     fixture();
+    puts("STAGE: basic fixtures"); fflush(stdout);
     assert(integer_sqrt(0)==0 && integer_sqrt(1)==1);
     assert(integer_sqrt(65535UL)==255 && integer_sqrt(4294967295UL)==65535UL);
     assert(g.balls==3 && g.waiting);
@@ -40,10 +41,20 @@ int main(int argc,char **argv)
     game_step(&g,&t,KEY_LEFT); assert(g.vy<0);
     fixture(); g.waiting=0; g.x=140*FP; g.y=163*FP; g.vy=30;
     game_step(&g,&t,KEY_RIGHT); assert(g.vy<0);
+    /* The ball can sit between the resting and raised flipper lines.
+     * The interpolated sweep must catch it during the key transition. */
+    fixture(); g.waiting=0; g.x=103*FP; g.y=161*FP; g.vy=40;
+    game_step(&g,&t,KEY_LEFT);
+    assert(g.vy<0 && g.balls==3);
+    /* A held raised flipper still collides on later steps. */
+    fixture(); g.waiting=0; g.x=103*FP; g.y=151*FP; g.vy=40;
+    game_step(&g,&t,KEY_LEFT);
+    assert(g.vy<0);
     fixture(); g.waiting=0; g.x=50*FP; g.y=60*FP;
     game_step(&g,&t,KEY_NUDGE); assert(g.vy<0 && g.vx>0 && g.nudge_delay==72);
     game_step(&g,&t,0); game_step(&g,&t,KEY_NUDGE);
     assert(g.nudge_delay==70);
+    puts("STAGE: flippers and nudge passed"); fflush(stdout);
     /* A failed launch may roll back past the shared drain height.
      * It must return to the plunger without consuming a ball. */
     fixture(); g.waiting=0; g.x=(t.launch_x+2)*FP;
@@ -68,7 +79,9 @@ int main(int argc,char **argv)
     assert(g.over);
     game_reset(&g,&t); assert(g.score==0 && !g.over && g.balls==3);
     /* Exercise the actual imported pack under 16-bit arithmetic. */
+    puts("STAGE: synthetic tests passed; loading imported table"); fflush(stdout);
     assert(table_load(&t,"TABLE.DAT")); game_reset(&g,&t);
+    puts("STAGE: imported pack loaded"); fflush(stdout);
     if(argc>1 && !strcmp(argv[1],"/original")) {
         /* Regression: full-power launch must leave the shooter lane and
          * reach a scoring bumper in the supplied Windows Space Cadet pack. */
@@ -77,9 +90,12 @@ int main(int argc,char **argv)
             game_step(&g,&t,keys);
             if(g.waiting && i>49) break;
         }
+        printf("ORIGINAL: hits=%lu score=%lu steps=%d x=%d y=%d\\n",
+               g.hits,g.score,i,g.x/FP,g.y/FP); fflush(stdout);
         assert(g.hits>0 && g.score>=500);
         game_reset(&g,&t);
     }
+    puts("STAGE: starting soak"); fflush(stdout);
     for(i=0;i<20000;i++) {
         unsigned keys=(i%192<48?KEY_LAUNCH:0)|(i%80<40?KEY_LEFT:KEY_RIGHT);
         if(g.over) game_reset(&g,&t);
