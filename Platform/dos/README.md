@@ -1,15 +1,16 @@
-# Space Cadet: native DOS / Tandy prototype
+# Space Cadet: native 16-bit DOS / Tandy and VGA prototype
 
 This is a separate C89, 16-bit real-mode target for an NEC V20 / 8088-class
-Tandy 1000. It does not use SDL, Windows, a DOS extender, an FPU, XMS or EMS.
+Tandy 1000 **and standard VGA-compatible DOS PCs**. It does not use SDL,
+Windows, a DOS extender, an FPU, XMS or EMS.
 The desktop version is unchanged. This is a playable experimental prototype,
 **not** a feature-complete port or a final hardware-certified release.
 
 **Final project handoff:** [FEATURE_STATUS.md](FEATURE_STATUS.md) lists
 exactly what works, what is simplified, what is **not implemented**, and
 what still needs physical V20 testing. [VALIDATION.md](VALIDATION.md) records
-automated checks and hardware observations. Feature work is paused unless
-a real playability problem justifies another change.
+automated checks and hardware observations. Further work is limited to owner-requested hardware compatibility and
+demonstrated playability problems.
 
 ## Project priorities: playability first, authenticity a very close second
 
@@ -61,8 +62,11 @@ from H and checked by an automated font regression test.
    `CADET /classic` loads the original unmodified background, with no ball
    shadow or glint. `CADET /3d` requests the enhanced style explicitly.
    If `TABLE3D.TGA` is missing, the game automatically uses `TABLE.TGA`.
-   Both background files are raw 32768-byte Tandy mode-09h bank images
-   (not Targa). Keep the executable and SCP2 `TABLE.DAT` from one build.
+   **Both video backends use exactly these same raw 32768-byte Tandy-bank
+   source images.** VGA expands the selected image once at startup, into
+   its linear 64000-byte background. No additional VGA assets are required.
+   The source files are *not* Targa images. Keep the EXE and SCP2 `TABLE.DAT`
+   from the same build.
 
 Controls: **Z** or **left mouse button** for the left flipper,
 **/** or **right mouse button** for the right flipper. Any combination
@@ -95,16 +99,54 @@ play. Switching sound off silences any currently playing tone immediately.
 display shifts incorrectly on actual hardware). The small one-character
 shake is done by a short MC6845 CRTC start-address offset and is restored
 on pause, menu and exit, with no full-screen redraw.
-Run on Tandy-compatible video;
-there is no VGA fallback or reliable automatic Tandy detection in this version.
-Visual style may be selected only at startup, not while the ball is moving.
+### Video mode selection
 
-The native program uses BIOS mode 09h, packed 4bpp B800 video memory with four
-8KB banks, and a private IRQ1 make/break keyboard handler. It restores the prior
-keyboard vector and video mode on normal exit. Do not terminate the emulator
-to test cleanup; use Esc. No PIT reprogramming: the BIOS timer drives 18.2 FPS
-with four fixed physics substeps (about 72.8 Hz). Late frames are counted and
-dropped rather than running unbounded catch-up work.
+| Startup | Behavior |
+| --- | --- |
+| `CADET` | **Auto-detect** standard VGA/MCGA via BIOS INT 10h AX=1A00h. Use VGA if detected, otherwise preserve the original Tandy mode |
+| `CADET /vga` | Force **VGA BIOS mode 13h**, 320x200, 256-color-capable (existing **16-color artwork** is preserved), linear A000h framebuffer |
+| `CADET /tandy` | Force the original **Tandy/PCjr BIOS mode 09h**, 320x200, 16 colors, banked B800h framebuffer |
+| `CADET /vga /classic` | Standard VGA with the untouched original artwork |
+| `CADET /tandy /3d` | Tandy graphics with the enhanced static-shaded artwork |
+
+These are **standard BIOS graphics modes**, not custom VGA timings, VESA,
+or unchained VGA. `/vga` refuses to run if the VGA BIOS detection fails,
+rather than blindly writing to unavailable video hardware. On a non-VGA
+machine without compatible Tandy/PCjr graphics, the Tandy fallback still
+requires actual Tandy-compatible hardware: plain CGA is not sufficient.
+
+The only differences are display and sound hardware:
+- Tandy mode uses packed 4bpp `B800h` with four interleaved 8KB banks
+  and the existing Tandy PSG. The original 32KB far background, Tandy
+  CRTC shake, sprite/pixel paths, and timing priorities are retained.
+- VGA mode sets the 16 original RGBI colors into the standard VGA DAC,
+  uses linear 8bpp `A000h` video and a **64000-byte far background**,
+  copies matching 2-pixel dirty rectangles, and plays short PC-speaker
+  tones instead of accessing Tandy PSG ports. The additional VGA colors
+  are not populated from the full-resolution source resources, and
+  **VGA still shows the same 320x200, 16-color artwork**.
+- The 32768-byte Tandy source image expands into VGA memory only at
+  startup. There is no full-screen redraw during normal gameplay.
+  There is no extra conversion in the ball/physics loop, and the
+  background is not duplicated in RAM.
+- The Tandy-only CRTC screen jolt is intentionally disabled on VGA,
+  where its addressing behavior differs. The selected artwork style
+  can only be changed when launching the program.
+
+The native program has a private IRQ1 make/break keyboard handler.
+It restores the previous keyboard vector and BIOS video mode on normal
+exit. Quit with Esc rather than terminating the emulator to test
+cleanup. No PIT reprogramming: the BIOS timer drives 18.2 FPS with
+four fixed physics substeps (about 72.8 Hz). Late frames are counted
+and dropped rather than running unbounded catch-up work.
+
+**Memory:** Tandy continues using a single 32KB far background; VGA
+allocates one 64000-byte far background. Both use the same near-data
+game and trace state; conventional DOS memory is required, and 640KB
+is recommended. VGA rendering speed and PC-speaker output on a
+physical PC are **not yet verified**. The BIOS chooses the initial
+video mode, and both styles restore the previous text/graphics mode
+when exiting normally.
 
 ## Optional static faux-3D enhancement (F-007)
 
@@ -239,9 +281,11 @@ bumper scoring, shooter-lane return versus regular drain, left/right flippers,
 contact-dependent flipper leverage and incoming-momentum response, more energetic
 playfield speed, three-direction nudges and return impulses, tilt, both timed
 outlane kickbacks and single-use gating, drain/restart and a 20,000-step soak. It writes `TEST.OK` on success.
-`CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (raw video memory)
-and `SMOKE.TXT`, and restores DOS. It exercises the backend but does not prove
-physical key responsiveness or real V20 timing.
+`CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (32768 bytes
+in Tandy mode, 64000 in VGA mode) and `SMOKE.TXT`, and restores DOS.
+The CI runner tests Tandy auto-detection, forced VGA, and VGA auto-detection
+in DOSBox-X, and verifies that the **entire final video frame matches
+pixel-for-pixel** between backends. It does not prove physical latency.
 `TEST /original` additionally checks all seven bumpers, both kickbacks at
 three entry offsets, original plunger frame positions, 12 partial-charge
 shooter-return trajectories, successful recharging/relaunching of a returned
@@ -266,8 +310,8 @@ inspect/share `FLIGHT.TXT` and `INPUT.TXT`. These show whether it exited the
 screen, drained, or remained inside an unexpected collision area.
 
 The small memory model keeps code and near data individually below 64KB;
-the immutable background is one 32KB far allocation. Only changed ball and
-flipper rectangles are restored. Collision candidates use 25 narrower 8-pixel vertical bands and
+the immutable background is one far allocation of 32KB (Tandy) or
+64000 bytes (VGA). Only changed ball and flipper rectangles are restored. Collision candidates use 25 narrower 8-pixel vertical bands and
 precomputed per-edge bounds before fixed-point dot products. Moving sprites
 are drawn scanline-by-scanline without per-pixel video address division;
 stationary flippers are not repainted unnecessarily. No per-frame allocation,
@@ -290,4 +334,6 @@ shorts and W*H bytes (0..15 or 255 for transparent). Caps are enforced by
 both converter and runtime. Coordinates are pixels; tangents Q8 and lengths Q6.
 
 Tandy layout reference: Tandy 1000 Technical Reference Manual, video section
-(four 8KB banks, mode 09h). Compiler: https://github.com/open-watcom/open-watcom-v2
+(four 8KB banks, mode 09h). Standard VGA reference: BIOS INT 10h modes 13h
+and AX=1A00h detection; A000h linear 64000-byte video, VGA DAC 3C8/3C9h.
+Compiler: https://github.com/open-watcom/open-watcom-v2
