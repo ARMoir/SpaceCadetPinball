@@ -158,6 +158,104 @@ def enhance(original, caps):
                 and out[y+2][x+2]==8):
                 out[y+2][x+2]=0
                 counters["cast_shadow"]+=1
+
+    # Second offline depth pass (F-007). Sharpen the relief of EXISTING
+    # painted metal, not the invisible collision edges. Source pixels and
+    # palette are immutable inputs; both the classic background and the
+    # original colored inserts are preserved exactly. Every change is to
+    # an already gray/white metal pixel. This shading is baked on a PC.
+    counters.update(rail_rim=0,rail_underside=0,
+                    hardware_relief=0,bumper_dome=0,
+                    bumper_underside=0,contact_occlusion=0)
+
+    def shade(x,y,color,kind):
+        if src[y][x] in NEUTRAL and out[y][x]!=color:
+            out[y][x]=color
+            counters[kind]+=1
+
+    # An edge exposed to the upper-left light is bright, the opposite edge
+    # is darker. Require a continuous metal area on one side so colored
+    # insert outlines and isolated silver playfield dots are not affected.
+    # The same rule makes the lower flipper guides and the shooter-lane
+    # hardware stand a little higher without painting new objects.
+    for y in range(8, PLAYFIELD_BOTTOM-3):
+        for x in range(8, PLAYFIELD_RIGHT-3):
+            c=src[y][x]
+            if c not in NEUTRAL:
+                continue
+            n,w=src[y-1][x],src[y][x-1]
+            e,ss=src[y][x+1],src[y+1][x]
+            support=sum(v in NEUTRAL for v in
+                        (n,w,e,ss,src[y-1][x-1],src[y+1][x+1]))
+            if support<3:
+                continue
+            top_left=(n==0 or w==0)
+            lower_right=(e==0 or ss==0)
+            in_hardware=(137<=y<=184 and
+                         (35<=x<=164 or 178<=x<=223))
+            if top_left and not lower_right:
+                if c==7:
+                    shade(x,y,15,"hardware_relief" if in_hardware
+                          else "rail_rim")
+                elif c==8 and ((x+2*y)&1)==0:
+                    shade(x,y,7,"hardware_relief" if in_hardware
+                          else "rail_rim")
+            elif lower_right and not top_left:
+                if c==15:
+                    shade(x,y,7,"hardware_relief" if in_hardware
+                          else "rail_underside")
+                elif c==7:
+                    shade(x,y,8,"hardware_relief" if in_hardware
+                          else "rail_underside")
+
+            # Local contact occlusion. Light metal a pixel above/left of an
+            # EXISTING dark-gray foot casts a small shadow down/right. The
+            # background black stays black; no masks extend into text or HUD.
+            if (c==8 and src[y-1][x-1] in (7,15)
+                    and (src[y-2][x-1] in (7,15) or
+                         src[y-1][x-2] in (7,15))
+                    and ((x+y)&1)==0):
+                shade(x,y,0,"contact_occlusion")
+
+    # Stronger rounded lighting on the *visible gray* portions of each of
+    # seven original-source bumper caps. This is visual relief only: no
+    # sprite, hitbox, bumper center, polygon or collision radius changes.
+    for cx,cy,rx,ry in caps:
+        xmin=max(8,int(cx-rx-4))
+        xmax=min(PLAYFIELD_RIGHT-3,int(cx+rx+5))
+        ymin=max(8,int(cy-ry-4))
+        ymax=min(PLAYFIELD_BOTTOM-3,int(cy+ry+5))
+        for y in range(ymin,ymax):
+            for x in range(xmin,xmax):
+                c=src[y][x]
+                if c not in NEUTRAL:
+                    continue
+                nx=(x-cx)/rx
+                ny=(y-cy)/ry
+                d2=nx*nx+ny*ny
+                facing=nx+ny
+                if .12<=d2<=.86 and facing<-.30:
+                    if c==7:
+                        shade(x,y,15,"bumper_dome")
+                    elif c==8 and ((x+y)&3)!=0:
+                        shade(x,y,7,"bumper_dome")
+                elif .42<=d2<=1.30 and facing>.35:
+                    if c==15:
+                        shade(x,y,7,"bumper_underside")
+                    elif c==7:
+                        shade(x,y,8,"bumper_underside")
+
+                # Extra shallow two-pixel downward/right contact shadow.
+                # Refuse to alter the colorful body/lights of the source.
+                sx=(x-cx-2.5)/(rx+1.3)
+                sy=(y-cy-2.5)/(ry+1.3)
+                shifted=sx*sx+sy*sy
+                if (1.02<=d2<=1.75 and
+                        .66<=shifted<=1.25 and facing>.05):
+                    if c==7 and ((x+y)&1)==0:
+                        shade(x,y,8,"bumper_underside")
+                    elif c==8 and ((x+y)&3)!=0:
+                        shade(x,y,0,"bumper_underside")
     return out, counters
 
 
