@@ -29,9 +29,9 @@ Tandy 1000 EX/V20.
 | Bumpers | Seven source-derived visible caps have radial contact, static initial 500/1500 scoring | No original per-bumper rule progression or vertical layers (F-004) |
 | Kickback saves | Left/right outlane catch, wind-up and return; one use per side per ball | **Not** original Hazard Target/gate state logic (F-001) |
 | Nudge / tilt | X / A / D impulses and tilt-warning/lockout | Custom thresholds, not exact original accumulation (F-005) |
-| Inputs and UI | Z and / flippers, Space plunger, keyboard menu, pause, new game, help/controls, sound toggle, exit | Menu is a compact substitute, not complete original dialogs |
+| Inputs and UI | Z and / flippers **plus optional DOS mouse left/right buttons**, Space plunger, keyboard menu, pause, new game, help/controls, sound toggle, exit | Standard INT 33h DOS mouse driver required, mouse click behavior unverified on real V20; menu is a compact substitute |
 | Sound | Short Tandy PSG tones, `/nosound`, S toggle | Original sound samples and music not ported |
-| Diagnostics | `/record`, `INPUT.TXT`, `FLIGHT.TXT` (schema 3), slow-frame and right-rail counters; PC-side `analyze_logs.py` | Buffer until exit, not long-term historical telemetry |
+| Diagnostics | `/record`, `INPUT.TXT`, `FLIGHT.TXT` (schema 4), slow-frame and both outer-rail counters; PC-side `analyze_logs.py` | Buffer until exit, not long-term historical telemetry |
 | Build/repro | Converter, test suites, Open Watcom build, DOSBox-X core/video smoke, `CADET.zip` artifact | Emulator pass does not prove real 7.16 MHz timing |
 
 ## Partially implemented, approximated, or not faithful to source
@@ -113,6 +113,16 @@ machine**, and those prior symptoms are not claimed solved:
 | Ball seemed to disappear into the upper-left playfield | Top/side safety rail, event/flight tracing | **Pending**: confirm correct ramps and no hidden trapping |
 | High-speed ball flew to upper-right HUD boundary | One-sided source-projected right outer rail guard, `right_rail_saves` logs, shooter exemption | **Pending**: confirm ball remains inside playable table without unnatural bounce |
 | Tandy V20 responsiveness and 3D art legibility | Fixed-point, dirty rectangles, offline shading, `/classic` | **Pending**: sustained play, input response, `slow_frames` and side-by-side CRT inspection |
+
+**Optional mouse flippers follow-up (2026-11-07):** When a compatible
+DOS driver is loaded, the left and right mouse buttons mirror Z and /
+flippers via INT 33h button state and press counts. A quick click is latched
+even if released between display frames. Both mouse buttons can be held at
+once, and keyboard/mouse inputs are combined. No cursor/mouse movement
+feature is included; `/nomouse` disables mouse support. Without a driver
+the keyboard remains fully functional. **Physical serial mouse and V20
+latency/performance validation is still pending.** This adds an input option,
+not any original gameplay rules.
 
 **Latest controls and bounds follow-up:** The 3×5 menu font previously
 rendered `A` exactly like `H`; the F1 help now clearly says
