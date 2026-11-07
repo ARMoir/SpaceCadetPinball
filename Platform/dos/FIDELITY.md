@@ -188,6 +188,32 @@ silently treat legacy exceptions as precedent for new ones.
   original 3D collision masks. Runtime costs: inexpensive integer
   interpolation for a rare out-of-bounds candidate, no per-frame memory
   allocation. Final V20 correctness/performance remains **UNVERIFIED**.
+  **2026-11-07 slingshot solid-core repair:** on physical Tandy hardware,
+  the ball repeatedly entered the **center of the right slingshot**
+  (potentially left as well), a trapping artifact from treating the
+  closed source outlines as independent two-sided capsules. The
+  imported SCP2 has two closed, 14-edge slingshot outlines: approximately
+  x=76..91/y=118..143 (left) and x=141..156/y=118..143 (right).
+  During `table_index`, DOS now recognizes them by their CLOSED SOURCE
+  outlines and relative flipper-pivot positions, builds a convex
+  three-face hull with precomputed Q8 outward normals, and removes only
+  their conflicting original perimeter capsules from the generic
+  collision bands. Near a sling, a ball is projected outside the
+  nearest hull face by its full 3px collision radius and reflected
+  outward; an upper/side impact gets a small upward release to avoid
+  hanging in place. Tandy and VGA use the **same** fixed-point logic.
+  The ball cannot occupy the filled slingshot center after a physics
+  step even when initially placed inside or moving into the wedge at
+  maximum normal playfield speed. There is no invented outer wall,
+  altered artwork, random teleport, ball-loss immunity, new scoring
+  event or changed data file. Each rescue increments
+  `sling_left_rescues` or `sling_right_rescues` in the existing
+  `/record` summary. Runtime cost is an inexpensive bounding-box
+  rejection except when the ball approaches a sling, with no dynamic
+  allocation. This is an intentional playability accommodation for
+  flattened 2D physics, not yet a faithful port of original collision
+  groups. Real 7.16 MHz V20 timing and the owner's physical
+  right-sling trajectory remain **UNVERIFIED**.
 - **Why / evidence:** the owner also observed a ball disappear into an
   upper-left highlighted area after a bounce. Whether this was an off-screen
   exit, collision mask/occlusion, or a gameplay drain is **unverified**.
@@ -195,8 +221,11 @@ silently treat legacy exceptions as precedent for new ones.
   which is unlike the actual below-flipper drain. The temporary containment
   prioritizes preserving a playable ball while source collision-layer import
   is incomplete. Real-mode performance/format limitations remain unmeasured.
-- **Tests:** synthetic one-way throat, all seven bumper contacts, a radial
-  penetration recovery at the upper-left cap, and top/side containment
+- **Tests:** original-data closed left/right sling recognition and
+  per-band exclusion, direct center penetration, high-speed entries
+  from above/below/left/right and sustained anti-trapping checks,
+  alongside synthetic one-way throat, all seven bumper contacts,
+  a radial penetration recovery at the upper-left cap, and top/side containment
   versus true lower drain. Original-table right-rail regression starts
   outside the imported source edge near the actual logged y=102,
   requires a safe inward reflection rather than a screen fallback,
