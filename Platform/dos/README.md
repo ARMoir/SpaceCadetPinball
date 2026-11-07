@@ -87,8 +87,14 @@ shading pass** adds clearer top-left metallic rims, darker lower-right rail
 undersides, short contact shadows on existing gray metal near flipper guides
 and shooter-lane hardware, and brighter domes/deeper undersides on the seven
 original bumper caps. It only recolors pixels that were already gray or
-white in the source image. Colored lamps and target art remain unchanged,
-and no perspective warp or new collision geometry is introduced. `TABLE.DAT`, original ball/flipper/plunger sprite data,
+white in the source image. **A third, purely offline trompe-l'œil pass**
+derives a three-tier *visual-only* height mask from already painted metal
+and the original seven bumper centers. One-pixel bright/dark Mach-band edges,
+1–3 pixel *internal* sidewall shading, small ordered-dither contact shadows,
+and longer offset shadows for higher bumper housings simulate extrusion.
+The masks are not exported to the game or used for ball collisions.
+Colored lamps and target art remain unchanged, and no perspective warp
+or new collision geometry is introduced. `TABLE.DAT`, original ball/flipper/plunger sprite data,
 gameplay state and scoring are identical between looks.
 
 The enhanced ball gets a small shadow and one highlight pixel, drawn only
