@@ -171,9 +171,11 @@ static void restore(int x,int y,int w,int h)
     if(w<=0 || h<=0) return;
     start=x/2; end=(x+w+1)/2;
     if(vga_mode) {
+        /* Match Tandy's two-pixel dirty-rectangle granularity exactly:
+         * this prevents subtly different flipper/ball restores on VGA. */
         for(row=y;row<y+h;row++) {
-            a=(unsigned)row*320U+(unsigned)x;
-            _fmemcpy(video+a,background+a,(unsigned)w);
+            a=(unsigned)row*320U+(unsigned)(start*2);
+            _fmemcpy(video+a,background+a,(unsigned)((end-start)*2));
         }
     } else {
         for(row=y;row<y+h;row++) {
