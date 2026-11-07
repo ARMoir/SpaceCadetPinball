@@ -182,7 +182,7 @@ int main(int argc,char **argv)
     unsigned last,now,frame=0,input,previous_input=0;
     unsigned long old_score=~0UL,slow_frames=0;
     int i,smoke=0,record=0,old_x=-10,old_y=-10,old_balls=-1,old_wait=-1,old_over=-1;
-    int old_new=0,event;
+    int old_new=0,event,next_x,next_y,ball_changed,ball_redraw;
     unsigned observed=0,launches=0;
     union REGS r;
     unsigned char old_mode;
@@ -234,7 +234,15 @@ int main(int argc,char **argv)
             if(game.event) { event=game.event; if(event==2) launches++; }
         }
         play_event(event);
-        restore(old_x,old_y,table.sprites[4].w+2,table.sprites[4].h+2);
+        next_x=game.x/FP-table.sprites[4].w/2-1;
+        next_y=game.y/FP-table.sprites[4].h/2-1;
+        /* Positions are Q6 but only whole screen pixels are displayed.
+         * Do not erase/repaint a ball that has not moved onscreen.
+         * This also prevents an 18 Hz erase/repaint flash at the plunger. */
+        ball_changed=(next_x!=old_x || next_y!=old_y || old_over!=game.over);
+        ball_redraw=ball_changed;
+        if(ball_changed)
+            restore(old_x,old_y,table.sprites[4].w+2,table.sprites[4].h+2);
         for(i=0;i<2;i++) {
             const Sprite *s;
             int changed=(input^previous_input)&(1<<i);
@@ -244,13 +252,18 @@ int main(int argc,char **argv)
             }
             s=&table.sprites[i*2+((input&(1<<i))!=0)];
             if(frame==1 || changed ||
-               ball_overlaps(s,old_x,old_y,
-                             table.sprites[4].w+2,table.sprites[4].h+2))
+               (ball_changed && ball_overlaps(s,old_x,old_y,
+                            table.sprites[4].w+2,table.sprites[4].h+2)))
                 sprite(s,s->x,s->y);
+            /* Changing a flipper can erase a stationary ball that overlaps
+             * it. Repaint the ball once after the flipper when necessary. */
+            if(changed && ball_overlaps(s,next_x,next_y,
+                                      table.sprites[4].w+2,table.sprites[4].h+2))
+                ball_redraw=1;
         }
-        old_x=game.x/FP-table.sprites[4].w/2-1;
-        old_y=game.y/FP-table.sprites[4].h/2-1;
-        if(!game.over) sprite(&table.sprites[4],old_x+1,old_y+1);
+        old_x=next_x; old_y=next_y;
+        if(!game.over && ball_redraw)
+            sprite(&table.sprites[4],old_x+1,old_y+1);
         if(old_score!=game.score || old_balls!=game.balls || old_wait!=game.waiting || old_over!=game.over) {
             hud(); old_score=game.score; old_balls=game.balls; old_wait=game.waiting; old_over=game.over;
         }
