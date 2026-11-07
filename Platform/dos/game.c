@@ -257,8 +257,10 @@ void game_step(Game *g,const Table *t,unsigned keys)
     }
     /* Once the ball leaves the right-side shooter and crosses left into
      * the playfield, a later drain must cost a ball normally. */
-    if(g->in_shooter && g->x<(t->launch_x-18)*FP &&
-       g->y<(t->drain_y-10)*FP)
+    /* Crossing the left boundary of the tube also means playfield,
+     * including near the bottom. Otherwise a right-side main-table
+     * drain could be mistaken for a returned shot. */
+    if(g->in_shooter && g->x<(t->launch_x-10)*FP)
         g->in_shooter=0;
 
     /* The original plunger can catch/relaunch weak shots returning down
