@@ -46,7 +46,7 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(schema, 3)
         self.assertEqual(rows[-1]["RIGHT_RAIL"], 1)
         self.assertIn("outer-right rail recoveries in window: 1",
-                      "\\n".join(summary_lines(rows, columns)))
+                      "\n".join(summary_lines(rows, columns)))
 
     def test_both_outer_rails_in_schema4(self):
         # Keep old schema 1/2/3 recordings readable, while ensuring the
@@ -64,7 +64,7 @@ class FlightTests(unittest.TestCase):
                 line = " ".join(fields)
                 row_index += 1
             converted.append(line)
-        schema, columns, rows = parse_flight("\\n".join(converted))
+        schema, columns, rows = parse_flight("\n".join(converted))
         self.assertEqual(schema, 4)
         self.assertEqual(rows[-1]["RIGHT_RAIL"], 1)
         self.assertEqual(rows[-1]["LEFT_RAIL"], 1)
