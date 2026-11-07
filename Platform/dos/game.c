@@ -106,6 +106,7 @@ static void feed(Game *g,const Table *t)
 {
     g->x=t->launch_x*FP; g->y=t->launch_y*FP;
     g->vx=g->vy=g->charge=0; g->waiting=1;
+    g->in_shooter=1;
     g->sweep[0]=g->sweep[1]=0;
 }
 
@@ -168,6 +169,22 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
     return 1;
 }
 
+/* The upper-left skill-shot chute includes one-way passages in the
+ * original (TOneway / skill-shot gates). The current SCP1 pack flattened
+ * adjacent ramp edges into two-sided walls. Let the ball pass downhill
+ * through the *interior* upper-left throat, but keep the long external
+ * boundaries and all ordinary playfield walls solid. This can be replaced
+ * by imported one-way edges in the next data format. */
+static int upper_chute_pass(const Game *g,const Edge *e,int px,int py)
+{
+    if(g->vy<=0 || px<57 || px>108 || py<20 || py>56)
+        return 0;
+    return minimum(e->x,e->ex)>=59 &&
+           maximum(e->x,e->ex)<=106 &&
+           minimum(e->y,e->ey)>=22 &&
+           maximum(e->y,e->ey)<=53;
+}
+
 void game_step(Game *g,const Table *t,unsigned keys)
 {
     int i,b,pressed,px,py;
@@ -217,6 +234,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
         const EdgeBounds *box=&t->bounds[index];
         if(px<box->left || px>box->right ||
            py<box->top || py>box->bottom) continue;
+        if(upper_chute_pass(g,&t->edges[index],px,py)) continue;
         collide(g,&t->edges[index],96,0);
         /* Contact correction can move the ball; refresh only for actual
          * nearby candidates instead of dividing for every indexed edge. */
@@ -237,19 +255,26 @@ void game_step(Game *g,const Table *t,unsigned keys)
         if(!hit)
             collide(g,&g->flips[i][(keys&key)!=0],192,0);
     }
-    if(g->y/FP>t->drain_y || g->x<0 || g->x>239*FP || g->y<0) {
-        /* The bottom of the shooter lane shares the table's drain Y.
-         * A missed shot rolling back down that narrow lane returns to the
-         * plunger without using a ball. Main-playfield drains still count. */
-        if(g->y/FP>t->drain_y && g->vy>0 &&
-           g->x>=0 && g->x<=239*FP &&
-           g->x/FP>=t->launch_x-8 && g->x/FP<=t->launch_x+8) {
-            feed(g,t);
-        } else {
-            g->balls--; g->event=3;
-            if(!g->balls) g->over=1;
-            else feed(g,t);
-        }
+    /* Once the ball leaves the right-side shooter and crosses left into
+     * the playfield, a later drain must cost a ball normally. */
+    if(g->in_shooter && g->x<(t->launch_x-18)*FP &&
+       g->y<(t->drain_y-10)*FP)
+        g->in_shooter=0;
+
+    /* The original plunger can catch/relaunch weak shots returning down
+     * the shooter tube. A simple X+-8 check at drain height missed the
+     * diagonal lower end of that tube and let the ball leave the screen.
+     * Reset once it comes back to the *bottom* of the shooter, before
+     * it reaches the shared playfield drain line. */
+    if(g->in_shooter && g->vy>0 &&
+       g->x>(t->launch_x-18)*FP &&
+       g->y>=(t->drain_y-12)*FP) {
+        feed(g,t);
+    } else if(g->y/FP>t->drain_y || g->x<0 ||
+              g->x>239*FP || g->y<0) {
+        g->balls--; g->event=3;
+        if(!g->balls) g->over=1;
+        else feed(g,t);
     }
     g->previous=(short)keys;
 }
