@@ -21,16 +21,39 @@ static void fixture(void)
 
 int main(int argc,char **argv)
 {
-    int i;
+    int i,weak_vy,full_vy;
     FILE *f;
     fixture();
     puts("STAGE: basic fixtures"); fflush(stdout);
     assert(integer_sqrt(0)==0 && integer_sqrt(1)==1);
     assert(integer_sqrt(65535UL)==255 && integer_sqrt(4294967295UL)==65535UL);
     assert(g.balls==3 && g.waiting);
+    /* The original visibly pulls back over time. Fixed-point DOS charge
+     * should continue over roughly 1.3 seconds, then stop at full pullback. */
     for(i=0;i<48;i++) game_step(&g,&t,KEY_LAUNCH);
-    assert(g.waiting && g.charge==48); puts("STAGE: charged"); fflush(stdout);
-    game_step(&g,&t,0); assert(!g.waiting && g.vy==-124); puts("STAGE: launch released"); fflush(stdout);
+    assert(g.waiting && g.charge==48);
+    for(i=0;i<64;i++) game_step(&g,&t,KEY_LAUNCH);
+    assert(g.waiting && g.charge==PLUNGER_MAX_CHARGE);
+    puts("STAGE: charged"); fflush(stdout);
+    game_step(&g,&t,0);
+    full_vy=g.vy;
+    assert(!g.waiting && full_vy<=-121 && full_vy>=-127 &&
+           g.event==2 && g.vx==0);
+    puts("STAGE: launch released"); fflush(stdout);
+    fixture();
+    game_step(&g,&t,KEY_LAUNCH);
+    game_step(&g,&t,0);
+    weak_vy=g.vy;
+    assert(!g.waiting && weak_vy<=-44 && weak_vy>=-49);
+    assert(full_vy<weak_vy);
+    /* Two seed values at the same pullback must differ slightly, never
+     * by enough to overpower the amount selected by the player. */
+    fixture(); g.charge=PLUNGER_MAX_CHARGE; g.plunger_rng=0;
+    game_step(&g,&t,KEY_LAUNCH); game_step(&g,&t,0);
+    weak_vy=g.vy;
+    fixture(); g.charge=PLUNGER_MAX_CHARGE; g.plunger_rng=1;
+    game_step(&g,&t,KEY_LAUNCH); game_step(&g,&t,0);
+    assert(g.vy!=weak_vy && abs(g.vy-weak_vy)<=6);
     fixture(); g.waiting=0; g.x=97*FP; g.y=60*FP; g.vx=128;
     game_step(&g,&t,0); assert(g.vx<0 && g.x<100*FP); puts("STAGE: wall bounce"); fflush(stdout);
     fixture(); t.edges[0].score=500; t.edges[0].boost=35;
@@ -88,9 +111,10 @@ int main(int argc,char **argv)
         /* Regression: full-power launch must leave the shooter lane and
          * reach a scoring bumper in the supplied Windows Space Cadet pack. */
         for(i=0;i<3000;i++) {
-            unsigned keys=(i<48?KEY_LAUNCH:0)|(i%80<40?KEY_LEFT:KEY_RIGHT);
+            unsigned keys=(i<PLUNGER_MAX_CHARGE?KEY_LAUNCH:0)|
+                          (i%80<40?KEY_LEFT:KEY_RIGHT);
             game_step(&g,&t,keys);
-            if(g.waiting && i>49) break;
+            if(g.waiting && i>PLUNGER_MAX_CHARGE+1) break;
         }
         printf("ORIGINAL: hits=%lu score=%lu steps=%d x=%d y=%d\\n",
                g.hits,g.score,i,g.x/FP,g.y/FP); fflush(stdout);
@@ -106,7 +130,7 @@ int main(int argc,char **argv)
         assert(abs(g.vx)<1024 && abs(g.vy)<1024);
     }
     f=fopen("TEST.OK","w"); assert(f);
-    fputs("PASS: launch, reflection, bumper score, both flippers, shooter return, drain, restart, 20000-step soak\n",f);
+    fputs("PASS: original-style plunger pullback, weak/full power, launch variation, reflection, bumper score, flippers, shooter return, drain, restart, 20000-step soak\n",f);
     fclose(f); puts("All DOS core tests passed.");
     return 0;
 }
