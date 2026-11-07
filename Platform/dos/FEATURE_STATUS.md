@@ -134,8 +134,10 @@ CADET /classic
 CADET /record
 ```
 
-The two image styles use identical gameplay rules; static faux-3D shading
-costs no additional runtime processing compared to the classic background.
+Both image styles use identical gameplay rules. The offline-baked static
+shading adds no processing to the DOS game; the enhanced style retains its
+previously implemented tiny ball glint/shadow (a few pixel writes), so the
+whole enhanced renderer is not literally identical in cost to `/classic`.
 Tests use `test_convert.py`, `test_analyze_logs.py`,
 `test_enhance_table.py`, `test_run_tests.py`, the 16-bit `TEST.EXE`
 `/original` scenarios, `verify_build.py`, and 360-frame DOSBox-X smoke
