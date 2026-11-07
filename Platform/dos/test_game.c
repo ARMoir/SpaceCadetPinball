@@ -109,22 +109,10 @@ int main(int argc,char **argv)
     puts("STAGE: imported pack loaded"); fflush(stdout);
     if(argc>1 && !strcmp(argv[1],"/original")) {
         int v;
-        /* Profile the imported curved shooter at its real 16-bit speeds.
-         * The conversion flattens elevation and some ramps, so speed can
-         * change which geometry gets hit. The known old speed is 124 Q6. */
-        for(v=119;v<=128;v++) {
-            game_reset(&g,&t);
-            g.waiting=0; g.vx=0; g.vy=(short)-v;
-            for(i=0;i<1400;i++) {
-                unsigned keys=i%80<40?KEY_LEFT:KEY_RIGHT;
-                game_step(&g,&t,keys);
-                if(g.waiting) break;
-            }
-            printf("TUNE: velocity=%d hits=%lu score=%lu steps=%d x=%d y=%d\\n",
-                   v,g.hits,g.score,i,g.x/FP,g.y/FP);
-            fflush(stdout);
-        }
-        for(v=118;v<=140;v++) {
+        /* Full-charge variation must not strand the ball in the shooter.
+         * Check the possible 128..130 Q6 launch impulses after charging:
+         * unlike phase-zero tests, release occurs at substep 97. */
+        for(v=128;v<=130;v++) {
             game_reset(&g,&t);
             g.waiting=0; g.vx=0; g.vy=(short)-v;
             g.steps=97;
@@ -133,9 +121,10 @@ int main(int argc,char **argv)
                 game_step(&g,&t,keys);
                 if(g.waiting) break;
             }
-            printf("PHASE97: velocity=%d hits=%lu score=%lu steps=%d\\n",
+            printf("POWER %d: hits=%lu score=%lu steps=%d\\n",
                    v,g.hits,g.score,i);
             fflush(stdout);
+            assert(g.hits>0 && g.score>=500);
         }
         game_reset(&g,&t);
         /* Regression: full-power launch must leave the shooter lane and
