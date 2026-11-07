@@ -97,6 +97,17 @@ int main(int argc,char **argv)
            g.y==t.launch_y*FP);
     puts("STAGE: 110-step detect, upward nudge, two safe moves and free relaunch");
     fflush(stdout);
+    /* The last remaining ball also has an unconditional free recovery,
+     * never a lost turn or accidental GAME OVER. Force the final stage. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.balls=1; g.score=7777;
+    g.x=125*FP; g.y=70*FP;
+    g.stuck_x=g.x; g.stuck_y=g.y;
+    g.stuck_stage=3; g.stuck_stage_ticks=UNSTICK_RETRY_TICKS-1;
+    game_step(&g,&t,0);
+    assert(g.waiting && g.in_shooter && !g.over &&
+           g.balls==1 && g.score==7777 &&
+           g.unstick_relaunches==1 && g.stuck_stage==0);
     /* Moving 10+ pixels consistently after the first nudge cancels
      * escalation, rather than unjustly refeeding a rescued live ball. */
     fixture(); g.waiting=0; g.in_shooter=0;
