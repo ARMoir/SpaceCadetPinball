@@ -430,7 +430,6 @@ void game_step(Game *g,const Table *t,unsigned keys)
         g->previous=(short)keys;
         return;
     }
-    collide_bumpers(g,t);
     py=g->y/FP;
     px=g->x/FP;
     b=maximum(0,minimum(BANDS-1,py/8));
@@ -446,6 +445,11 @@ void game_step(Game *g,const Table *t,unsigned keys)
          * nearby candidates instead of dividing for every indexed edge. */
         px=g->x/FP; py=g->y/FP;
     }
+    /* F-002/F-004: enforce radial bumper separation AFTER neighboring
+     * flattened static rails. Rails and upper-layer outlines overlap near
+     * the upper-left bumper; a second wall correction must not leave the
+     * ball buried inside its cap until the following physics step. */
+    collide_bumpers(g,t);
     for(i=0;i<2;i++) {
         int key=1<<i,hit=0;
         if(g->tilted) {
