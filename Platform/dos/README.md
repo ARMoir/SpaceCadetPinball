@@ -77,11 +77,12 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 * Ramps, elevation/occlusion, holes, sinks, gates, kickouts and rollover/target
   rules are not implemented. Their initial artwork can still be visible.
   Ground-only filtering prevents upper-level rails becoming invisible walls.
-* Until the original plunger sprite states are imported into the SCP1 pack,
-  a small silver plunger head and shaft are drawn at the bottom-right of the
-  launcher tube, **not** at the ball's feed location inside the tube.
-  The plunger moves downward up to 12 pixels as Space is held. These are
-  small dirty-rectangle updates, not a full-screen redraw.
+* The original silver plunger handle is already visible as a gray shape
+  below the playfield at the far bottom-right of the imported background.
+  The DOS code animates a small chrome highlight over that existing handle
+  (not at the ball's feed location), moving about 10 pixels as Space is held.
+  Importing the original animated plunger frames remains future work.
+  Animation uses small dirty rectangles, not a full-screen redraw.
 * Original rest/raised flipper endpoints are retained. Collision checks also
   cover a midpoint during a three-substep fixed-point sweep, approximating
   the original moving flipper without trigonometry. The artwork still has
