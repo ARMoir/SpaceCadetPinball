@@ -16,13 +16,18 @@ def verify(directory):
         assert header*16<=len(data) and relocoff+relocs*4<=header*16
         assert ss*16+sp < 128*1024 and cs==0 and ip<len(data)
         image=len(data)-header*16
-        required=image+minalloc*16+256+32768
-        assert required<128*1024, 'Minimum load + PSP + background exceeds 128KB'
+        base=image+minalloc*16+256
+        tandy_required=base+32768
+        vga_required=base+64000
+        assert tandy_required<128*1024, 'Tandy 09h load + 32KB background exceeds 128KB'
+        assert vga_required<192*1024, 'VGA 13h load + 64KB background exceeds 192KB'
         map_text=(directory/(name+'.MAP')).read_text()
         dgroup=int(re.search(r'DGROUP\s+[0-9a-fA-F]+:0000\s+([0-9a-fA-F]+)',map_text).group(1),16)
         assert dgroup<=65536
         assert 'lib386' not in map_text and 'clib3' not in map_text
-        print(f'{name}: MZ {len(data)} bytes; DGROUP {dgroup}; minimum image/PSP/background {required} bytes')
+        print(f'{name}: MZ {len(data)} bytes; DGROUP {dgroup}; '
+              f'Tandy09 minimum {tandy_required} bytes; '
+              f'VGA13 minimum {vga_required} bytes (not peak heap)')
 
 
 if __name__=='__main__': verify(Path(__file__).resolve().parents[2]/'build/dos')
