@@ -36,16 +36,22 @@ A successful emulator build does not establish hardware performance or parity.
 
 1. Unpack Open Watcom 2 and set `WATCOM` to its absolute installation directory.
 2. From the repository root, run `python Platform/dos/build.py` (Python 3.9+).
-3. Copy the three files from `Platform/dos/data` named `TABLE.DAT`, `TABLE.TGA`
-   and `IMPORT.json` into `build/dos`, or regenerate them with
-   `python Platform/dos/convert.py /path/to/PINBALL.DAT --output build/dos`
-   using the Windows Space Cadet resource file. Full Tilt CADET.DAT is not yet
-   supported. Alternatively run `python Platform/dos/make_demo.py` to generate
-   an asset-free diagnostic table; it is **not** Space Cadet.
-4. Copy `CADET.EXE`, `TABLE.DAT` and `TABLE.TGA` from `build/dos` to one DOS
-   directory and run `CADET`. TABLE.TGA is a raw Tandy bank image, not Targa.
-   Replace the EXE and table files together: this version requires SCP2 packs
-   and rejects older SCP1 TABLE.DAT files.
+3. Copy `TABLE.DAT`, `TABLE.TGA` and `IMPORT.json` from
+   `Platform/dos/data` into `build/dos`, or regenerate these from a Windows
+   `PINBALL.DAT` using
+   `python Platform/dos/convert.py /path/to/PINBALL.DAT --output build/dos`.
+   Full Tilt CADET.DAT is not supported. `make_demo.py` produces an asset-free
+   diagnostic table, not Space Cadet.
+4. Generate the optional, CPU-free enhanced static background on your PC:
+   `python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png`.
+   GitHub Actions already runs this step and packages both looks.
+5. Copy **`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, and `TABLE3D.TGA`** into
+   the same DOS directory. `CADET` uses the enhanced background by default;
+   `CADET /classic` loads the original unmodified background, with no ball
+   shadow or glint. `CADET /3d` requests the enhanced style explicitly.
+   If `TABLE3D.TGA` is missing, the game automatically uses `TABLE.TGA`.
+   Both background files are raw 32768-byte Tandy mode-09h bank images
+   (not Targa). Keep the executable and SCP2 `TABLE.DAT` from one build.
 
 Controls: **Z** left flipper, **/** right flipper, hold **Space** to pull the
 plunger back and release to launch (about 1.3 seconds to full power, with a
@@ -61,6 +67,7 @@ shake is done by a short MC6845 CRTC start-address offset and is restored
 on pause, menu and exit, with no full-screen redraw.
 Run on Tandy-compatible video;
 there is no VGA fallback or reliable automatic Tandy detection in this version.
+Visual style may be selected only at startup, not while the ball is moving.
 
 The native program uses BIOS mode 09h, packed 4bpp B800 video memory with four
 8KB banks, and a private IRQ1 make/break keyboard handler. It restores the prior
@@ -68,6 +75,29 @@ keyboard vector and video mode on normal exit. Do not terminate the emulator
 to test cleanup; use Esc. No PIT reprogramming: the BIOS timer drives 18.2 FPS
 with four fixed physics substeps (about 72.8 Hz). Late frames are counted and
 dropped rather than running unbounded catch-up work.
+
+## Optional static faux-3D enhancement (F-007)
+
+The 16-color original background remains **byte-for-byte unchanged** in
+`TABLE.TGA`. `TABLE3D.TGA` is generated **offline** by
+[`enhance_table.py`](enhance_table.py): existing gray ramps/rails gain
+top-left highlights and down-right shading, and the seven source-derived
+bumper caps receive subtle bevels/cast shadows. Colored lamps and target
+art remain unchanged, and no perspective warp or new collision geometry
+is introduced. `TABLE.DAT`, original ball/flipper/plunger sprite data,
+gameplay state and scoring are identical between looks.
+
+The enhanced ball gets a small shadow and one highlight pixel, drawn only
+when the ball was already moving and being repainted. Those pixels fit in
+the existing 6x6 dirty rectangle; no screen-wide redrawing or added
+simulation step. Static artwork introduces **no extra work during gameplay**.
+The 4-pixel ball decoration has a tiny runtime cost and still needs
+measurement for brightness and perceived motion on the real CRT.
+
+Compare the same shot in `CADET /classic` versus `CADET /3d`. Use
+`CADET /record /classic` or `CADET /record /3d` to capture timing and
+confirm the enhanced appearance does not produce an unacceptable slowdown.
+The two builds use the **same** collision and gameplay logic.
 
 ## What comes from the original
 
