@@ -1,6 +1,9 @@
-# Prototype validation
+# Prototype validation and final handoff
 
-Tested November 7, 2026, using the owner-supplied Windows PINBALL.DAT.
+Reviewed November 7, 2026, using the owner-supplied Windows PINBALL.DAT.
+The [feature-status inventory](FEATURE_STATUS.md) is the definitive account
+of original-game systems **not yet implemented**; successful tests below
+do not imply complete gameplay or final V20 hardware certification.
 Source resource SHA-256 and the complete import inventory are in data/IMPORT.json.
 
 ## Completed
@@ -31,9 +34,12 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
   top/side screen boundary retention, and true lower-drain differentiation.
 * Five smoke-report parser tests verify that incomplete runs, missing full
   launches and zero-score original-table runs fail the runner.
-* CADET /smoke at fixed 1200 emulator cycles/ms: 360 frames, 1440 substeps,
-  2500 points, five bumper hits, one fully charged launch, three balls remaining.
-  This run reported seven late frames; timing varies with host load.
+* One verified [2026-11-07 GitHub Actions run](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42393901598):
+  360 rendered frames and 1440 physics steps, score 3500, seven bumper hits,
+  two full-charge launches, two balls remaining and ten slow frames
+  at fixed 1200 DOSBox-X emulator cycles/ms. This is an example
+  **emulated** run, not a measurement of physical V20 frames/second;
+  results and late-frame counters vary with host and workload.
 * Inspected both the native video-memory dump and the actual DOSBox-X window:
   original table artwork, ball, flippers and HUD render in Tandy mode.
 * **F-007 enhanced 3D artwork (2026-11-07):** offline `enhance_table.py`
@@ -63,13 +69,18 @@ source-inspired adjustment. Original flipper impulse parity is not claimed.
 ```
 python Platform/dos/test_convert.py
 python Platform/dos/test_run_tests.py
+python Platform/dos/test_analyze_logs.py
+python Platform/dos/test_enhance_table.py
 python Platform/dos/build.py
 python Platform/dos/verify_build.py
 python Platform/dos/run_tests.py --emulator /path/to/dosbox-x --original
 ```
 
-Copy data/TABLE.DAT and data/TABLE.TGA to build/dos before running DOS tests.
-CI performs these steps and publishes EXEs, maps, table pack and logs.
+Copy `Platform/dos/data/TABLE.DAT` and `TABLE.TGA` to `build/dos`
+and generate `TABLE3D.TGA` with `enhance_table.py` before running
+the DOSBox-X tests, or use the pinned GitHub Actions workflow, which
+performs these steps and publishes the EXEs, matching data, previews
+and logs in one artifact.
 
 ## Required hardware follow-up
 
@@ -121,9 +132,11 @@ original 3D ramps and gate groups.
 Flattened collision groups, omitted ramps, and one-way gates can still trap
 a ball in the upper-left chute; these tests do not certify every trajectory.
 
-Remaining gameplay gaps and original-vs-simplified boundaries are in
-[README.md](README.md). The mandatory [fidelity audit and exception register](FIDELITY.md)
-is the primary source for **P0/P1 remediation priorities**, references to the
-original implementation, and required evidence whenever the DOS version
-deviates from the original. This validation records passing test cases, not
-approval of the currently documented gameplay approximations.
+Remaining implemented, simplified and **absent** gameplay systems are
+documented in [FEATURE_STATUS.md](FEATURE_STATUS.md), with source
+boundaries in [README.md](README.md). The
+[fidelity audit and exception register](FIDELITY.md) preserves original-source
+references, P0/P1 remediation priorities and the technical reasons for
+documented deviations. This validation records passing test cases,
+**not approval of the approximations, full-feature parity, or final
+hardware verification**.
