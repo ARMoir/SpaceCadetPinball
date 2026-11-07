@@ -324,6 +324,8 @@ static void contain_outer_right(Game *g,const Table *t)
     e=&t->edges[t->outer_right_rail];
     if(py<minimum(e->y,e->ey) || py>maximum(e->y,e->ey) ||
        e->ey==e->y) return;
+    /* F-002/V20: reject the inboard majority BEFORE 32-bit division. */
+    if(g->x<=(minimum(e->x,e->ex)-2)*FP) return;
     dy=(long)g->y-(long)e->y*FP;
     limit=(long)e->x*FP+
           dy*(e->ex-e->x)/(e->ey-e->y)-2*FP;
@@ -355,6 +357,9 @@ static void contain_outer_left(Game *g,const Table *t)
     e=&t->edges[t->outer_left_rail];
     if(py<minimum(e->y,e->ey) || py>maximum(e->y,e->ey) ||
        e->ey==e->y) return;
+    /* The normal game costs only a small integer comparison; divide
+     * to interpolate the rail slope only for a plausible outer escape. */
+    if(g->x>=(maximum(e->x,e->ex)+2)*FP) return;
     dy=(long)g->y-(long)e->y*FP;
     limit=(long)e->x*FP+
           dy*(e->ex-e->x)/(e->ey-e->y)+2*FP;
