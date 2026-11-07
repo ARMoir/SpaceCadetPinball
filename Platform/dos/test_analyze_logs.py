@@ -35,6 +35,19 @@ class FlightTests(unittest.TestCase):
         self.assertIn("event=drain", notes)
         self.assertIn("1 total, 1 powered", notes)
 
+    def test_right_rail_recovery_uses_schema3(self):
+        enhanced = NEW.replace("schema=2", "schema=3").replace(
+            "CHARGE BORDER INPUT", "CHARGE BORDER RIGHT_RAIL INPUT")
+        enhanced = enhanced.replace(
+            "96 0 2 0 0 0 0 1048", "96 0 0 2 0 0 0 0 1048")
+        enhanced = enhanced.replace(
+            "0 0 2 0 1 0 1 1052", "0 0 1 2 0 1 0 1 1052")
+        schema, columns, rows = parse_flight(enhanced)
+        self.assertEqual(schema, 3)
+        self.assertEqual(rows[-1]["RIGHT_RAIL"], 1)
+        self.assertIn("outer-right rail recoveries in window: 1",
+                      "\\n".join(summary_lines(rows, columns)))
+
     def test_reject_partial_or_corrupted_flight(self):
         for body in ("", "garbage", OLD.replace("263 11584", "263 ?"),
                      OLD.replace("263 11584", "261 11584"),
