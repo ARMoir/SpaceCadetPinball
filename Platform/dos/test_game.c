@@ -26,6 +26,21 @@ int main(int argc,char **argv)
     int i,weak_vy,full_vy;
     FILE *f;
     fixture();
+    /* INT 33h button bits feed the existing flipper controls; gameplay
+     * remains exactly the same for keyboard or mouse source. */
+    assert(MOUSE_FLIPPER_KEYS(0)==0);
+    assert(MOUSE_FLIPPER_KEYS(1)==KEY_LEFT);
+    assert(MOUSE_FLIPPER_KEYS(2)==KEY_RIGHT);
+    assert(MOUSE_FLIPPER_KEYS(3)==(KEY_LEFT|KEY_RIGHT));
+    assert(MOUSE_FLIPPER_KEYS(4)==0); /* middle button ignored */
+    fixture(); g.waiting=0; g.x=90*FP; g.y=163*FP; g.vy=30;
+    game_step(&g,&t,MOUSE_FLIPPER_KEYS(1));
+    assert(g.vy<0 && g.flipper_contacts[0]>0);
+    fixture(); g.waiting=0; g.x=140*FP; g.y=163*FP; g.vy=30;
+    game_step(&g,&t,MOUSE_FLIPPER_KEYS(2));
+    assert(g.vy<0 && g.flipper_contacts[1]>0);
+    puts("STAGE: mouse left/right and dual-button flipper mapping"); fflush(stdout);
+    fixture();
     puts("STAGE: basic fixtures"); fflush(stdout);
     assert(integer_sqrt(0)==0 && integer_sqrt(1)==1);
     assert(integer_sqrt(65535UL)==255 && integer_sqrt(4294967295UL)==65535UL);
