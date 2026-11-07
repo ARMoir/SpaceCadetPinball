@@ -8,13 +8,16 @@ Reverse engineering of `3D Pinball for Windows - Space Cadet`, a game bundled wi
 
 ## How to play
 
-### Native DOS / Tandy prototype (this fork)
+### Native DOS / Tandy and VGA prototype (this fork)
 
 A standalone 8086/V20 real-mode Space Cadet prototype is in
 [Platform/dos](Platform/dos/README.md), with imported Windows
-`PINBALL.DAT` resources, fixed-point physics, Tandy 320×200 16-color
-graphics, optional offline 3D-shaded playfield art, and automated DOS
-builds/tests. Its core is **playable but not a feature-complete copy**
+`PINBALL.DAT` resources, fixed-point physics, and **both standard VGA
+mode 13h and Tandy/PCjr mode 09h**. It automatically selects VGA when
+supported, otherwise Tandy, with `/vga` and `/tandy` overrides. Both
+use identical 320×200, 16-color source artwork and optional offline
+3D shading, with automated DOS gameplay and video-parity tests.
+Its core is **playable but not a feature-complete copy**
 of the original Space Cadet. See the
 [**DOS feature inventory and missing implementations**](Platform/dos/FEATURE_STATUS.md)
 and [hardware/CI validation notes](Platform/dos/VALIDATION.md).
@@ -23,8 +26,10 @@ The CI artifact includes the matching game and table data.
 The owner has tested earlier revisions on a real Tandy 1000 EX/V20 and
 reported several physics/collision issues; automated regressions were added
 for the subsequent fixes, but **the latest build's real-hardware
-performance and final playability remain unverified**. Further feature
-development is paused in favor of this documented prototype baseline.
+performance and final playability remain unverified**. The new
+standard VGA path passes DOSBox-X testing, including a complete 64000-pixel
+frame comparison with the Tandy renderer, but has not yet been tested
+on physical VGA hardware.
 
 ### Desktop version
 
