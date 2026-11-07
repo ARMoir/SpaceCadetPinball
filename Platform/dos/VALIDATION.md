@@ -55,4 +55,9 @@ Do not label this prototype hardware-verified until these checks are complete.
 Flattened walls can still trap a ball, including around the upper-left chute;
 these scoring/containment tests do not certify every trajectory or mission.
 
-Remaining gameplay gaps and original-vs-simplified boundaries are in README.md.
+Remaining gameplay gaps and original-vs-simplified boundaries are in
+[README.md](README.md). The mandatory [fidelity audit and exception register](FIDELITY.md)
+is the primary source for **P0/P1 remediation priorities**, references to the
+original implementation, and required evidence whenever the DOS version
+deviates from the original. This validation records passing test cases, not
+approval of the currently documented gameplay approximations.
