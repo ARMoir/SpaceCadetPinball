@@ -36,8 +36,14 @@ int table_index(Table *t)
            e->x < -32 || e->x>350 || e->ex < -32 || e->ex>350 ||
            e->y < -32 || e->y>350 || e->ey < -32 || e->ey>350 ||
            e->score<0 || e->boost<0 || e->boost>128) return 0;
-        lo=maximum(0,(minimum(e->y,e->ey)-3)/16);
-        hi=minimum(BANDS-1,(maximum(e->y,e->ey)+3)/16);
+        /* Precompute tight screen-space rejection bounds once per table.
+         * 8-pixel bands cut candidate checks on a 7 MHz V20. */
+        t->bounds[i].left=(short)(minimum(e->x,e->ex)-4);
+        t->bounds[i].right=(short)(maximum(e->x,e->ex)+4);
+        t->bounds[i].top=(short)(minimum(e->y,e->ey)-4);
+        t->bounds[i].bottom=(short)(maximum(e->y,e->ey)+4);
+        lo=maximum(0,(minimum(e->y,e->ey)-3)/8);
+        hi=minimum(BANDS-1,(maximum(e->y,e->ey)+3)/8);
         for(b=lo;b<=hi;b++) {
             if(t->band_count[b]>=BAND_EDGES) return 0;
             t->band[b][t->band_count[b]++]=(unsigned short)i;
@@ -100,12 +106,13 @@ static void feed(Game *g,const Table *t)
 {
     g->x=t->launch_x*FP; g->y=t->launch_y*FP;
     g->vx=g->vy=g->charge=0; g->waiting=1;
+    g->sweep[0]=g->sweep[1]=0;
 }
 
 void game_reset(Game *g,const Table *t)
 {
     int i,j;
-    memset(g,0,sizeof(*g)); g->balls=3;
+    memset(g,0,sizeof(*g)); g->balls=3; g->noise=0xace1U;
     for(i=0;i<2;i++) for(j=0;j<2;j++) {
         const short *p=t->flipper+i*6;
         make_edge(&g->flips[i][j],p[0],p[1],p[2+j*2],p[3+j*2]);
@@ -143,8 +150,23 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
     if(dot>=0 && !kick) return 0;
     impulse=-(dot*7)/4+e->boost;
     if(dot<0) { g->vx+=(short)(impulse*nx/256); g->vy+=(short)(impulse*ny/256); }
-    if(kick) { g->vy=-110; g->vx=(short)((g->x/FP-e->x)*3); }
+    if(kick) {
+        /* Tip contact has greater leverage than a hit near the pivot;
+         * retain some incoming horizontal motion instead of a fixed shot. */
+        int lever=abs(g->x/FP-e->x);
+        if(lever>20) lever=20;
+        g->vy=(short)(-88-lever*2);
+        g->vx=(short)((g->x/FP-e->x)*3+g->vx/4);
+    }
     if(e->score && !g->hit_delay) {
+        /* A very small tangential variation avoids repeated identical
+         * bumper orbits. Only performed on scored hits, never per frame. */
+        unsigned short n=g->noise;
+        n^=(unsigned short)(n<<7);
+        n^=(unsigned short)(n>>9);
+        n^=(unsigned short)(n<<8);
+        g->noise=n;
+        g->vx+=(short)((n&7)-3);
         g->score+=e->score; g->hits++; g->hit_delay=8; g->event=1;
     }
     return 1;
@@ -162,6 +184,10 @@ void game_step(Game *g,const Table *t,unsigned keys)
         if(keys&KEY_LAUNCH) { if(g->charge<48) g->charge++; }
         else if(g->previous&KEY_LAUNCH) {
             g->waiting=0; g->vy=(short)(-100-g->charge/2); g->event=2;
+            /* Key timing slightly changes the lateral launch direction,
+             * instead of repeating the exact same ideal trajectory. */
+            g->noise^=(unsigned short)(g->steps+g->charge);
+            g->vx=(short)((g->noise&7)-3);
         }
         g->previous=(short)keys;
         return;
@@ -176,15 +202,26 @@ void game_step(Game *g,const Table *t,unsigned keys)
     g->vx=(short)maximum(-128,minimum(128,g->vx));
     g->vy=(short)maximum(-128,minimum(128,g->vy));
     g->x+=g->vx; g->y+=g->vy;
-    b=maximum(0,minimum(BANDS-1,g->y/(16*FP)));
-    for(i=0;i<t->band_count[b];i++)
-        collide(g,&t->edges[t->band[b][i]],96,0);
+    b=maximum(0,minimum(BANDS-1,g->y/(8*FP)));
+    for(i=0;i<t->band_count[b];i++) {
+        unsigned short index=t->band[b][i];
+        const EdgeBounds *box=&t->bounds[index];
+        int px=g->x/FP,py=g->y/FP;
+        if(px<box->left || px>box->right ||
+           py<box->top || py>box->bottom) continue;
+        collide(g,&t->edges[index],96,0);
+    }
     for(i=0;i<2;i++) {
-        int key=1<<i;
-        /* On the rising edge also test the resting paddle, so a ball resting
-         * on it is caught as the two-state paddle sweeps upward. */
-        if(pressed&key) collide(g,&g->flips[i][0],192,1);
-        collide(g,&g->flips[i][(keys&key)!=0],160,(pressed&key)!=0);
+        int key=1<<i,hit=0;
+        if(pressed&key) g->sweep[i]=4;
+        if(!(keys&key)) g->sweep[i]=0;
+        /* The switch between the resting and raised shapes is animated
+         * over four physics substeps. A late ball still meets the paddle,
+         * rather than slipping through after the first input substep. */
+        if(g->sweep[i]) hit=collide(g,&g->flips[i][0],192,1);
+        if(!hit) hit=collide(g,&g->flips[i][(keys&key)!=0],192,g->sweep[i]!=0);
+        if(hit) g->sweep[i]=0;
+        else if(g->sweep[i]) g->sweep[i]--;
     }
     if(g->y/FP>t->drain_y || g->x<0 || g->x>239*FP || g->y<0) {
         /* The bottom of the shooter lane shares the table's drain Y.
