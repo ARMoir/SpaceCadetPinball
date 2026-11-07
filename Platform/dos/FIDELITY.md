@@ -155,6 +155,20 @@ silently treat legacy exceptions as precedent for new ones.
   introducing randomness. `right_rail_saves` is separately counted
   from the older `boundary_hits` screen fallback. This is a safety
   adaptation, not original collision-layer semantics.
+  **2026-11-07 outer-rail consistency pass:** the right exterior guard
+  now excludes balls still in the valid shooter tube; the matching original
+  *left* rail (projected roughly x=62 at y=40 to x=39 at y=166)
+  is located from SCP2 geometry at table-index time. If an in-play ball
+  crosses that line, a one-sided outward-normal reflection projects it
+  two pixels inside the source rail, symmetrically with the right guard.
+  It is active only between that rail's actual source endpoints, not
+  across upper ramps, the shooter, lower outlanes or valid drains.
+  The left/right counters (`left_rail_saves`, `right_rail_saves`) distinguish
+  these responses from the last-resort screen boundary. This is an
+  explicitly documented, temporary playability adaptation, **not**
+  original 3D collision masks. Runtime costs: inexpensive integer
+  interpolation for a rare out-of-bounds candidate, no per-frame memory
+  allocation. Final V20 correctness/performance remains **UNVERIFIED**.
 - **Why / evidence:** the owner also observed a ball disappear into an
   upper-left highlighted area after a bounce. Whether this was an off-screen
   exit, collision mask/occlusion, or a gameplay drain is **unverified**.
@@ -167,7 +181,11 @@ silently treat legacy exceptions as precedent for new ones.
   versus true lower drain. Original-table right-rail regression starts
   outside the imported source edge near the actual logged y=102,
   requires a safe inward reflection rather than a screen fallback,
-  and confirms an inboard ball isn't disturbed.
+  and confirms an inboard ball isn't disturbed. Additional
+  original-table tests now cover a left-rail escape, unaffected inboard
+  travel, and shooter-lane exemption from the right-rail guard. The
+  `/record` flight schema 4 separates `LEFT_RAIL`, `RIGHT_RAIL` and
+  `BORDER` recovery counters.
   `CADET /record` now captures the last 256
   rendered frames to `FLIGHT.TXT` (ball Q6 position/velocity, tube flag,
   charge, event, ball count and safety-rail contact counter), **buffered
