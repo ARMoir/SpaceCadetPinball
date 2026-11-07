@@ -1,4 +1,4 @@
-name: Native DOS Tandy prototype
+name: Native DOS Tandy and VGA prototype
 on:
   push:
     paths: ['Platform/dos/**', '.github/workflows/dos-tandy.yml']
@@ -64,6 +64,10 @@ jobs:
           # Old 7 MHz target remains the baseline, with BIOS auto-select.
           python Platform/dos/run_tests.py --emulator $emu --original --video tandy --auto-video
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_AUTO_SUMMARY.TXT
+          # Verify the explicit /tandy override on a Tandy BIOS as well.
+          python Platform/dos/run_tests.py --emulator $emu --original --video tandy
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_SUMMARY.TXT
           # Standard VGA machines must support both explicit and auto mode.
           python Platform/dos/run_tests.py --emulator $emu --original --video vga
@@ -95,6 +99,7 @@ jobs:
             build/dos/SMOKE.TXT
             build/dos/RUN_SUMMARY.TXT
             build/dos/RUN_TANDY_SUMMARY.TXT
+            build/dos/RUN_TANDY_AUTO_SUMMARY.TXT
             build/dos/RUN_VGA_SUMMARY.TXT
             build/dos/RUN_VGA_AUTO_SUMMARY.TXT
             build/dos/SCREEN-TANDY.BIN
