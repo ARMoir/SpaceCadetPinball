@@ -159,7 +159,7 @@ static int rect_overlaps(int x,int y,int w,int h,
 /* Original tiny UI font, 3x5. Table art and moving sprites come from the pack. */
 static const unsigned short font[]={
     31599,11415,29671,29647,23497,31183,31215,29257,31727,31695,
-    23533,27566,31015,27502,31207,31204,31087,23533,29847,4719,
+    11245,27566,31015,27502,31207,31204,31087,23533,29847,4719,
     23469,18727,24557,24557,31599,31716,31609,31724,31183,29842,
     23407,23402,23421,23213,23186,29351
 };
@@ -238,11 +238,12 @@ static void draw_panel(int view,int choice,int paused)
         text_color(245,84,"Z LEFT FLIP",15);
         text_color(245,96,"/ RIGHT FLIP",15);
         text_color(245,108,"SPACE PLUNGER",15);
-        text_color(245,120,"A D SIDE BUMP",15);
-        text_color(245,132,"X UP BUMP",15);
-        text_color(245,144,"S SOUND F2 NEW",15);
-        text_color(245,156,"F3 PAUSE",15);
-        text_color(245,177,"ENTER BACK",7);
+        text_color(245,120,"A LEFT BUMP",15);
+        text_color(245,132,"D RIGHT BUMP",15);
+        text_color(245,144,"X UP BUMP",15);
+        text_color(245,156,"S SOUND F2 NEW",15);
+        text_color(245,168,"F3 PAUSE",15);
+        text_color(245,180,"ENTER BACK",7);
     } else {
         panel_frame(241,63,78,30);
         text_color(245,67,"BALL",13);
