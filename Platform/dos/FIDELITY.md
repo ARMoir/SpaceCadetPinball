@@ -150,7 +150,9 @@ silently treat legacy exceptions as precedent for new ones.
 - **Why / evidence:** full-power source-like variation currently destabilizes
   simplified 2D shooter trajectories, not a CPU-budget constraint.
 - **Tests today:** 12 partial-charge returns, full charge reaches a bumper,
-  original frame positions.
+  original frame positions. Regression also verifies that after a weak shot
+  returns to READY, holding Space for a different charge launches that same
+  ball again without decreasing the ball count.
 - **Remedy:** restore the original charge curve and boost variance once source
   launcher response/curve and gate geometry work across tested shot strengths.
 
@@ -192,13 +194,28 @@ silently treat legacy exceptions as precedent for new ones.
   and ball-state handling.
 - **DOS deviation:** fixed-point capsules, three-state sampled sweep,
   two-frame flipper art, tuned velocity/elasticity constants and no true
-  ramp height/spin.
-- **Why / evidence:** integer arithmetic and bounded collision work are
-  credible V20 optimizations; **specific gameplay changes need comparison
-  tests and, where practical, hardware cost measurements**.
-- **Tests today:** both flippers, raised/midpoint contact, imported trajectories.
-- **Remedy:** fixed-point port of more original edge impulse and angular sweep;
-  prioritize missed contacts and realistic rebounds without full table scans.
+  ramp height/spin. A formerly fixed `vx/vy` flipper shot was replaced
+  on 2026-11-07 with an **additive normal impulse** scaled by contact
+  distance from the flipper pivot, retaining incoming reflected momentum.
+  On moving sweeps the impulse faces the playfield even when an interpolated
+  edge has an ambiguous contact side. Playfield velocity is capped at
+  176 Q6 vertically (160 horizontally) while the source-sensitive shooter
+  path retains its existing 132/128 Q6 caps.
+- **Why / evidence:** the owner reported on **real Tandy hardware** that
+  flippers felt underpowered and repeated trajectories were too predictable.
+  The old forced `vy=-88..-128` and universal `-132` limit made mechanically
+  different contacts produce nearly the same ball motion. The new boost is
+  source-inspired by `TFlipperEdge::EdgeCollision`, but it is **not an exact
+  port** of original front/back contact logic or angular speed. Actual
+  improvement, possible tunneling and 7 MHz performance remain **UNVERIFIED**
+  until the owner tests a new build.
+- **Tests:** synthetic heel/tip leverage, different incoming momentum,
+  midpoint sweep contact, moving/stationary flippers and shooter relaunch;
+  imported-table launch and long-running soak remain mandatory.
+- **Remedy:** calibrate angular boost using original source parameters
+  (attributes 803-805), preserve ramp/layer states, and add swept segment
+  collision only where measured hardware tests show missed contacts.
+  Avoid random path perturbations that hide collision problems.
 
 ### F-007 Rendering, audio and frame rate
 
