@@ -20,11 +20,16 @@ not a feature-complete port or a verified 7.16 MHz hardware release.
 
 Controls: **Z** left flipper, **/** right flipper, hold **Space** to pull the
 plunger back and release to launch (about 1.3 seconds to full power, with a
-small ~1% launch variation), **X** nudge (one-second cooldown),
-**S** toggle sound on/off (shown in the right sidebar), **N** new game,
+small ~1% launch variation), **X** upward bump, **A** bump from the left,
+**D** bump from the right, **S** toggle sound on/off (shown in the
+right sidebar), **N** new game,
 **Esc** quit. Both flippers can be held together. There are three balls.
 `/nosound` starts with sound disabled, and **S** can re-enable it during
 play. Switching sound off silences any currently playing tone immediately.
+`/noshake` disables optional hardware viewport shaking (use this if the
+display shifts incorrectly on actual hardware). The small one-character
+shake is done by a short MC6845 CRTC start-address offset and is restored
+on pause, menu and exit, with no full-screen redraw.
 Run on Tandy-compatible video;
 there is no VGA fallback or reliable automatic Tandy detection in this version.
 
@@ -90,8 +95,19 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   Static lights do not animate.
 * Single ball/player, basic bumper scoring, drain/relaunch and restart only.
   Missions, jackpots, rank, bonus, skill-shot and multiball remain future work.
-  Nudge is a fixed impulse with cooldown; the original tilt rules are absent.
-  Reduced precision/two-sided walls can trap the ball; use X to recover.
+  A V20-friendly approximation of original nudge.cpp now applies additive
+  velocity, its inverse after about 0.4 seconds, three bump directions
+  (A, D, X), and a decaying tilt meter with warning and flipper lockout
+  until the ball drains. This is not a 3D rigid-body simulation.
+* Both outlane kickbacks use a short wind-up, then throw the ball upward
+  and inward. Each side gets one save per ball. The original named Hazard
+  Target triplets and gate enable/disable rules are not yet imported, so
+  their per-side recharge logic remains an intentional approximation.
+  The kicker trigger zones are derived from existing flipper/drain anchors,
+  not yet from the source's world-space collision geometry.
+  The HUD shows `KICK L R`, or a dash for a consumed side.
+* Reduced precision/two-sided walls can still trap the ball; nudge with X,
+  A, or D to free it, but repeated nudges can tilt.
 * Short synthesized Tandy PSG tones replace original samples and music.
 * Whole-table view prioritizes memory and frame cost over fine visual detail.
 
@@ -99,16 +115,17 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 
 `TEST.EXE` runs the same core using actual 16-bit arithmetic: progressive
 plunger pullback, weak and full launch, bounded variation, wall reflection,
-bumper scoring, shooter-lane return versus regular drain,
-left/right flippers, drain/restart and a
-20,000-step soak with the current table. It writes `TEST.OK` on success.
+bumper scoring, shooter-lane return versus regular drain, left/right flippers,
+three-direction nudges and return impulses, tilt, both timed outlane kickbacks
+and single-use gating, drain/restart and a 20,000-step soak. It writes `TEST.OK` on success.
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (raw video memory)
 and `SMOKE.TXT`, and restores DOS. It exercises the backend but does not prove
 physical key responsiveness or real V20 timing.
 `TEST /original` additionally checks that a full-power shot leaves the shooter
 lane and reaches a scoring bumper in the included Space Cadet pack.
-`CADET /record` uses real keyboard input and writes `INPUT.TXT` on Esc, including
-observed control bits and launch count, for manual keyboard/cleanup checks.
+`CADET /record` uses real keyboard input and writes `INPUT.TXT` on Esc,
+including observed control bits, launches, nudges, kickbacks, tilts, and
+slow-frame count for hardware timing and control checks.
 
 The small memory model keeps code and near data individually below 64KB;
 the immutable background is one 32KB far allocation. Only changed ball and
