@@ -123,11 +123,29 @@ balls that cross it before reaching the far side of the screen.
 Regression starts beyond the rail at the reported y=102 with an outward
 velocity and requires an inward reflected shot, without counting a
 screen-edge contact. The `right_rail_saves` counter is separate from
-`boundary_hits`; `FLIGHT.TXT` schema 3 includes a `RIGHT_RAIL` column.
+`boundary_hits`. The latest follow-up now uses `FLIGHT.TXT` schema 4,
+which records `RIGHT_RAIL`, `LEFT_RAIL`, and `BORDER` separately.
 The 16-bit /original and DOSBox-X checks pass; **correctness, feel, and
 performance on the actual 7.16 MHz Tandy still need confirmation.**
 This is temporary geometry containment, not a faithful import of the
 original 3D ramps and gate groups.
+
+**Additional F-002 / F1 controls review (2026-11-07):** the F1 menu's
+tiny 3×5 font previously encoded `A` identically to `H`, misleading
+users about the left bump key. The glyph has been corrected and the F1
+instructions now show A / D / X on separate lines. A Python regression
+test checks the glyph and key mapping.
+
+The original imported *left* outer rail, about (62,40) to (39,166),
+is now used for a matching one-sided outer-boundary guard, while the
+right-hand rail guard is **disabled when the ball is legitimately in
+the shooter tube**. New DOS regression cases include a fast left-side
+escape, unchanged inboard ball motion and a valid shooter trajectory.
+These guards apply only within their source rail intervals and do not
+turn the lower outlanes or ramp passages into a global invisible wall.
+The positive regressions and emulated build pass, but physical Tandy
+playability and timing are **not yet re-verified**. Source 3D/layer
+collision remains incomplete.
 
 Flattened collision groups, omitted ramps, and one-way gates can still trap
 a ball in the upper-left chute; these tests do not certify every trajectory.
