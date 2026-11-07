@@ -55,7 +55,16 @@ class OfflineDepthTests(unittest.TestCase):
                     self.assertEqual(old, new)
         self.assertGreater(changed, 30)
         self.assertLess(changed, 7000)
-        self.assertGreater(sum(changes.values()), 30)
+        # Second-pass art adds noticeably more surface relief, entirely
+        # during offline generation. Its counters make unintended weakening
+        # of the rail/bumper bevels visible in CI.
+        self.assertGreater(changes["rail_rim"]+changes["rail_underside"],
+                           0)
+        self.assertGreater(changes["bumper_dome"]+
+                           changes["bumper_underside"], 0)
+        self.assertGreater(changes["contact_occlusion"]+
+                           changes["hardware_relief"], 0)
+        self.assertGreater(sum(changes.values()), 100)
         self.assertNotEqual(raw, enhanced)
         self.assertEqual(generate(raw, pack)[0], enhanced)  # Reproducible.
 
