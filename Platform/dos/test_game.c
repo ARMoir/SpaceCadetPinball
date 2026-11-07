@@ -354,6 +354,41 @@ int main(int argc,char **argv)
             assert(g.hits==1 && g.vx>0);
         }
         puts("STAGE: radial upper-left bumper escape"); fflush(stdout);
+        /* F-006: reproduce the user's actual /record flight near the
+         * right flipper. The original-table flipper is at (140,158),
+         * resting at (125,167), raised at (125,149). A descending ball
+         * near (127,149) must meet a held raised flipper; one near
+         * (127,164) must meet a released resting flipper. The old synthetic
+         * fixture did not cover these actual source coordinates or
+         * collisions against neighboring imported rails. */
+        {
+            int q,was_reflected;
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=127*FP+32; g.y=147*FP;
+            g.vx=-1; g.vy=11; g.previous=KEY_RIGHT;
+            was_reflected=0;
+            for(q=0;q<20;q++) {
+                game_step(&g,&t,KEY_RIGHT);
+                if(g.vy<0) { was_reflected=1; break; }
+            }
+            printf("REAL RIGHT HELD: reflected=%d x=%d y=%d vy=%d\n",
+                   was_reflected,g.x/FP,g.y/FP,g.vy);
+            fflush(stdout);
+            assert(was_reflected && g.balls==3);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=126*FP+45; g.y=162*FP;
+            g.vx=-1; g.vy=31; g.previous=0;
+            was_reflected=0;
+            for(q=0;q<10;q++) {
+                game_step(&g,&t,0);
+                if(g.vy<0) { was_reflected=1; break; }
+            }
+            printf("REAL RIGHT REST: reflected=%d x=%d y=%d vy=%d\n",
+                   was_reflected,g.x/FP,g.y/FP,g.vy);
+            fflush(stdout);
+            assert(was_reflected && g.balls==3);
+        }
+        puts("STAGE: real right-flipper playback contact"); fflush(stdout);
         /* Strike from the imported anchors, including offset entries.
          * For the first return arc, both sides must remain on the table. */
         for(v=0;v<2;v++) {
