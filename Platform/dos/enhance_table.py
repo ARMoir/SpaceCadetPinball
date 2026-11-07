@@ -154,10 +154,16 @@ def add_height_illusion(src, out, caps, counters):
                 # continuous gray support of the raised object.
                 if src[yy][xx] not in (7,8):
                     break
-                if depth == 1 and src[yy][xx] == 7:
-                    shade(xx,yy,8,"height_sidewall")
-                elif src[yy][xx] == 8:
+                if depth == 1 and src[yy][xx] == 8:
+                    # The source's narrow gray strip serves as the fake
+                    # vertical face. Alternate dark/gray to suggest a
+                    # sidewall without adding new geometry or black edges.
                     if bayer[yy&1][xx&1] < (2 if tier==1 else 3):
+                        shade(xx,yy,0,"height_sidewall")
+                    else:
+                        shade(xx,yy,7,"height_dither")
+                elif src[yy][xx] == 8:
+                    if bayer[yy&1][xx&1] < 3:
                         shade(xx,yy,0,"height_contact")
                     else:
                         shade(xx,yy,7,"height_dither")
