@@ -21,7 +21,7 @@ Tandy 1000 EX/V20.
 | Function | Present implementation | Evidence / limitations |
 | --- | --- | --- |
 | Native executable | Real-mode 16-bit Open Watcom C89 `CADET.EXE`; no Windows, FPU, XMS/EMS, SDL or extender | MZ/header and DGROUP checks in `verify_build.py` |
-| Tandy display | BIOS mode 09h, 320×200, 16-color banked VRAM, original projected playfield | 360-frame video smoke and screenshot |
+| Tandy/VGA display | Tandy/PCjr BIOS mode 09h in banked B800h 16-color VRAM, or VGA BIOS mode 13h with linear A000h 8bpp VRAM; both 320x200 and same 16-color source art | Explicit /tandy and /vga overrides and BIOS VGA auto-selection; CI tests both video backends and full 64000-pixel final-frame parity; physical VGA performance unverified |
 | Appearance | Classic `TABLE.TGA`; optional default `TABLE3D.TGA` with **offline-only static** fake-depth shading; `/classic` comparison | Both styles share the same `TABLE.DAT`; original colored artwork remains intact |
 | Ball and paddles | Imported ball and two rest/raised flipper sprites, fixed-point movement and collisions | Playable but simplified physics, not continuous original sweep |
 | Plunger | Eight original animation frames, hold/release, full/weak launch; weak shooter returns can be launched again | DOS charge curve differs from source (F-003) |
@@ -30,9 +30,24 @@ Tandy 1000 EX/V20.
 | Kickback saves | Left/right outlane catch, wind-up and return; one use per side per ball | **Not** original Hazard Target/gate state logic (F-001) |
 | Nudge / tilt | X / A / D impulses and tilt-warning/lockout | Custom thresholds, not exact original accumulation (F-005) |
 | Inputs and UI | Z and / flippers **plus optional DOS mouse left/right buttons**, Space plunger, keyboard menu, pause, new game, help/controls, sound toggle, exit | Standard INT 33h DOS mouse driver required, mouse click behavior unverified on real V20; menu is a compact substitute |
-| Sound | Short Tandy PSG tones, `/nosound`, S toggle | Original sound samples and music not ported |
+| Sound | Short Tandy PSG tones in mode 09h, PC-speaker event tones in VGA mode 13h; `/nosound`, S toggle | Original sound samples/music and exact source timing not ported; physical VGA speaker test pending |
 | Diagnostics | `/record`, `INPUT.TXT`, `FLIGHT.TXT` (schema 4), slow-frame and both outer-rail counters; PC-side `analyze_logs.py` | Buffer until exit, not long-term historical telemetry |
-| Build/repro | Converter, test suites, Open Watcom build, DOSBox-X core/video smoke, `CADET.zip` artifact | Emulator pass does not prove real 7.16 MHz timing |
+| Build/repro | Converter, test suites, Open Watcom build, DOSBox-X Tandy09/VGA13 smoke, pixel parity, `CADET.zip` artifact | Emulator pass does not prove physical V20 or VGA machine timing |
+
+**Video compatibility addition (2026-11-07):** both standard BIOS
+Tandy/PCjr mode 09h and VGA mode 13h are implemented in the **same**
+16-bit executable. Default behavior detects a VGA BIOS and uses mode
+13h if available; otherwise the original Tandy renderer is selected.
+Use `/tandy` or `/vga` to force a supported backend. The VGA
+palette has 256 available entries, but the game **uses only the same
+16 RGBI colors** as the Tandy conversion. No second game, table, or
+background art dataset has been created. VGA 13h needs a 64000-byte
+far background versus the Tandy's 32768-byte one. The physics, original
+resource geometry, mouse flipper controls and game rules are identical.
+The Tandy CRTC shake is disabled on VGA; PC-speaker beeps replace
+Tandy-only PSG output. Both emulated backends have produced identical
+final frames and scored gameplay, but real VGA hardware compatibility
+and frame timing remain unverified.
 
 ## Partially implemented, approximated, or not faithful to source
 
