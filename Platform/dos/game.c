@@ -187,9 +187,18 @@ void game_step(Game *g,const Table *t,unsigned keys)
         collide(g,&g->flips[i][(keys&key)!=0],160,(pressed&key)!=0);
     }
     if(g->y/FP>t->drain_y || g->x<0 || g->x>239*FP || g->y<0) {
-        g->balls--; g->event=3;
-        if(!g->balls) g->over=1;
-        else feed(g,t);
+        /* The bottom of the shooter lane shares the table's drain Y.
+         * A missed shot rolling back down that narrow lane returns to the
+         * plunger without using a ball. Main-playfield drains still count. */
+        if(g->y/FP>t->drain_y && g->vy>0 &&
+           g->x>=0 && g->x<=239*FP &&
+           g->x/FP>=t->launch_x-8 && g->x/FP<=t->launch_x+8) {
+            feed(g,t);
+        } else {
+            g->balls--; g->event=3;
+            if(!g->balls) g->over=1;
+            else feed(g,t);
+        }
     }
     g->previous=(short)keys;
 }
