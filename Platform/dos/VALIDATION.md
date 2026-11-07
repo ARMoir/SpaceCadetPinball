@@ -7,9 +7,10 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 
 * Open Watcom 2, pinned `2026-11-01-Build`, Windows x64 host.
   Both binaries build warning-free with `-bt=dos -0 -ms -os -s -w4 -we`.
-* CADET.EXE: 27,318 bytes, plain DOS MZ with no appended extender;
-  DGROUP 51,392 bytes. MZ minimum load allocation + PSP + 32KB background:
-  108,054 bytes. This is a checked lower bound, not a peak heap measurement.
+* CADET.EXE (2026-11-07 F-006 flipper update): 27,478 bytes,
+  plain DOS MZ with no appended extender; DGROUP 51,392 bytes.
+  MZ minimum load allocation + PSP + 32KB background: 108,214 bytes.
+  This is a checked lower bound, not a peak heap measurement.
 * Five host converter tests: all screen pixels round-trip through the four
   Tandy banks; padding, nibble order, bitmap orientation, malformed/truncated
   inputs, attributes, segment generation, and generated diagnostic pack.
@@ -17,9 +18,13 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
   memory, XMS/EMS/UMB disabled. DOS programs only use conventional memory.
 * Native TEST.EXE passes the synthetic physics checks and 20,000-step soak.
   Imported-table regressions cover seven scoring bumpers, both kickbacks at
-  three entry offsets, eight source plunger frames, 12 partial-charge returns,
-  and full-power scoring shots. Tilted paddles retain passive collisions;
-  a synthetic wall test verifies kickback returns cannot bypass walls.
+  three entry offsets, eight source plunger frames, 12 partial-charge returns
+  followed by a second charge/relaunch of the same ball, and full-power
+  scoring shots. The 2026-11-07 flipper follow-up also tests stronger
+  tip-vs-pivot contacts on **both** flippers, retained incoming horizontal
+  momentum, a faster wall reflection, and the moving midpoint contact.
+  Tilted paddles retain passive collisions; a synthetic wall test verifies
+  kickback returns cannot bypass walls.
 * Five smoke-report parser tests verify that incomplete runs, missing full
   launches and zero-score original-table runs fail the runner.
 * CADET /smoke at fixed 1200 emulator cycles/ms: 360 frames, 1440 substeps,
@@ -30,6 +35,12 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 
 The emulator cycle setting is a repeatable test load, **not** a conversion to
 7.16 MHz NEC V20 performance. Timing and sound on a real Tandy are unverified.
+The F-006 flipper improvement and repeat-plunger regressions passed
+[GitHub Actions on 2026-11-07](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42384787810),
+but **the new feel, bounce variation, and contact reliability are not yet
+verified on the physical Tandy**. The project owner reported weak flippers and
+predictable trajectories on the *previous* real-hardware build, motivating this
+source-inspired adjustment. Original flipper impulse parity is not claimed.
 
 ## Reproduce
 
