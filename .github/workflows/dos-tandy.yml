@@ -43,6 +43,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_analyze_logs.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_menu_font.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_enhance_table.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/build.py
