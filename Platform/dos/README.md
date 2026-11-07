@@ -65,19 +65,23 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   Gravity, speed limits, restitution and flipper impulses are tuned constants.
   Spin, material-specific behavior, stochastic drag and continuous swept
   collision detection are absent. A substep caps movement to two pixels/axis.
-* Bumpers use eight-sided outlines. Static segments are two-sided capsules;
-  original one-way edges and collision masks are not reproduced.
-* Missed shots that fall back down the narrow shooter lane near the plunger
-  return to launch without costing a ball. For now this uses an 8-pixel
-  corridor around the imported launch X at drain height, not a full 3D ramp.
+* Bumpers use eight-sided outlines. Most static segments are still two-sided
+  capsules; collision groups are not reproduced. The upper-left skill-shot
+  throat now has a small downhill-only passage, approximating the original
+  TOneway gates so a ball does not get trapped by flattened ramp walls.
+  Other original gates and one-way edges still need an explicit data import.
+* Missed shots that return down the diagonal shooter tube return to the
+  plunger without using a ball. The game tracks whether the ball has entered
+  the main playfield, then catches a weak shot near the tube's lower end
+  (before the shared drain line). Normal playfield drains still count.
 * Ramps, elevation/occlusion, holes, sinks, gates, kickouts and rollover/target
   rules are not implemented. Their initial artwork can still be visible.
   Ground-only filtering prevents upper-level rails becoming invisible walls.
 * Until the original plunger sprite states are imported into the SCP1 pack,
-  a small silver plunger head and shaft are drawn below the imported shooter
-  position, moving downward up to 12 pixels as Space is held. These are
-  small dirty-rectangle updates, not a full-screen redraw. On release the
-  plunger snaps back and the launch speed reflects the chosen charge.
+  a small silver plunger head and shaft are drawn at the bottom-right of the
+  launcher tube, **not** at the ball's feed location inside the tube.
+  The plunger moves downward up to 12 pixels as Space is held. These are
+  small dirty-rectangle updates, not a full-screen redraw.
 * Original rest/raised flipper endpoints are retained. Collision checks also
   cover a midpoint during a three-substep fixed-point sweep, approximating
   the original moving flipper without trigonometry. The artwork still has
