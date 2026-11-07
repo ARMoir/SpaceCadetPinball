@@ -349,6 +349,30 @@ silently treat legacy exceptions as precedent for new ones.
   zero runtime execution or memory cost** compared to the prior build.
   Tests check source color preservation and deterministic output.
   Appearance and readability on the physical CRT are still UNVERIFIED.
+- **F-007 VGA compatibility revision (2026-11-07):** standard
+  VGA/MCGA detection via BIOS INT 10h AX=1A00h selects VGA 320x200
+  mode 13h by default where available; /vga forces it, and /tandy
+  forces the original Tandy/PCjr 320x200 mode 09h. /vga rejects
+  machines where VGA BIOS detection is absent. Both modes use the
+  **same** TABLE.DAT, 32768-byte TABLE.TGA / TABLE3D.TGA,
+  sprites, gameplay/input core and fixed 16-color RGBI indices.
+  VGA expands the banked image **once at startup** into a linear
+  64000-byte far background and writes A000h VRAM. Tandy's original
+  four-bank B800h memory and 32KB far background remain intact.
+  The 16 Tandy RGBI colors are programmed into VGA DAC entries 0..15;
+  VGA's other 240 palette entries are not used or represented as
+  faithful new artwork. The existing Tandy CRTC screen shake is
+  disabled on VGA. Standard PC-speaker event tones replace Tandy PSG
+  writes **only on VGA**, avoiding port 0xC0 on non-Tandy hardware.
+  This changes video/audio backend behavior and memory requirements,
+  **not** ball movement, scoring, collision, or mission rules.
+  The executable remains real-mode 16-bit C89. Higher VGA background
+  memory usage is intentional and tested separately in verify_build.py.
+  DOSBox-X tests run Tandy auto/forced and VGA auto/forced modes;
+  a full 64000-pixel decoded screen parity test has passed with zero
+  color or gameplay-frame differences on the emulator.
+  **Hardware VGA speed, CRT/monitor output and PC-speaker sound
+  are still UNVERIFIED**; DOSBox timing is not a benchmark.
 - **Why / evidence:** owner requested more visible depth on their son's
   first impression of the CRT playfield. Original game relies on art,
   highlights and occlusion for a 3D impression. Baking effects offline
