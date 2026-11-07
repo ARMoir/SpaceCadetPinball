@@ -169,7 +169,7 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
 
 void game_step(Game *g,const Table *t,unsigned keys)
 {
-    int i,b,pressed;
+    int i,b,pressed,px,py;
     g->steps++; g->event=0;
     if(g->over) { g->previous=(short)keys; return; }
     if(g->hit_delay) g->hit_delay--;
@@ -195,14 +195,18 @@ void game_step(Game *g,const Table *t,unsigned keys)
     g->vx=(short)maximum(-128,minimum(128,g->vx));
     g->vy=(short)maximum(-128,minimum(128,g->vy));
     g->x+=g->vx; g->y+=g->vy;
-    b=maximum(0,minimum(BANDS-1,g->y/(8*FP)));
+    py=g->y/FP;
+    px=g->x/FP;
+    b=maximum(0,minimum(BANDS-1,py/8));
     for(i=0;i<t->band_count[b];i++) {
         unsigned short index=t->band[b][i];
         const EdgeBounds *box=&t->bounds[index];
-        int px=g->x/FP,py=g->y/FP;
         if(px<box->left || px>box->right ||
            py<box->top || py>box->bottom) continue;
         collide(g,&t->edges[index],96,0);
+        /* Contact correction can move the ball; refresh only for actual
+         * nearby candidates instead of dividing for every indexed edge. */
+        px=g->x/FP; py=g->y/FP;
     }
     for(i=0;i<2;i++) {
         int key=1<<i,hit=0;
