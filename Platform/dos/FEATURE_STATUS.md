@@ -10,7 +10,7 @@ acceptance testing**.
 **Project priorities:** (1) playable, responsive, fun on the actual Tandy,
 (2) authentic original-game behavior and artwork, a very close second.
 See [`FIDELITY.md`](FIDELITY.md) for original source references, engineering
-rules, exceptions F-001 through F-007, and why deviations currently exist.
+rules, exceptions F-001 through F-008, and why deviations currently exist.
 
 ## What works in the current prototype
 
@@ -29,6 +29,7 @@ Tandy 1000 EX/V20.
 | Bumpers | Seven source-derived visible caps have radial contact, static initial 500/1500 scoring | No original per-bumper rule progression or vertical layers (F-004) |
 | Kickback saves | Left/right outlane catch, wind-up and return; one use per side per ball | **Not** original Hazard Target/gate state logic (F-001) |
 | Nudge / tilt | X / A / D impulses and tilt-warning/lockout | Custom thresholds, not exact original accumulation (F-005) |
+| Universal anti-stuck | Q6 position progress watchdog, upward nudge, 2 verified-clear local moves, free same-ball plunger return | Original `UnstuckBall` detection/counter timing not reproduced; V20 behavior not physically verified (F-008) |
 | Inputs and UI | Z and / flippers **plus optional DOS mouse left/right buttons**, Space plunger, keyboard menu, pause, new game, help/controls, sound toggle, exit | Standard INT 33h DOS mouse driver required, mouse click behavior unverified on real V20; menu is a compact substitute |
 | Sound | Short Tandy PSG tones in mode 09h, PC-speaker event tones in VGA mode 13h; `/nosound`, S toggle | Original sound samples/music and exact source timing not ported; physical VGA speaker test pending |
 | Diagnostics | `/record`, `INPUT.TXT`, `FLIGHT.TXT` (schema 4), slow-frame and both outer-rail counters; PC-side `analyze_logs.py` | Buffer until exit, not long-term historical telemetry |
@@ -53,7 +54,7 @@ and frame timing remain unverified.
 
 | Area | What is present | What is still **not** implemented | Fidelity audit |
 | --- | --- | --- | --- |
-| World physics | Q6 fixed-point 2D ball, wall normals, gravity, speed clamps, collision bands | Original 3D/world-space position and height, spin, full material friction/elasticity, stochastic drag, continuous sweep, exact collision responses | F-002, F-006 |
+| World physics | Q6 fixed-point 2D ball, wall normals, gravity, speed clamps, collision bands, bounded anti-stuck watchdog | Original 3D/world-space position and height, spin, full material friction/elasticity, stochastic drag, continuous sweep, exact collision responses | F-002, F-006 |
 | Ramps and layers | Initial ramp art and selected projected ground rails | Physical ramp elevation, traversable upper/lower layers, occlusion masks, level-dependent rail collisions and accurate ramp exits | F-002 |
 | One-way rails and gates | Special upper-left passage, source-derived **left/right** exterior rail containment and **solid left/right slingshot hulls** that reject the ball from closed sling interiors | General original `TOneway`, gate orientation, open/closed state and per-group collision filtering | F-002 |
 | Flippers | Source rest/raised geometry; midpoint and seven-substep assisted motion, leverage-based impulse, plus 5px inward active-tip forgiveness for near-center descents | Original continuous angular sweep/velocity and exact front/back collision, trap/hold and original power curve; intentional easier-than-original gap handling | F-006 |
@@ -63,6 +64,18 @@ and frame timing remain unverified.
 | Nudge/tilt | Three directions, reversal impulse and warning/lockout | Exact source threshold, accumulation/decay and physically accurate displacement | F-005 |
 | Visual effects | Static initial-state lights, color-reduced artwork, small ball shadow/glint and optional CRTC shake | Original state-driven lamp animations, ramps/targets changing visually, full image-depth/occlusion rendering | F-007 |
 | Audio | Synthetic PSG event beeps | Source samples, original soundtrack/music playback and full event sound mapping | F-007 |
+
+**Universal recovery (2026-11-07):** The DOS port adds a
+source-inspired F-008 anti-stuck watchdog. The original has an
+`UnstuckBall` routine that first launches upward and eventually
+relaunches; DOS uses 110 near-stationary physics steps before a gentle
+upward push, followed by small geometry-checked relocation attempts
+every 73 steps, then a free relaunch if nothing works. It does not
+consume balls or award points. Flipper trapping, waiting/plunger
+movement, kickback hold and normal drains are exempt. Recovery
+attempts appear in `INPUT.TXT` under `unstick_nudges`,
+`unstick_moves`, and `unstick_relaunches`. This remains a
+source-inspired approximation, not verified original timing.
 
 **Important:** The source-derived one-sided **left/right** exterior-rail
 guards, two filled slingshot collision hulls, and top/side screen
