@@ -45,6 +45,7 @@ typedef struct {
     unsigned short plunger_rng;
     unsigned long score,steps,hits;
     unsigned short nudges,kickbacks,tilts,boundary_hits;
+    unsigned short flipper_contacts[2],flipper_power_contacts[2];
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
 } Game;
 int table_load(Table *t, const char *path);
