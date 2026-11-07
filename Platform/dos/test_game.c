@@ -29,27 +29,28 @@ int main(int argc,char **argv)
     assert(integer_sqrt(65535UL)==255 && integer_sqrt(4294967295UL)==65535UL);
     assert(g.balls==3 && g.waiting);
     for(i=0;i<48;i++) game_step(&g,&t,KEY_LAUNCH);
-    assert(g.waiting && g.charge==48);
-    game_step(&g,&t,0); assert(!g.waiting && g.vy==-124);
+    assert(g.waiting && g.charge==48); puts("STAGE: charged"); fflush(stdout);
+    game_step(&g,&t,0); assert(!g.waiting && g.vy==-124); puts("STAGE: launch released"); fflush(stdout);
     fixture(); g.waiting=0; g.x=97*FP; g.y=60*FP; g.vx=128;
-    game_step(&g,&t,0); assert(g.vx<0 && g.x<100*FP);
+    game_step(&g,&t,0); assert(g.vx<0 && g.x<100*FP); puts("STAGE: wall bounce"); fflush(stdout);
     fixture(); t.edges[0].score=500; t.edges[0].boost=35;
     g.waiting=0; g.x=97*FP; g.y=60*FP; g.vx=128;
     game_step(&g,&t,0); assert(g.score==500 && g.hits==1);
-    game_step(&g,&t,0); assert(g.score==500);
+    game_step(&g,&t,0); assert(g.score==500); puts("STAGE: scoring"); fflush(stdout);
     fixture(); g.waiting=0; g.x=90*FP; g.y=163*FP; g.vy=30;
-    game_step(&g,&t,KEY_LEFT); assert(g.vy<0);
+    game_step(&g,&t,KEY_LEFT); assert(g.vy<0); puts("STAGE: left"); fflush(stdout);
     fixture(); g.waiting=0; g.x=140*FP; g.y=163*FP; g.vy=30;
-    game_step(&g,&t,KEY_RIGHT); assert(g.vy<0);
+    game_step(&g,&t,KEY_RIGHT); assert(g.vy<0); puts("STAGE: right"); fflush(stdout);
     /* The ball can sit between the resting and raised flipper lines.
      * The interpolated sweep must catch it during the key transition. */
     fixture(); g.waiting=0; g.x=103*FP; g.y=161*FP; g.vy=40;
     game_step(&g,&t,KEY_LEFT);
-    assert(g.vy<0 && g.balls==3);
+    assert(g.vy<0 && g.balls==3); puts("STAGE: midpoint"); fflush(stdout);
     /* A held raised flipper still collides on later steps. */
     fixture(); g.waiting=0; g.x=103*FP; g.y=149*FP; g.vy=40;
     game_step(&g,&t,KEY_LEFT);
     assert(g.vy<0);
+    puts("STAGE: raised"); fflush(stdout);
     fixture(); g.waiting=0; g.x=50*FP; g.y=60*FP;
     game_step(&g,&t,KEY_NUDGE); assert(g.vy<0 && g.vx>0 && g.nudge_delay==72);
     game_step(&g,&t,0); game_step(&g,&t,KEY_NUDGE);
