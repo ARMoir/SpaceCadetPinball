@@ -117,6 +117,9 @@ def summary_lines(rows, columns, maximum=15):
     if "BORDER" in columns:
         delta = last.get("BORDER", 0) - first.get("BORDER", 0)
         lines.append(f"Top/side safety contacts in window: {delta}")
+    if "RIGHT_RAIL" in columns:
+        delta = last["RIGHT_RAIL"] - first["RIGHT_RAIL"]
+        lines.append(f"Source-derived outer-right rail recoveries in window: {delta}")
     if "LATE" in columns:
         lines.append(f"Late frames in window: {last['LATE'] - first['LATE']}")
     # Show the real end of the trajectory, not just an abstract event count.
