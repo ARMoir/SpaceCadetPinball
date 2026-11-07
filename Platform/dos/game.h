@@ -44,7 +44,7 @@ typedef struct {
     short nudge_return_x,nudge_return_y,nudge_heat;
     unsigned short plunger_rng;
     unsigned long score,steps,hits;
-    unsigned short nudges,kickbacks,tilts;
+    unsigned short nudges,kickbacks,tilts,boundary_hits;
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
 } Game;
 int table_load(Table *t, const char *path);
