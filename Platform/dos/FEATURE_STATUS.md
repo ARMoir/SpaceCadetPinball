@@ -40,7 +40,7 @@ Tandy 1000 EX/V20.
 | --- | --- | --- | --- |
 | World physics | Q6 fixed-point 2D ball, wall normals, gravity, speed clamps, collision bands | Original 3D/world-space position and height, spin, full material friction/elasticity, stochastic drag, continuous sweep, exact collision responses | F-002, F-006 |
 | Ramps and layers | Initial ramp art and selected projected ground rails | Physical ramp elevation, traversable upper/lower layers, occlusion masks, level-dependent rail collisions and accurate ramp exits | F-002 |
-| One-way rails and gates | Special upper-left passage and source-derived right-rail containment guards | General original `TOneway`, gate orientation, open/closed state and per-group collision filtering | F-002 |
+| One-way rails and gates | Special upper-left passage and source-derived **left/right** exterior rail containment with shooter exemption | General original `TOneway`, gate orientation, open/closed state and per-group collision filtering | F-002 |
 | Flippers | Source rest/raised geometry; midpoint and seven-substep assisted motion, leverage-based impulse | Original continuous angular sweep/velocity and exact front/back collision, trap/hold and original power curve | F-006 |
 | Shooter | Original plunger frames and re-catch of weak return | Original 25 ms boost progression, ~2.5 s charge curve, full ~10% boost variance and exact shooter chute transitions | F-003 |
 | Bumpers | Seven radial caps, basic initial scoring | Variable score state, independent component cooldowns, full original material/layer interaction | F-004 |
@@ -49,8 +49,10 @@ Tandy 1000 EX/V20.
 | Visual effects | Static initial-state lights, color-reduced artwork, small ball shadow/glint and optional CRTC shake | Original state-driven lamp animations, ramps/targets changing visually, full image-depth/occlusion rendering | F-007 |
 | Audio | Synthetic PSG event beeps | Source samples, original soundtrack/music playback and full event sound mapping | F-007 |
 
-**Important:** The small one-sided right-rail and top/side screen safeguards
-are **temporary playability repairs**, not restored source collision groups.
+**Important:** The source-derived one-sided **left/right** exterior-rail
+guards and top/side screen safeguards are **temporary playability repairs**,
+not restored source collision groups. The right guard skips valid shooter
+travel. Both only cover the vertical intervals of their source rail segments.
 If the ball repeatedly tunnels, gets stuck or vanishes on real hardware,
 those issues remain open, even if synthetic tests pass.
 
@@ -109,8 +111,16 @@ machine**, and those prior symptoms are not claimed solved:
 | Right flipper underpowered or ball passed through | Stronger held/front-face response and longer seven-substep swept contact | **Pending**: rapid taps, held keys, tip/heel impacts, several drains |
 | Ball wedged near the upper-left bumper | Radial contacts, separate neighboring static-wall correction | **Pending**: repeated full-strength launches and chute returns |
 | Ball seemed to disappear into the upper-left playfield | Top/side safety rail, event/flight tracing | **Pending**: confirm correct ramps and no hidden trapping |
-| High-speed ball flew to upper-right HUD boundary | One-sided source-projected right outer rail guard, `right_rail_saves` logs | **Pending**: confirm ball remains inside playable table without unnatural bounce |
+| High-speed ball flew to upper-right HUD boundary | One-sided source-projected right outer rail guard, `right_rail_saves` logs, shooter exemption | **Pending**: confirm ball remains inside playable table without unnatural bounce |
 | Tandy V20 responsiveness and 3D art legibility | Fixed-point, dirty rectangles, offline shading, `/classic` | **Pending**: sustained play, input response, `slow_frames` and side-by-side CRT inspection |
+
+**Latest controls and bounds follow-up:** The 3×5 menu font previously
+rendered `A` exactly like `H`; the F1 help now clearly says
+`A LEFT BUMP`, `D RIGHT BUMP`, and `X UP BUMP`. `H` is not assigned.
+A new source-derived *left* rail recovery is tested alongside the right
+rail, and `FLIGHT.TXT` schema 4 records `LEFT_RAIL` and `RIGHT_RAIL`
+counters. These are safety repairs, not new game rules. Hardware validation
+remains open.
 
 For investigation, run `CADET /record`, quit with Esc immediately after a
 failure, then collect `INPUT.TXT` and `FLIGHT.TXT`. `analyze_logs.py` on a
