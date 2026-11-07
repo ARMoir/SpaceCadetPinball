@@ -28,14 +28,50 @@ static int read_short(FILE *f,short *out)
 
 int table_index(Table *t)
 {
-    int i,b,lo,hi;
+    int i,b,lo,hi,k,minx,maxx,miny,maxy,diameter;
     memset(t->band_count,0,sizeof(t->band_count));
+    t->bumper_count=0;
+    /* F-004: Source TBumper uses a radial normal. Reassemble closed eight-
+     * edge source caps once, replacing the generic inward-facing polygons. */
+    for(i=0;i+7<t->count;i++) {
+        const Edge *e=&t->edges[i];
+        Bumper *bumper;
+        if(e->score==0) continue;
+        minx=maxx=e->x; miny=maxy=e->y;
+        for(k=0;k<8;k++) {
+            const Edge *p=&t->edges[i+k];
+            const Edge *next=&t->edges[i+((k+1)&7)];
+            if(p->score!=e->score || p->boost!=e->boost ||
+               p->ex!=next->x || p->ey!=next->y) break;
+            minx=minimum(minx,minimum(p->x,p->ex));
+            maxx=maximum(maxx,maximum(p->x,p->ex));
+            miny=minimum(miny,minimum(p->y,p->ey));
+            maxy=maximum(maxy,maximum(p->y,p->ey));
+        }
+        if(k!=8) continue;
+        if(t->bumper_count>=MAX_BUMPERS) return 0;
+        bumper=&t->bumpers[t->bumper_count++];
+        bumper->first=(short)i;
+        bumper->x=(short)((minx+maxx)*FP/2);
+        bumper->y=(short)((miny+maxy)*FP/2);
+        diameter=maximum(maxx-minx,maxy-miny);
+        bumper->radius=(short)(diameter*FP/2+96);
+        bumper->score=e->score;
+        bumper->boost=e->boost;
+        i+=7;
+    }
     for(i=0;i<t->count;i++) {
         Edge *e=&t->edges[i];
         if(e->length<=0 || abs(e->tx)>256 || abs(e->ty)>256 ||
            e->x < -32 || e->x>350 || e->ex < -32 || e->ex>350 ||
            e->y < -32 || e->y>350 || e->ey < -32 || e->ey>350 ||
            e->score<0 || e->boost<0 || e->boost>128) return 0;
+        /* Each radial bumper is tested once instead of eight conflicting
+         * side capsules. Preserve ordinary scored line fixtures. */
+        for(k=0;k<t->bumper_count;k++)
+            if(i>=t->bumpers[k].first &&
+               i<t->bumpers[k].first+8) break;
+        if(k<t->bumper_count) continue;
         /* Precompute tight screen-space rejection bounds once per table.
          * 8-pixel bands cut candidate checks on a 7 MHz V20. */
         t->bounds[i].left=(short)(minimum(e->x,e->ex)-4);
@@ -187,6 +223,53 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
         g->score+=e->score; g->hits++; g->hit_delay=8; g->event=1;
     }
     return 1;
+}
+
+/* F-004: Source TBumper responds along a radial collision normal. At close
+ * range an eight-sided generic capsule can correct the ball toward the
+ * INTERIOR of its closed loop, leaving it trapped against nearby rails.
+ * Test the original cap radius instead. The expensive sqrt is only called
+ * on an actual nearby bumper candidate, not every physics tick. */
+static void collide_bumpers(Game *g,const Table *t)
+{
+    int i;
+    for(i=0;i<t->bumper_count;i++) {
+        const Bumper *b=&t->bumpers[i];
+        long dx=(long)g->x-b->x,dy=(long)g->y-b->y;
+        unsigned long radius2,dist2,dist;
+        int nx,ny;
+        long dot,impulse;
+        if(dx<=-(long)b->radius || dx>=b->radius ||
+           dy<=-(long)b->radius || dy>=b->radius) continue;
+        radius2=(unsigned long)b->radius*b->radius;
+        dist2=(unsigned long)(dx*dx+dy*dy);
+        if(dist2>=radius2) continue;
+        dist=integer_sqrt(dist2);
+        if(!dist) {
+            unsigned long speed=integer_sqrt((unsigned long)(
+                (long)g->vx*g->vx+(long)g->vy*g->vy));
+            if(speed) {
+                nx=(int)(-(long)g->vx*256/(long)speed);
+                ny=(int)(-(long)g->vy*256/(long)speed);
+            } else { nx=0; ny=-256; }
+        } else {
+            nx=(int)(dx*256/(long)dist);
+            ny=(int)(dy*256/(long)dist);
+        }
+        /* Reposition outside the cap to prevent another internal hit. */
+        g->x+=(short)(((long)(b->radius-(short)dist+12)*nx)/256);
+        g->y+=(short)(((long)(b->radius-(short)dist+12)*ny)/256);
+        dot=((long)g->vx*nx+(long)g->vy*ny)/256;
+        if(dot<0) {
+            impulse=-(dot*7)/4+b->boost;
+            g->vx+=(short)(impulse*nx/256);
+            g->vy+=(short)(impulse*ny/256);
+            if(!g->hit_delay && !g->tilted) {
+                g->score+=b->score; g->hits++;
+                g->hit_delay=8; g->event=1;
+            }
+        }
+    }
 }
 
 /* The upper-left skill-shot chute includes one-way passages in the
@@ -347,6 +430,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
         g->previous=(short)keys;
         return;
     }
+    collide_bumpers(g,t);
     py=g->y/FP;
     px=g->x/FP;
     b=maximum(0,minimum(BANDS-1,py/8));
