@@ -37,7 +37,7 @@ int main(int argc,char **argv)
     puts("STAGE: charged"); fflush(stdout);
     game_step(&g,&t,0);
     full_vy=g.vy;
-    assert(!g.waiting && full_vy<=-128 && full_vy>=-130 &&
+    assert(!g.waiting && full_vy<=-128 && full_vy>=-129 &&
            g.event==2 && g.vx==0);
     puts("STAGE: launch released"); fflush(stdout);
     fixture();
@@ -110,9 +110,9 @@ int main(int argc,char **argv)
     if(argc>1 && !strcmp(argv[1],"/original")) {
         int v;
         /* Full-charge variation must not strand the ball in the shooter.
-         * Check the possible 128..130 Q6 launch impulses after charging:
+         * Check the possible 128..129 Q6 launch impulses after charging:
          * unlike phase-zero tests, release occurs at substep 97. */
-        for(v=128;v<=130;v++) {
+        for(v=128;v<=129;v++) {
             game_reset(&g,&t);
             g.waiting=0; g.vx=0; g.vy=(short)-v;
             g.steps=97;
