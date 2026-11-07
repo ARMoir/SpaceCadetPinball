@@ -747,13 +747,14 @@ int main(int argc,char **argv)
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u mouse_driver=%u video_vga=%u\n",
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u mouse_driver=%u video_vga=%u sling_left_rescues=%u sling_right_rescues=%u\n",
                 frame,game.steps,game.score,game.hits,game.balls,slow_frames,
                 observed,launches,game.nudges,game.kickbacks,game.tilts,
                 full_launches,game.boundary_hits,game.right_rail_saves,
                 game.left_rail_saves,game.flipper_contacts[0],game.flipper_contacts[1],
                 game.flipper_power_contacts[0],game.flipper_power_contacts[1],
-                mouse_available,vga_mode);
+                mouse_available,vga_mode,
+                game.sling_rescues[0],game.sling_rescues[1]);
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=%d\n",
                 enhanced?"3d":"classic",enhanced);
         fclose(report);
