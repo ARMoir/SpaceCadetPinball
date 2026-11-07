@@ -170,10 +170,13 @@ void game_reset(Game *g,const Table *t)
  * Reflection uses the normal-component decomposition in maths::basic_collision.
  * Restitution is a fixed 3/4; original per-material and spin terms are not used.
  */
+/* Flipper kick mode: 0 passive; 1 powered rotating stroke; 2 modest
+ * top-face assistance while held. Return: 0 no approach, 1 passive hit,
+ * 2 powered hit, so per-side diagnostics distinguish the two. */
 static int collide(Game *g,const Edge *e,int radius,int kick)
 {
     long rx,ry,along,dx,dy,dist,dot,impulse;
-    int nx,ny,px=g->x/FP,py=g->y/FP;
+    int nx,ny,powered=0,px=g->x/FP,py=g->y/FP;
     if(px<minimum(e->x,e->ex)-4 || px>maximum(e->x,e->ex)+4 ||
        py<minimum(e->y,e->ey)-4 || py>maximum(e->y,e->ey)+4) return 0;
     rx=(long)g->x-e->x*FP; ry=(long)g->y-e->y*FP;
@@ -193,36 +196,37 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
     dot=((long)g->vx*nx+(long)g->vy*ny)/256;
     dx=(radius-dist+1)*nx/256; dy=(radius-dist+1)*ny/256;
     g->x+=(short)dx; g->y+=(short)dy;
-    if(dot>=0 && !kick) return 0;
+    if(dot>=0 && kick!=1) return 0;
     impulse=-(dot*7)/4+e->boost;
     if(dot<0) { g->vx+=(short)(impulse*nx/256); g->vy+=(short)(impulse*ny/256); }
     if(kick) {
-        /* F-006 / TFlipperEdge::EdgeCollision:
-         * The source adds flipper angular-motion boost to the reflected
-         * ball vector, scaled by pivot distance and collision direction.
-         * The previous DOS code instead replaced both velocity components
-         * with nearly the same scripted shot at each contact.
-         * Keep the reflected/incoming momentum and add a contact-normal
-         * impulse. During a moving sweep the ball may lie exactly on an
-         * interpolated contact line: orient the active impulse toward the
-         * playfield rather than using an arbitrary zero-distance side.
-         * Stationary flipper contact remains passive.
-         * Q6 / Q8 integers only; no trig on normal line contact. */
+        /* F-006: TFlipperEdge::EdgeCollision applies contact-direction and
+         * pivot-distance angular boost during motion. At 18 Hz input scans
+         * the previous 3-substep DOS sweep ended too soon. The extended
+         * moving sweep gets full boost on ANY of its three interpolated
+         * surfaces; otherwise the outer raised edge could only produce a
+         * weak passive bounce. A held raised paddle gets a *smaller* boost
+         * only for incoming top-face balls, a documented V20 playability
+         * concession because original stationary paddles are passive.
+         * Never give underside/retreating contacts the held boost. */
         int lever=(int)(along*20/e->length);
         int power,nfx=nx,nfy=ny;
         if(lever<0) lever=0;
         if(lever>20) lever=20;
-        if(nfy>0) { nfx=-nfx; nfy=-nfy; }
-        power=90+lever*4;
-        g->vx+=(short)((long)power*nfx/256);
-        g->vy+=(short)((long)power*nfy/256);
-        g->vx=(short)maximum(-160,minimum(160,g->vx));
-        g->vy=(short)maximum(-176,minimum(176,g->vy));
+        if(kick==1 || (nfy<0 && dot<0)) {
+            if(nfy>0) { nfx=-nfx; nfy=-nfy; }
+            power=kick==1?90+lever*4:36+lever*2;
+            g->vx+=(short)((long)power*nfx/256);
+            g->vy+=(short)((long)power*nfy/256);
+            g->vx=(short)maximum(-160,minimum(160,g->vx));
+            g->vy=(short)maximum(-176,minimum(176,g->vy));
+            powered=1;
+        }
     }
     if(e->score && !g->hit_delay && !g->tilted) {
         g->score+=e->score; g->hits++; g->hit_delay=8; g->event=1;
     }
-    return 1;
+    return powered?2:1;
 }
 
 /* F-004: Source TBumper responds along a radial collision normal. At close
@@ -454,21 +458,32 @@ void game_step(Game *g,const Table *t,unsigned keys)
         int key=1<<i,hit=0;
         if(g->tilted) {
             g->sweep[i]=0;
-            collide(g,&g->flips[i][0],192,0);
-            continue;
+            hit=collide(g,&g->flips[i][0],192,0);
+        } else {
+            /* The original TFlipper rotates continuously and sweeps into
+             * the ball. At 72.8 substeps, 7 steps span about 96 ms.
+             * The previous 3-step pulse (41 ms) ended within a single
+             * 18 Hz input/render frame and missed real tip contacts. */
+            if((keys^g->previous)&key) g->sweep[i]=7;
+            if(g->sweep[i]) {
+                int extending=(keys&key)!=0;
+                hit=collide(g,&g->flips[i][extending?0:1],
+                            192,extending);
+                if(!hit) hit=collide(g,&g->flips[i][2],192,extending);
+                /* The raised position is ALSO part of the rotating stroke:
+                 * do not accidentally use a passive kick=0 here. */
+                if(!hit) hit=collide(g,&g->flips[i][extending?1:0],
+                                    192,extending);
+                g->sweep[i]--;
+            }
+            if(!hit)
+                hit=collide(g,&g->flips[i][(keys&key)!=0],192,
+                            (keys&key)!=0?2:0);
         }
-        if((keys^g->previous)&key) g->sweep[i]=3;
-        /* The original flipper is an angular swept capsule. Approximate it
-         * with rest, midpoint and raised edges over three substeps. No
-         * per-frame trigonometry, allocation or floating-point calculation. */
-        if(g->sweep[i]) {
-            int extending=(keys&key)!=0;
-            hit=collide(g,&g->flips[i][extending?0:1],192,extending);
-            if(!hit) hit=collide(g,&g->flips[i][2],192,extending);
-            g->sweep[i]--;
+        if(hit) {
+            g->flipper_contacts[i]++;
+            if(hit==2) g->flipper_power_contacts[i]++;
         }
-        if(!hit)
-            collide(g,&g->flips[i][(keys&key)!=0],192,0);
     }
     /* The tube bends left above the feed point. A constant X cutoff marked
      * partial shots as in-play while they were still climbing that bend.
