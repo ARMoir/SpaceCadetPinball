@@ -65,6 +65,126 @@ def _neutral(src, x, y):
     return src[y][x] in NEUTRAL
 
 
+def add_height_illusion(src, out, caps, counters):
+    """Offline trompe-l'oeil. Infer visual height from *painted* metal.
+
+    No source collision segments, sprite locations, or runtime renderer are
+    changed. The height field is a PC-side lighting mask only, and updates
+    remain limited to pixels already gray/white in the ORIGINAL background.
+    In particular, no new silhouette crosses a dark edge into a lamp, text,
+    or the nearby HUD. A 2x2 dither simulates intermediate shadow tones.
+    """
+    height = [[0] * WIDTH for _ in range(HEIGHT)]
+    light = (7, 15)
+    bayer = ((0, 2), (3, 1))
+    counters.update(height_rim=0, height_sidewall=0,
+                    height_contact=0, high_cap_shadow=0,
+                    mach_band=0, height_dither=0)
+
+    def shade(x, y, color, label):
+        if (8 <= x < PLAYFIELD_RIGHT-3 and
+                8 <= y < PLAYFIELD_BOTTOM-3 and
+                src[y][x] in NEUTRAL and out[y][x] != color):
+            out[y][x] = color
+            counters[label] += 1
+
+    # Automatically categorize visual *paint*, not collision edges.
+    # Isolated colored lamps and little decorative dots stay untouched.
+    # Narrow rails = tier 1; wide metal/ramp surfaces = tier 2.
+    # Bumper caps use source-imported centers for tier 3.
+    for y in range(9, PLAYFIELD_BOTTOM-5):
+        for x in range(9, PLAYFIELD_RIGHT-5):
+            c = src[y][x]
+            if c not in NEUTRAL:
+                continue
+            support = sum(
+                src[y+dy][x+dx] in light
+                for dy, dx in ((-1,-1),(-1,0),(-1,1),
+                               (0,-1),(0,1),
+                               (1,-1),(1,0),(1,1)))
+            if c == 8:
+                if support >= 3:
+                    height[y][x] = 2 if support >= 5 else 1
+            elif support >= 1:
+                height[y][x] = 2 if support >= 4 else 1
+
+    for cx, cy, rx, ry in caps:
+        for y in range(max(9, int(cy-ry-4)),
+                       min(PLAYFIELD_BOTTOM-5, int(cy+ry+5))):
+            for x in range(max(9, int(cx-rx-4)),
+                           min(PLAYFIELD_RIGHT-5, int(cx+rx+5))):
+                if src[y][x] not in NEUTRAL:
+                    continue
+                d2 = ((x-cx)/rx)**2 + ((y-cy)/ry)**2
+                if d2 <= 1.25:
+                    height[y][x] = 3
+
+    # Make a one-pixel top-left highlight immediately adjacent to a dark
+    # lower-right line. The eye exaggerates this contrast (Mach band),
+    # producing an apparent beveled rim at no runtime cost.
+    for y in range(10, PLAYFIELD_BOTTOM-6):
+        for x in range(10, PLAYFIELD_RIGHT-6):
+            tier = height[y][x]
+            c = src[y][x]
+            if not tier:
+                continue
+            nw = (src[y-1][x] in (0,8) or
+                  src[y][x-1] in (0,8))
+            se = (src[y+1][x] in NEUTRAL or
+                  src[y][x+1] in NEUTRAL)
+            if nw and se and c in (7,8):
+                if c == 7:
+                    shade(x,y,15,"height_rim")
+                elif bayer[y&1][x&1] <= 1:
+                    shade(x,y,7,"mach_band")
+
+            # Fake a 1-3 pixel sidewall *inside existing painted metal*.
+            # The source silhouette remains untouched, and the highest
+            # tier receives the deepest dark side. This is a visual height
+            # map, deliberately not an exported 3D/collision height map.
+            if c not in light:
+                continue
+            if src[y+1][x+1] != 8:
+                continue
+            for depth in range(1,tier+1):
+                xx, yy = x+depth, y+depth
+                if xx >= PLAYFIELD_RIGHT-3 or yy >= PLAYFIELD_BOTTOM-3:
+                    break
+                # Do not shade unrelated floor pixels beyond the first
+                # continuous gray support of the raised object.
+                if src[yy][xx] not in (7,8):
+                    break
+                if depth == 1 and src[yy][xx] == 7:
+                    shade(xx,yy,8,"height_sidewall")
+                elif src[yy][xx] == 8:
+                    if bayer[yy&1][xx&1] < (2 if tier==1 else 3):
+                        shade(xx,yy,0,"height_contact")
+                    else:
+                        shade(xx,yy,7,"height_dither")
+
+    # Height-dependent *cast* shadow: the taller imported bumper housings
+    # get a ~3 px offset below/right; rails above only received 1-2px
+    # sidewalls. A soft checker avoids a solid black halo on an RGBI CRT.
+    for cx,cy,rx,ry in caps:
+        offset=3
+        for y in range(max(9,int(cy-ry-7)),
+                       min(PLAYFIELD_BOTTOM-5,int(cy+ry+8))):
+            for x in range(max(9,int(cx-rx-7)),
+                           min(PLAYFIELD_RIGHT-5,int(cx+rx+8))):
+                c=src[y][x]
+                if c not in (7,8):
+                    continue
+                d2=((x-cx)/rx)**2+((y-cy)/ry)**2
+                shifted=((x-cx-offset)/(rx+1.8))**2 + (
+                         (y-cy-offset)/(ry+1.8))**2
+                # Outside original cap but inside its shifted footprint.
+                if d2 >= 1.02 and .75 <= shifted <= 1.25:
+                    if c==7 and bayer[y&1][x&1] <= 2:
+                        shade(x,y,8,"high_cap_shadow")
+                    elif c==8 and bayer[y&1][x&1] <= 2:
+                        shade(x,y,0,"high_cap_shadow")
+
+
 def enhance(original, caps):
     """Deterministic 16-color lighting, restricted to existing neutral pixels.
 
@@ -256,6 +376,11 @@ def enhance(original, caps):
                         shade(x,y,8,"bumper_underside")
                     elif c==8 and ((x+y)&3)!=0:
                         shade(x,y,0,"bumper_underside")
+
+    # Third offline-only pass: source-derived visual height and Mach bands.
+    # The default TABLE3D.TGA remains exactly 32768 bytes with the same
+    # geometry and original palette. The 7.16 MHz game runs no added code.
+    add_height_illusion(src,out,caps,counters)
     return out, counters
 
 
