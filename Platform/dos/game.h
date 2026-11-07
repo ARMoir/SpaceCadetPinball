@@ -2,6 +2,7 @@
 #define DOS_GAME_H
 /* C89, 16-bit int / 32-bit long. No floating point or DOS extender. */
 #define MAX_EDGES 640
+#define MAX_BUMPERS 8
 #define BANDS 25
 #define BAND_EDGES 256
 #define FP 64
@@ -17,11 +18,16 @@ typedef struct { short x,y,ex,ey,tx,ty,length,score,boost; } Edge;
 typedef struct { short x,y,w,h; unsigned char pixels[1024]; } Sprite;
 /* Runtime-only collision AABBs, not part of SCP2 on-disk format. */
 typedef struct { short left,right,top,bottom; } EdgeBounds;
+/* Source bumper caps are circular. SCP2 stores their eight outline edges;
+ * derive a low-cost radial hit area once when the table is indexed. */
+typedef struct { short first,x,y,radius,score,boost; } Bumper;
 typedef struct {
     short count,launch_x,launch_y,drain_y,flipper[12];
     short kickback[4]; /* Source-projected left/right strike centers. */
     Edge edges[MAX_EDGES];
     EdgeBounds bounds[MAX_EDGES];
+    Bumper bumpers[MAX_BUMPERS];
+    short bumper_count;
     Sprite sprites[5];
     Sprite plunger[8];
     unsigned short band[BANDS][BAND_EDGES], band_count[BANDS];
