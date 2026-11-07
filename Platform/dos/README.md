@@ -284,8 +284,21 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   Strike centers come from the source collision segments; trigger widths,
   timing and impulses are simplified. Walls stay solid throughout the return.
   The HUD shows `KICK L R`, or a dash for a consumed side.
-* Reduced precision/two-sided walls can still trap the ball; nudge with X,
-  A, or D to free it, but repeated nudges can tilt.
+* **Solid slingshots (F-002):** the original 14-segment closed left and
+  right sling outlines are now automatically recognized from `TABLE.DAT`.
+  Their centers are treated as solid triangular collision surfaces
+  instead of 14 independent two-sided edges. Balls approaching from
+  any side, especially the right slingshot's hollow middle, are
+  pushed to the nearest outside surface and rebound outward, with a
+  slight upward release at side/top faces to prevent sticking.
+  The source art, sprites and table pack are unchanged. An inexpensive
+  bounding-box check avoids costly math away from the slings. This
+  deliberately favors reliable DOS playability over trapping artifacts
+  from a flattened 2D collision import. `CADET /record` reports
+  `sling_left_rescues` and `sling_right_rescues` in `INPUT.TXT`;
+  re-test the actual right sling and performance on your V20.
+  Other missing ramp/layer collisions may still trap the ball; nudge
+  with X, A, or D if necessary, but repeated nudges can tilt.
 * Short synthesized Tandy PSG tones replace original samples and music.
 * Whole-table view prioritizes memory and frame cost over fine visual detail.
 
@@ -297,7 +310,8 @@ bumper scoring, shooter-lane return versus regular drain, left/right flippers,
 contact-dependent flipper leverage and incoming-momentum response,
 active flipper tip forgiveness with no idle/tilt saves, more energetic
 playfield speed, three-direction nudges and return impulses, tilt, both timed
-outlane kickbacks and single-use gating, drain/restart and a 20,000-step soak. It writes `TEST.OK` on success.
+outlane kickbacks and single-use gating, solid slingshot center
+recognition/anti-trapping, drain/restart and a 20,000-step soak. It writes `TEST.OK` on success.
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (32768 bytes
 in Tandy mode, 64000 in VGA mode) and `SMOKE.TXT`, and restores DOS.
 The CI runner tests Tandy auto-detection, forced VGA, and VGA auto-detection
