@@ -25,7 +25,7 @@ typedef struct {
     unsigned char sweep[2];
     unsigned short noise;
     unsigned long score,steps,hits;
-    Edge flips[2][2];
+    Edge flips[2][3]; /* rest, raised, intermediate sweep */
 } Game;
 int table_load(Table *t, const char *path);
 int table_index(Table *t);
