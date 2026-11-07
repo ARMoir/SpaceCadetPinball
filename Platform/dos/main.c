@@ -22,8 +22,12 @@ static void __interrupt __far keyboard(void)
     outp(0x61,acknowledge|0x80); outp(0x61,acknowledge);
     /* XT/V20 make/break scancodes; extended prefixes are ignored. */
     if(scan!=0xe0 && scan!=0xe1) {
-        keys[scan&127]=(scan&128)?0:1;
-        if(!(scan&128)) pressed_keys[scan&127]=1;
+        unsigned code=scan&127;
+        /* The S toggle is edge-triggered: auto-repeat must not toggle it
+         * repeatedly while held. Other keys retain quick-tap latching. */
+        if(!(scan&128) && (code!=31 || !keys[code]))
+            pressed_keys[code]=1;
+        keys[code]=(scan&128)?0:1;
     }
     outp(0x20,0x20);
 }
@@ -162,6 +166,9 @@ static void hud(void)
     text(240,124,"N NEW GAME"); text(240,132,"ESC QUIT");
     text(240,140,"X NUDGE");
     text(240,156,game.over?"GAME OVER   ":game.waiting?"READY       ":"PLAY        ");
+    /* Redraw just this short status strip, clearing the old ON/OFF text. */
+    restore(240,172,48,5);
+    text(240,172,sound_enabled?"S SOUND ON":"S SOUND OFF");
 }
 
 static void silence(void)
@@ -213,6 +220,7 @@ int main(int argc,char **argv)
     int old_new=0,event,next_x,next_y,ball_changed,ball_redraw;
     int plunger_x,plunger_y,old_plunger_x=-1,old_plunger_y=-1;
     int plunger_changed,plunger_redraw,plunger_charge;
+    unsigned char toggle_sound;
     unsigned observed=0,launches=0;
     union REGS r;
     unsigned char old_mode;
@@ -252,7 +260,15 @@ int main(int argc,char **argv)
               ((keys[57]||pressed_keys[57])?KEY_LAUNCH:0)|
               ((keys[45]||pressed_keys[45])?KEY_NUDGE:0);
         pressed_keys[44]=pressed_keys[53]=pressed_keys[57]=pressed_keys[45]=0;
+        toggle_sound=pressed_keys[31]; /* S, scan code 1Fh */
+        pressed_keys[31]=0;
         _enable();
+        if(toggle_sound) {
+            /* Mute *before* disabling writes, so a playing tone cannot
+             * linger. /nosound still performs no PSG writes at startup. */
+            if(sound_enabled) { silence(); sound_ticks=0; sound_enabled=0; }
+            else { sound_enabled=1; sound_ticks=0; }
+        }
         if(smoke) input=(frame%48<16?KEY_LAUNCH:0)|
                          (frame%20<10?KEY_LEFT:KEY_RIGHT)|(frame%90==0?KEY_NUDGE:0);
         observed|=input;
@@ -326,7 +342,7 @@ int main(int argc,char **argv)
         old_x=next_x; old_y=next_y;
         if(!game.over && ball_redraw)
             sprite(&table.sprites[4],old_x+1,old_y+1);
-        if(old_score!=game.score || old_balls!=game.balls || old_wait!=game.waiting || old_over!=game.over) {
+        if(toggle_sound || old_score!=game.score || old_balls!=game.balls || old_wait!=game.waiting || old_over!=game.over) {
             hud(); old_score=game.score; old_balls=game.balls; old_wait=game.waiting; old_over=game.over;
         }
         previous_input=input;
