@@ -21,6 +21,22 @@ static void fixture(void)
     assert(table_index(&t)); game_reset(&g,&t);
 }
 
+/* Return true if the ball still overlaps a filled slingshot core.
+ * Mirrors the source-derived Q8 half-plane test, independently of the
+ * original disconnected line-segment collision index. */
+static int overlaps_sling(const Game *ball,const Sling *h)
+{
+    int k;
+    if(!h->count) return 0;
+    for(k=0;k<3;k++) {
+        long dx=(long)ball->x-(long)h->x[k]*FP;
+        long dy=(long)ball->y-(long)h->y[k]*FP;
+        long d=(dx*h->nx[k]+dy*h->ny[k])/256;
+        if(d>=3*FP) return 0;
+    }
+    return 1;
+}
+
 int main(int argc,char **argv)
 {
     int i,weak_vy,full_vy;
@@ -353,6 +369,61 @@ int main(int argc,char **argv)
     puts("STAGE: synthetic tests passed; loading imported table"); fflush(stdout);
     assert(table_load(&t,"TABLE.DAT")); game_reset(&g,&t);
     puts("STAGE: imported pack loaded"); fflush(stdout);
+    /* F-002: slingshots are irregular CLOSED source outlines, not
+     * collections of independent two-sided wall capsules. Both must
+     * index as solid faces, especially the problem right sling. */
+    {
+        int side,trial,step;
+        static const short vx[7]={0,160,-160,0,0,135,-135};
+        static const short vy[7]={0,0,0,160,-160,145,145};
+        static const short ox[7]={0,-15,15,0,0,-13,13};
+        static const short oy[7]={0,0,0,-11,13,-11,-11};
+        assert(t.sling_count==2);
+        for(side=0;side<2;side++) {
+            const Sling *h=&t.slings[side];
+            int cx=(h->x[0]+h->x[1]+h->x[2])/3;
+            int cy=(h->y[0]+h->y[1]+h->y[2])/3;
+            assert(h->count>=3 && h->count<=20 &&
+                   h->right-h->left>=12 && h->right-h->left<=18 &&
+                   h->bottom-h->top>=22 && h->bottom-h->top<=29);
+            assert((side==0 && h->right<=t.flipper[0]+2) ||
+                   (side==1 && h->left>=t.flipper[6]-2));
+            /* No old two-sided sling edge may also run in the normal
+             * indexed collision path and shove a ball back inside. */
+            for(trial=0;trial<BANDS;trial++) {
+                int z;
+                for(z=0;z<t.band_count[trial];z++) {
+                    int edge=t.band[trial][z];
+                    assert(edge<h->first || edge>=h->first+h->count);
+                }
+            }
+            for(trial=0;trial<7;trial++) {
+                game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+                g.x=(short)((cx+ox[trial])*FP);
+                g.y=(short)((cy+oy[trial])*FP);
+                g.vx=vx[trial]; g.vy=vy[trial];
+                if(!trial) assert(overlaps_sling(&g,h));
+                for(step=0;step<48 && !g.over && !g.waiting;step++) {
+                    game_step(&g,&t,0);
+                    if(overlaps_sling(&g,h)) {
+                        printf("SLING TRAP side=%d trial=%d step=%d x=%d y=%d\n",
+                               side,trial,step,g.x/FP,g.y/FP);
+                        fflush(stdout);
+                    }
+                    assert(!overlaps_sling(&g,h));
+                }
+                if(!trial) {
+                    printf("SOLID SLING %c: x=%d y=%d rescues=%u\n",
+                           side?'R':'L',g.x/FP,g.y/FP,
+                           g.sling_rescues[side]);
+                    fflush(stdout);
+                    assert(g.sling_rescues[side]>0 && g.balls==3);
+                }
+            }
+        }
+        puts("STAGE: original slingshot centers are solid on both sides");
+        fflush(stdout);
+    }
     if(argc>1 && !strcmp(argv[1],"/original")) {
         int v,bumper_count=0;
         /* F-002: hardware FLIGHT log 2026-11-07 frames 1432-1455
