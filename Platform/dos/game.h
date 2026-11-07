@@ -10,7 +10,9 @@
 #define KEY_LEFT 1
 #define KEY_RIGHT 2
 #define KEY_LAUNCH 4
-#define KEY_NUDGE 8
+#define KEY_NUDGE 8 /* X: nudge upward */
+#define KEY_NUDGE_LEFT 16 /* A: bump from left, ball goes right */
+#define KEY_NUDGE_RIGHT 32 /* D: bump from right, ball goes left */
 typedef struct { short x,y,ex,ey,tx,ty,length,score,boost; } Edge;
 typedef struct { short x,y,w,h; unsigned char pixels[1024]; } Sprite;
 /* Runtime-only collision AABBs, not part of SCP1 on-disk format. */
@@ -28,6 +30,10 @@ typedef struct {
     /* Set on ball feed, cleared once the ball enters the main playfield.
      * Needed to distinguish an unsuccessful shooter return from a drain. */
     unsigned char in_shooter;
+    unsigned char kick_armed[2],kick_side,kick_delay,kick_grace;
+    unsigned char shake_frames,tilted,tilt_warning;
+    unsigned char nudge_return_ticks,nudge_decay_ticks;
+    short nudge_return_x,nudge_return_y,nudge_heat;
     unsigned short plunger_rng;
     unsigned long score,steps,hits;
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
