@@ -31,6 +31,7 @@ int table_index(Table *t)
     int i,b,lo,hi,k,minx,maxx,miny,maxy,diameter;
     memset(t->band_count,0,sizeof(t->band_count));
     t->bumper_count=0;
+    t->outer_right_rail=-1;
     /* F-004: Source TBumper uses a radial normal. Reassemble closed eight-
      * edge source caps once, replacing the generic inward-facing polygons. */
     for(i=0;i+7<t->count;i++) {
@@ -66,6 +67,21 @@ int table_index(Table *t)
            e->x < -32 || e->x>350 || e->ex < -32 || e->ex>350 ||
            e->y < -32 || e->y>350 || e->ey < -32 || e->ey>350 ||
            e->score<0 || e->boost<0 || e->boost>128) return 0;
+        /* The source's long right exterior rail is around x=170..193,
+         * y=40..166 in the imported SCP2 projection. Find it by shape
+         * rather than binding logic to a hard-coded edge index. This
+         * supports a cheap one-sided escape guard after ordinary collisions
+         * when the two closely spaced projected walls let a ball tunnel
+         * past them. We prefer the rightmost qualifying wall. */
+        if(!e->score && minimum(e->y,e->ey)<=45 &&
+           maximum(e->y,e->ey)>=160 &&
+           maximum(e->x,e->ex)>=185 &&
+           abs(e->ey-e->y)>=95 &&
+           (t->outer_right_rail<0 ||
+            maximum(e->x,e->ex)>
+            maximum(t->edges[t->outer_right_rail].x,
+                    t->edges[t->outer_right_rail].ex)))
+            t->outer_right_rail=(short)i;
         /* Each radial bumper is tested once instead of eight conflicting
          * side capsules. Preserve ordinary scored line fixtures. */
         for(k=0;k<t->bumper_count;k++)
@@ -276,6 +292,40 @@ static void collide_bumpers(Game *g,const Table *t)
     }
 }
 
+/* F-002: source-projected outer-right rail escape guard. Imported edges
+ * can be parallel and only two pixels apart, causing narrow capsule
+ * corrections to eject a fast ball THROUGH the wall. The owner's flight
+ * record showed x=235 at y=113 after passing the true rail near x=184.
+ * Run this guard only near the long source rail, after ordinary static
+ * and bumper collisions. It is one-sided: preserve interior play and
+ * reflect only outward movement, without a random nudge or teleport.
+ * A 2-pixel ball margin prevents the sprite overlapping the rail. */
+static void contain_outer_right(Game *g,const Table *t)
+{
+    const Edge *e;
+    long limit,dy,dot,impulse;
+    int nx,ny,py=g->y/FP;
+    if(t->outer_right_rail<0) return;
+    e=&t->edges[t->outer_right_rail];
+    if(py<minimum(e->y,e->ey) || py>maximum(e->y,e->ey) ||
+       e->ey==e->y) return;
+    dy=(long)g->y-(long)e->y*FP;
+    limit=(long)e->x*FP+
+          dy*(e->ex-e->x)/(e->ey-e->y)-2*FP;
+    if((long)g->x<=limit) return;
+    /* Project right-facing normal from the wall direction, Q8. */
+    nx=abs(e->ty);
+    ny=e->ty>=0?-e->tx:e->tx;
+    dot=((long)g->vx*nx+(long)g->vy*ny)/256;
+    if(dot>0) {
+        impulse=dot*7/4;
+        g->vx-=(short)(impulse*nx/256);
+        g->vy-=(short)(impulse*ny/256);
+    }
+    g->x=(short)limit;
+    g->right_rail_saves++;
+}
+
 /* The upper-left skill-shot chute includes one-way passages in the
  * original (TOneway / skill-shot gates). The current SCP2 pack flattened
  * adjacent ramp edges into two-sided walls. Let the ball pass downhill
@@ -454,6 +504,9 @@ void game_step(Game *g,const Table *t,unsigned keys)
      * the upper-left bumper; a second wall correction must not leave the
      * ball buried inside its cap until the following physics step. */
     collide_bumpers(g,t);
+    /* Restore the source exterior after all two-sided wall corrections.
+     * This catches the actual off-right-table flight seen on hardware. */
+    contain_outer_right(g,t);
     for(i=0;i<2;i++) {
         int key=1<<i,hit=0;
         if(g->tilted) {
