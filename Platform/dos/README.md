@@ -140,10 +140,15 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   two-sided capsules; collision groups are not reproduced. The upper-left skill-shot
   throat now has a small downhill-only passage, approximating the original
   TOneway gates so a ball does not get trapped by flattened ramp walls.
-  As a playability fallback, the extreme top and side screen limits now
-  reflect a ball instead of consuming one. This is **not** a fully faithful
-  ramp/one-way fix, and remaining unusual upper-left paths must be verified
-  on hardware. Other original gates and one-way edges still need explicit
+  The original projected outer-right rail is now also identified from
+  `TABLE.DAT`: if a fast ball slips outside that rail (as observed on the
+  Tandy at frames 1432-1455), a one-sided normal reflection catches it
+  at the *table* edge, not the screen edge. This is a temporary F-002
+  playability guard, not an imported replacement for the original gate
+  or collision-layer rules. The extreme top and side screen limits still
+  reflect instead of consuming balls as an emergency fallback.
+  The full ramp/one-way mechanics and final hardware verification remain
+  incomplete. Other original gates and one-way edges still need explicit
   data import.
 * Missed shots that return down the diagonal shooter tube return to the
   plunger without using a ball. The game tracks whether the ball has entered
@@ -204,10 +209,13 @@ runner also requires a bumper hit and at least 500 points. Python tests reject
 incomplete, uncharged and zero-score smoke reports.
 `CADET /record` uses real keyboard input and writes `INPUT.TXT` on Esc,
 including observed control bits, launches, nudges, kickbacks, tilts, top/side
-safety contacts (`boundary_hits`) and slow-frame count for hardware checks.
+safety contacts (`boundary_hits`), source outer-right-rail catches
+(`right_rail_saves`), and slow-frame count for hardware checks.
 It also writes **`FLIGHT.TXT`**, a rolling trace of the **last 256 rendered
 frames (about 14 seconds)**: Q6 ball position and velocity, remaining balls,
-READY/shooter status, charge and event code. Flight data is buffered in memory,
+READY/shooter status, charge, event code and both separate cumulative
+`BORDER` and `RIGHT_RAIL` recovery counters (flight schema 3).
+Flight data is buffered in memory,
 **not written to disk during gameplay**, so normal play is unaffected. If the
 ball disappears near the upper-left chute, press **Esc immediately** and
 inspect/share `FLIGHT.TXT` and `INPUT.TXT`. These show whether it exited the
