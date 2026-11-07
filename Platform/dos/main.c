@@ -1,4 +1,4 @@
-/* Native 8086 real-mode DOS / Tandy 1000 backend. */
+/* Native 8086 real-mode DOS: Tandy mode 09h and standard VGA mode 13h. */
 #include "game.h"
 #include "menu_art.h"
 #include <dos.h>
@@ -33,6 +33,7 @@ static void (__interrupt __far *old_keyboard)(void);
 static int sound_enabled=1, sound_ticks;
 static int shake_enabled=1,video_shift=0;
 static int mouse_available=0; /* Only poll INT 33h when a driver exists. */
+static int vga_mode=0; /* Selected once before display setup. */
 
 /* Shift the 6845 start-address by one unit for a short screen jolt.
  * This shifts the visible image in hardware without copying 32 KB of
@@ -40,6 +41,9 @@ static int mouse_available=0; /* Only poll INT 33h when a driver exists. */
  * systems with unusual video hardware. */
 static void camera_shift(int offset)
 {
+    /* VGA has different CRTC memory units: never apply Tandy screen shake
+     * to VGA. Keep all physics/state shake counters unchanged. */
+    if(vga_mode) { video_shift=0; return; }
     if(!shake_enabled) offset=0;
     if(video_shift==offset) return;
     outp(0x3d4,13);
@@ -115,13 +119,44 @@ static void mode(unsigned char value)
     memset(&r,0,sizeof(r)); r.h.ah=0; r.h.al=value; int86(0x10,&r,&r);
 }
 
+/* Tandy video is four 8KB banks with two pixels per byte. VGA 13h is
+ * a linear 64000-byte framebuffer (one 0..15 palette index per pixel). */
 static unsigned address(int x,int y)
 { return (unsigned)((y&3)*8192+(y>>2)*160+(x>>1)); }
+
+static int detect_vga(void)
+{
+    union REGS r;
+    memset(&r,0,sizeof(r));
+    r.x.ax=0x1a00; /* BIOS VGA/MCGA Display Combination Code service. */
+    int86(0x10,&r,&r);
+    return r.h.al==0x1a; /* Non-VGA BIOS leaves AL != 1Ah. */
+}
+
+/* RGBI palette from the original 16-color Tandy converter, 6-bit DAC.
+ * Preserve every art and moving-sprite index. VGA's extra 240 colors are
+ * intentionally unused until there is a separate original-art import. */
+static void set_vga_palette(void)
+{
+    static const unsigned char dac[48]={
+         0, 0, 0,  0, 0,42,  0,42, 0,  0,42,42,
+        42, 0, 0, 42, 0,42, 42,21, 0, 42,42,42,
+        21,21,21, 21,21,63, 21,63,21, 21,63,63,
+        63,21,21, 63,21,63, 63,63,21, 63,63,63
+    };
+    int i;
+    outp(0x3c8,0);
+    for(i=0;i<48;i++) outp(0x3c9,dac[i]);
+}
 
 static void pixel(int x,int y,unsigned color)
 {
     unsigned a;
     if(x<0 || x>=320 || y<0 || y>=200) return;
+    if(vga_mode) {
+        video[(unsigned)y*320U+(unsigned)x]=(unsigned char)color;
+        return;
+    }
     a=address(x,y);
     if(x&1) video[a]=(video[a]&0xf0)|(unsigned char)color;
     else video[a]=(video[a]&0x0f)|(unsigned char)(color<<4);
@@ -135,9 +170,16 @@ static void restore(int x,int y,int w,int h)
     if(x+w>320) w=320-x; if(y+h>200) h=200-y;
     if(w<=0 || h<=0) return;
     start=x/2; end=(x+w+1)/2;
-    for(row=y;row<y+h;row++) {
-        a=address(start*2,row);
-        _fmemcpy(video+a,background+a,end-start);
+    if(vga_mode) {
+        for(row=y;row<y+h;row++) {
+            a=(unsigned)row*320U+(unsigned)x;
+            _fmemcpy(video+a,background+a,(unsigned)w);
+        }
+    } else {
+        for(row=y;row<y+h;row++) {
+            a=address(start*2,row);
+            _fmemcpy(video+a,background+a,end-start);
+        }
     }
 }
 
@@ -155,6 +197,14 @@ static void sprite(const Sprite *s,int x,int y)
         end=s->w;
         if(x+end>320) end=320-x;
         if(start>=end) continue;
+        if(vga_mode) {
+            /* Linear VGA writes with a transparent source sprite.
+             * No per-pixel multiplication or division on this hot path. */
+            a=(unsigned)dst_y*320U+(unsigned)(x+start);
+            for(xx=start;xx<end;xx++,a++)
+                if(p[xx]!=255) video[a]=p[xx];
+            continue;
+        }
         a=address(x+start,dst_y);
         for(xx=start;xx<end;xx++) {
             unsigned char c=p[xx];
@@ -210,9 +260,18 @@ static void draw_title(void)
 {
     int y,x;
     for(y=0;y<MENU_ART_H;y++) {
-        unsigned a=address(242,4+y);
-        for(x=0;x<MENU_ART_W/2;x++)
-            video[a+x]=menu_art[y*(MENU_ART_W/2)+x];
+        if(vga_mode) {
+            unsigned a=(unsigned)(y+4)*320U+242U;
+            for(x=0;x<MENU_ART_W/2;x++) {
+                unsigned char pair=menu_art[y*(MENU_ART_W/2)+x];
+                video[a+2*x]=(unsigned char)(pair>>4);
+                video[a+2*x+1]=(unsigned char)(pair&15);
+            }
+        } else {
+            unsigned a=address(242,4+y);
+            for(x=0;x<MENU_ART_W/2;x++)
+                video[a+x]=menu_art[y*(MENU_ART_W/2)+x];
+        }
     }
     for(x=241;x<=318;x++) {
         pixel(x,2,7); pixel(x,58,7);
@@ -316,7 +375,13 @@ static void draw_panel(int view,int choice,int paused)
 static void silence(void)
 {
     if(!sound_enabled) return;
-    outp(0xc0,0x9f); outp(0xc0,0xbf); outp(0xc0,0xdf); outp(0xc0,0xff);
+    if(vga_mode) {
+        /* On AT/VGA hardware port 0xC0 is not a Tandy PSG.
+         * Use the standard PC speaker gate instead. */
+        outp(0x61,inp(0x61)&0xfc);
+    } else {
+        outp(0xc0,0x9f); outp(0xc0,0xbf); outp(0xc0,0xdf); outp(0xc0,0xff);
+    }
 }
 
 static void play_event(int event)
@@ -326,7 +391,19 @@ static void play_event(int event)
     if(!event) { if(sound_ticks && !--sound_ticks) silence(); return; }
     divisor=event==1?180:event==2?320:event==4?230:
             event==5?760:600;
-    outp(0xc0,0x80|(divisor&15)); outp(0xc0,divisor>>4); outp(0xc0,0x94);
+    if(vga_mode) {
+        /* PIT channel 2, PC speaker. Trigger notes on the same events,
+         * preserving Tandy PSG output exactly in mode 09h. */
+        divisor=(unsigned)(divisor*6U);
+        outp(0x43,0xb6);
+        outp(0x42,divisor&255);
+        outp(0x42,divisor>>8);
+        outp(0x61,inp(0x61)|3);
+    } else {
+        outp(0xc0,0x80|(divisor&15));
+        outp(0xc0,divisor>>4);
+        outp(0xc0,0x94);
+    }
     sound_ticks=2;
 }
 
@@ -344,9 +421,29 @@ static int load_background(int *enhanced)
         f=fopen("TABLE.TGA","rb");
     }
     if(!f) return 0;
-    for(i=0;i<64;i++) {
-        if(fread(buf,1,512,f)!=512) { ok=0; break; }
-        _fmemcpy(background+i*512U,buf,512);
+    if(vga_mode) {
+        /* Expand the existing 32768-byte Tandy art directly into a
+         * 64000-byte linear VGA background, ONCE at startup. Read each
+         * 8K bank as 50x160 used bytes plus 192 unused bytes. No second
+         * 32K allocation, no extra disk assets, no runtime conversion. */
+        unsigned bank,row,x;
+        for(bank=0;bank<4 && ok;bank++) {
+            for(row=0;row<50;row++) {
+                unsigned dst=(unsigned)(row*4U+bank)*320U;
+                if(fread(buf,1,160,f)!=160) { ok=0; break; }
+                for(x=0;x<160;x++) {
+                    unsigned char pair=buf[x];
+                    background[dst+2*x]=(unsigned char)(pair>>4);
+                    background[dst+2*x+1]=(unsigned char)(pair&15);
+                }
+            }
+            if(ok && fread(buf,1,192,f)!=192) ok=0;
+        }
+    } else {
+        for(i=0;i<64;i++) {
+            if(fread(buf,1,512,f)!=512) { ok=0; break; }
+            _fmemcpy(background+i*512U,buf,512);
+        }
     }
     if(fgetc(f)!=EOF) ok=0;
     fclose(f); return ok;
@@ -358,7 +455,9 @@ static void dump_screen(void)
     unsigned i;
     unsigned char buf[512];
     if(!f) return;
-    for(i=0;i<64;i++) { _fmemcpy(buf,video+i*512U,512); fwrite(buf,1,512,f); }
+    for(i=0;i<(vga_mode?125U:64U);i++) {
+        _fmemcpy(buf,video+i*512U,512); fwrite(buf,1,512,f);
+    }
     fclose(f);
 }
 
@@ -377,7 +476,7 @@ int main(int argc,char **argv)
     unsigned char toggle_sound,toggle_menu,key_up,key_down;
     unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_new;
     unsigned observed=0,launches=0,full_launches=0,mouse_input=0;
-    int no_mouse=0;
+    int no_mouse=0,video_choice=-1; /* -1 detect VGA; 0 Tandy; 1 VGA */
     union REGS r;
     unsigned char old_mode;
     FILE *report;
@@ -387,16 +486,27 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"/nosound")) sound_enabled=0;
         else if(!strcmp(argv[i],"/noshake")) shake_enabled=0;
         else if(!strcmp(argv[i],"/nomouse")) no_mouse=1;
+        else if(!strcmp(argv[i],"/tandy")) video_choice=0;
+        else if(!strcmp(argv[i],"/vga")) video_choice=1;
         else if(!strcmp(argv[i],"/classic")) enhanced=0;
         else if(!strcmp(argv[i],"/3d")) enhanced=1;
-        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake] [/nomouse] [/classic|/3d]"); return 1; }
+        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
+    if(video_choice==1 && !detect_vga()) {
+        puts("VGA BIOS not detected; /vga requires standard VGA hardware.");
+        return 1;
+    }
+    vga_mode=(video_choice==1 ||
+              (video_choice<0 && detect_vga()));
     if(!table_load(&table,"TABLE.DAT")) {
         puts("Missing or invalid TABLE.DAT. Run convert.py or make_demo.py first."); return 1;
     }
-    background=_fmalloc(32768UL);
-    if(!background) { puts("Not enough conventional memory (32KB background)."); return 1; }
+    background=_fmalloc(vga_mode?64000UL:32768UL);
+    if(!background) {
+        puts("Not enough conventional memory for selected video background.");
+        return 1;
+    }
     if(!load_background(&enhanced)) {
         _ffree(background);
         puts("Missing or invalid table artwork (32768 bytes).");
@@ -405,12 +515,13 @@ int main(int argc,char **argv)
     game_reset(&game,&table);
     if(!smoke) game.plunger_rng^=ticks(); /* Reproducible smoke, varied interactive play. */
     memset(&r,0,sizeof(r)); r.h.ah=15; int86(0x10,&r,&r); old_mode=r.h.al;
-    mode(9);
+    mode((unsigned char)(vga_mode?0x13:9));
+    if(vga_mode) set_vga_palette();
     /* Enable mouse only if a standard DOS mouse driver is present.
      * Smoke tests stay deterministic even in emulators with built-in mice. */
     if(!smoke && !no_mouse) mouse_available=mouse_detect();
-    video=(unsigned char __far *)MK_FP(0xb800,0);
-    _fmemcpy(video,background,32768U);
+    video=(unsigned char __far *)MK_FP(vga_mode?0xa000:0xb800,0);
+    _fmemcpy(video,background,vga_mode?64000U:32768U);
     draw_title();
     draw_panel(view,choice,paused);
     silence();
@@ -634,13 +745,13 @@ int main(int argc,char **argv)
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u mouse_driver=%u\n",
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u mouse_driver=%u video_vga=%u\n",
                 frame,game.steps,game.score,game.hits,game.balls,slow_frames,
                 observed,launches,game.nudges,game.kickbacks,game.tilts,
                 full_launches,game.boundary_hits,game.right_rail_saves,
                 game.left_rail_saves,game.flipper_contacts[0],game.flipper_contacts[1],
                 game.flipper_power_contacts[0],game.flipper_power_contacts[1],
-                mouse_available);
+                mouse_available,vga_mode);
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=%d\n",
                 enhanced?"3d":"classic",enhanced);
         fclose(report);
@@ -649,7 +760,8 @@ int main(int argc,char **argv)
         report=fopen("FLIGHT.TXT","w");
         if(report) {
             unsigned j;
-            fprintf(report,"# CADET_FLIGHT schema=4 count=%u rate_hz=18.2 scale=64\n",flight_used);
+            fprintf(report,"# CADET_FLIGHT schema=4 count=%u rate_hz=18.2 scale=64 video=%s\n",
+                    flight_used,vga_mode?"vga13":"tandy09");
             fprintf(report,"# Q6 positions/velocities divide by 64; INPUT bits 1=Z 2=/ 4=SPACE 8=X 16=A 32=D\n");
             fprintf(report,"# STATE bits 1=PAUSE 2=MENU 4=TILT 8=GAME_OVER 16=MOUSE_LEFT 32=MOUSE_RIGHT; EVENT 0=none 1=bumper 2=launch 3=drain 4=kickback 5=tilt\n");
             fprintf(report,"# Contact counters (LH RH LP RP), boundary and late-frame counts are cumulative; SWEEP is remaining active substeps.\n");
