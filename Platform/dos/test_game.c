@@ -124,6 +124,19 @@ int main(int argc,char **argv)
                    v,g.hits,g.score,i,g.x/FP,g.y/FP);
             fflush(stdout);
         }
+        for(v=118;v<=140;v++) {
+            game_reset(&g,&t);
+            g.waiting=0; g.vx=0; g.vy=(short)-v;
+            g.steps=97;
+            for(i=0;i<2500;i++) {
+                unsigned keys=(i+97)%80<40?KEY_LEFT:KEY_RIGHT;
+                game_step(&g,&t,keys);
+                if(g.waiting) break;
+            }
+            printf("PHASE97: velocity=%d hits=%lu score=%lu steps=%d\\n",
+                   v,g.hits,g.score,i);
+            fflush(stdout);
+        }
         game_reset(&g,&t);
         /* Regression: full-power launch must leave the shooter lane and
          * reach a scoring bumper in the supplied Windows Space Cadet pack. */
