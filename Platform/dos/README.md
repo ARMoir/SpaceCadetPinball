@@ -110,7 +110,11 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   two-sided capsules; collision groups are not reproduced. The upper-left skill-shot
   throat now has a small downhill-only passage, approximating the original
   TOneway gates so a ball does not get trapped by flattened ramp walls.
-  Other original gates and one-way edges still need an explicit data import.
+  As a playability fallback, the extreme top and side screen limits now
+  reflect a ball instead of consuming one. This is **not** a fully faithful
+  ramp/one-way fix, and remaining unusual upper-left paths must be verified
+  on hardware. Other original gates and one-way edges still need explicit
+  data import.
 * Missed shots that return down the diagonal shooter tube return to the
   plunger without using a ball. The game tracks whether the ball has entered
   the main playfield, then catches a weak shot near the tube's lower end
@@ -169,8 +173,15 @@ retain passive resting collisions. The deterministic smoke test must complete
 runner also requires a bumper hit and at least 500 points. Python tests reject
 incomplete, uncharged and zero-score smoke reports.
 `CADET /record` uses real keyboard input and writes `INPUT.TXT` on Esc,
-including observed control bits, launches, nudges, kickbacks, tilts, and
-slow-frame count for hardware timing and control checks.
+including observed control bits, launches, nudges, kickbacks, tilts, top/side
+safety contacts (`boundary_hits`) and slow-frame count for hardware checks.
+It also writes **`FLIGHT.TXT`**, a rolling trace of the **last 256 rendered
+frames (about 14 seconds)**: Q6 ball position and velocity, remaining balls,
+READY/shooter status, charge and event code. Flight data is buffered in memory,
+**not written to disk during gameplay**, so normal play is unaffected. If the
+ball disappears near the upper-left chute, press **Esc immediately** and
+inspect/share `FLIGHT.TXT` and `INPUT.TXT`. These show whether it exited the
+screen, drained, or remained inside an unexpected collision area.
 
 The small memory model keeps code and near data individually below 64KB;
 the immutable background is one 32KB far allocation. Only changed ball and
