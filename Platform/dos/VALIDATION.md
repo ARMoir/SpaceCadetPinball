@@ -84,6 +84,21 @@ and logs in one artifact.
 
 ## Required hardware follow-up
 
+**Optional mouse flippers (2026-11-07):** `CADET.EXE` now detects a
+standard DOS `INT 33h` mouse driver at startup (after Tandy mode setup).
+Mouse left/right buttons produce the existing left/right flipper key bits,
+including dual-button holds. DOS `INT 33h` function 3 supplies held
+button state; function 5 captures fast presses released between the 18.2 Hz
+input samples. The game does not draw a mouse pointer, move the paddle
+with mouse position or modify physics. `/nomouse` disables the feature,
+and missing-driver / emulator smoke paths do not poll the driver. Core
+DOS tests verify mapping of 0/left/right/both/middle-only button states
+and matching flipper collisions; a source-contract regression checks
+driver detection and input latching. **Actual serial mouse driver support,
+short-click responsiveness and frame-time cost on the Tandy remain UNVERIFIED.**
+Test both buttons together, rapid clicks, mixed Z + right mouse, and
+`CADET /nomouse` on hardware.
+
 Test on the actual Tandy 1000 EX/V20 with 640KB: simultaneous flipper keys,
 quick Space taps, keyboard repeat/release, sustained play, nudge recovery,
 PSG sound, exit/relaunch and DOS keyboard restoration. Measure late-frame
