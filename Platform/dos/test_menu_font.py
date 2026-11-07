@@ -30,6 +30,20 @@ class HelpTextTests(unittest.TestCase):
         self.assertEqual(glyph("H"), ("#.#", "#.#", "###", "#.#", "#.#"))
         self.assertNotEqual(glyph("A"), glyph("H"))
 
+    def test_mouse_help_and_driver_latching_are_available(self):
+        self.assertIn('"Z OR LEFT CLICK"', MAIN)
+        self.assertIn('"/ OR RIGHT CLICK"', MAIN)
+        # Slash needs an explicit 3x5 glyph in this letter-only font.
+        self.assertIn("bits=*s=='/'?4772U:", MAIN)
+        # Detect an installed driver, and poll held and quick clicks only
+        # when present; leave smoke tests independent of host mouse state.
+        self.assertIn("if(!smoke && !no_mouse) mouse_available=mouse_detect();", MAIN)
+        self.assertIn("MOUSE_FLIPPER_KEYS(mouse_buttons())", MAIN)
+        self.assertIn("r.x.ax=3;", MAIN)
+        self.assertIn("r.x.ax=5; r.x.bx=0;", MAIN)
+        self.assertIn("r.x.ax=5; r.x.bx=1;", MAIN)
+        self.assertIn('"/nomouse"', MAIN)
+
     def test_help_shows_real_nudge_keys(self):
         for label in ("A LEFT BUMP", "D RIGHT BUMP", "X UP BUMP"):
             self.assertIn('"' + label + '"', MAIN)
