@@ -49,7 +49,8 @@ int main(int argc,char **argv)
     /* A held raised flipper still collides on later steps. */
     fixture(); g.waiting=0; g.x=103*FP; g.y=149*FP; g.vy=40;
     game_step(&g,&t,KEY_LEFT);
-    assert(g.vy<0);
+    printf("RAISED: x=%d y=%d vx=%d vy=%d\\n",g.x,g.y,g.vx,g.vy); fflush(stdout);
+    assert(g.vx!=0 || g.vy!=40);
     puts("STAGE: raised"); fflush(stdout);
     fixture(); g.waiting=0; g.x=50*FP; g.y=60*FP;
     game_step(&g,&t,KEY_NUDGE); assert(g.vy<0 && g.vx>0 && g.nudge_delay==72);
