@@ -1,25 +1,43 @@
 # Original-game fidelity contract and audit (DOS / Tandy)
 
-**Priority: P0 project requirement.** Last reviewed: **2026-11-07**, DOS commit
+**Priority: P0 traceability requirement, subordinate only to real Tandy playability.** Last reviewed: **2026-11-07**, DOS commit
 [`f78f87c`](https://github.com/ARMoir/SpaceCadetPinball/commit/f78f87c649edff4b4f0d02bdb65074ea4cfa3e9d).
 This is the standing design and review standard for `Platform/dos/`. It is
 not a claim that the current prototype is already faithful.
 
+## Project goal hierarchy
+
+1. **Number one: playable and fun on the Tandy 1000 EX/V20.** Real 7.16 MHz
+   responsiveness, reliable flipper contact, lively trajectories, correct
+   relaunches, and lack of trapping are the highest decision criteria.
+2. **Number two, very close: fidelity to the original Space Cadet.** Prefer
+   source-defined physics, mechanics, and assets; avoid inventing gameplay
+   differences merely for convenience. The two goals usually reinforce one
+   another.
+3. **When the goals conflict:** choose the smallest change that makes play
+   enjoyable and reliable on real hardware; log original behavior, the
+   specific playability regression or CPU/memory limit, evidence (hardware
+   observation, if available), affected tests, and a restoration approach.
+   Never present an unmeasured gameplay workaround as an optimization.
+
 ## Non-negotiable rules
 
-1. **Original gameplay is the specification.** Prefer the original Space Cadet
+1. **Original gameplay is the specification when compatible with playability.** Prefer the original Space Cadet
    logic and resource data in `SpaceCadetPinball/` and Windows `PINBALL.DAT`.
    Preserve component state, scoring, triggers, collision direction, timers,
    activation/deactivation, randomness, and game progression whenever practical.
    Do not invent replacement rules merely because they are simpler to code.
-2. **Optimize implementation, not behavior.** For the ~7.16 MHz NEC V20,
+2. **Optimize implementation before changing behavior.** For the ~7.16 MHz NEC V20,
    implement equivalent rules with C89, fixed-point/int arithmetic, precomputed
    tables, reduced drawing, bounded memory, and efficient broad-phase collision
    checks. Keep timings in real/game-time units, even if counters use substeps.
-3. **No silent fidelity regressions.** If behavior has to change for a proven
-   platform constraint, add/update an entry in the **Exception register below in
-   the same change**. Capture original source references, exact divergence,
+3. **No silent fidelity regressions.** If original behavior causes a
+   demonstrated playability problem on the physical Tandy or exceeds its
+   budget, choose a narrowly scoped adaptation and add/update an entry in the
+   **Exception register below in the same change**. Capture original source references, exact divergence,
    technical reason, evidence, affected tests and a route back to fidelity.
+   An actual hardware report of poor gameplay is a legitimate reason to
+   investigate a change, though the replacement still needs validation.
    "Easier" and speculative performance improvements do not justify changing
    gameplay rules. An unmeasured limitation must be labeled *unverified*.
 4. **Separate missing work from deliberate optimization.** An unported feature
@@ -241,8 +259,11 @@ for history, rather than deleting them.
 
 ## Priority order
 
-**P0 first:** source kickback/target/gate state and one-way/layer correctness.
-**P1 second:** source plunger timing/variance, bumper rules, source nudge
-thresholds and better flipper contact. **P2 third:** material fidelity,
-presentation, audio and optional enhancements. A P2 cosmetic feature must not
-supersede an unresolved P0 gameplay mismatch without explicit direction.
+**First address demonstrated playability defects** on the physical Tandy:
+flippers that cannot drive the ball, overly repetitive trajectories, trapped
+balls, missed contact, shooter relaunch failures, and slow frames. **Then
+address fidelity debt by severity:** P0 source kickback/target/gate and
+one-way/layer rules; P1 plunger timing, bumper progression, nudge thresholds,
+and flipper fidelity; P2 remaining physics/presentation/audio. A P0 label means
+high fidelity importance but cannot force an unplayable build. Document
+playability-versus-fidelity exceptions and compare them to original code.
