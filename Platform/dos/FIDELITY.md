@@ -286,6 +286,18 @@ silently treat legacy exceptions as precedent for new ones.
   `CADET /3d` selects the enhanced look. The original 4x4 ball sprite gains
   one highlight and three shadow pixels when rendered in 3D mode, entirely
   within the *existing* 6x6 dirty region; sprite and gameplay data unchanged.
+- **F-007 offline art revision (2026-11-07):** strengthen the existing
+  `enhance_table.py` effect for the **default** `TABLE3D.TGA` only:
+  brighter upper-left edge rims on painted metallic rails, darker
+  lower-right undersides, added short occlusion shadows on gray pixels
+  around flipper guide and launcher hardware, and stronger dome highlights
+  and lower-right contact shading on the seven imported bumper caps.
+  The second pass colors only *existing neutral/gray/white pixels*
+  and leaves the original fixed 16-color palette, all colored light
+  pixels, `TABLE.TGA`, `TABLE.DAT`, sprite assets, and all 16-bit C
+  gameplay/rendering code unchanged. It adds **zero runtime operations**.
+  The previously existing tiny moving-ball glint/shadow is unchanged.
+  The source screenshot comparison remains unverified on the physical CRT.
 - **Why / evidence:** owner requested more visible depth on their son's
   first impression of the CRT playfield. Original game relies on art,
   highlights and occlusion for a 3D impression. Baking effects offline
@@ -295,7 +307,9 @@ silently treat legacy exceptions as precedent for new ones.
   evidence of original artwork equivalence or hardware performance.
 - **Tests:** `test_enhance_table.py` validates nibble/bank fidelity,
   32768-byte size, deterministic enhancement, unchanged colored pixels,
-  original source asset immutability and no changes outside the playfield.
+  original source asset immutability and no changes outside the playfield,
+  plus positive coverage for stronger rail bevels, bumper dome lighting,
+  and nearby contact shadows.
   DOSBox-X smoke exercises 3D default. /classic remains the lossless
   original Tandy image; needs side-by-side CRT confirmation.
 - **Remedy:** measure actual CRT readability, especially colored targets and
