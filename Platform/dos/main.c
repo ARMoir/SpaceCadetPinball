@@ -130,6 +130,18 @@ static void sprite(const Sprite *s,int x,int y)
     }
 }
 
+/* Faux-3D ball detail, active only with enhanced artwork. The floor
+ * shadow lies inside the existing 6x6 dirty rectangle surrounding the
+ * original 4x4 ball sprite. Just three dark pixels and one bright glint
+ * when that ball already needs redrawing. Source sprite/collision unchanged.
+ * F-007: cosmetic playability experiment for the actual Tandy CRT. */
+static void ball_shadow(int bx,int by)
+{
+    pixel(bx+2,by+4,0);
+    pixel(bx+3,by+4,8);
+    pixel(bx+4,by+3,0);
+}
+
 /* A stationary flipper only needs repainting if the old ball was erased
  * over it. Otherwise leave its pixels alone until the key state changes. */
 static int ball_overlaps(const Sprite *s,int x,int y,int w,int h)
@@ -277,12 +289,19 @@ static void play_event(int event)
     sound_ticks=2;
 }
 
-static int load_background(void)
+static int load_background(int *enhanced)
 {
-    FILE *f=fopen("TABLE.TGA","rb");
+    FILE *f=0;
     unsigned i;
     unsigned char buf[512];
     int ok=1;
+    if(*enhanced) f=fopen("TABLE3D.TGA","rb");
+    if(!f) {
+        if(*enhanced)
+            puts("Enhanced table not found: using original TABLE.TGA.");
+        *enhanced=0;
+        f=fopen("TABLE.TGA","rb");
+    }
     if(!f) return 0;
     for(i=0;i<64;i++) {
         if(fread(buf,1,512,f)!=512) { ok=0; break; }
@@ -306,7 +325,7 @@ int main(int argc,char **argv)
 {
     unsigned last,now,frame=0,input,previous_input=0;
     unsigned long old_score=~0UL,slow_frames=0;
-    int i,smoke=0,record=0,old_x=-10,old_y=-10,old_balls=-1,old_wait=-1,old_over=-1;
+    int i,smoke=0,record=0,enhanced=1,old_x=-10,old_y=-10,old_balls=-1,old_wait=-1,old_over=-1;
     int old_new=0,event,next_x,next_y,ball_changed,ball_redraw;
     int plunger_x,plunger_y,old_plunger_x=-1,old_plunger_y=-1;
     int plunger_changed,plunger_redraw,plunger_charge;
@@ -325,7 +344,9 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"/record")) record=1;
         else if(!strcmp(argv[i],"/nosound")) sound_enabled=0;
         else if(!strcmp(argv[i],"/noshake")) shake_enabled=0;
-        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake]"); return 1; }
+        else if(!strcmp(argv[i],"/classic")) enhanced=0;
+        else if(!strcmp(argv[i],"/3d")) enhanced=1;
+        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake] [/classic|/3d]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
     if(!table_load(&table,"TABLE.DAT")) {
@@ -333,7 +354,11 @@ int main(int argc,char **argv)
     }
     background=_fmalloc(32768UL);
     if(!background) { puts("Not enough conventional memory (32KB background)."); return 1; }
-    if(!load_background()) { _ffree(background); puts("Missing/invalid TABLE.TGA (32768 bytes)."); return 1; }
+    if(!load_background(&enhanced)) {
+        _ffree(background);
+        puts("Missing or invalid table artwork (32768 bytes).");
+        return 1;
+    }
     game_reset(&game,&table);
     if(!smoke) game.plunger_rng^=ticks(); /* Reproducible smoke, varied interactive play. */
     memset(&r,0,sizeof(r)); r.h.ah=15; int86(0x10,&r,&r); old_mode=r.h.al;
@@ -525,8 +550,11 @@ int main(int argc,char **argv)
         old_plunger_frame=plunger_frame;
         old_plunger_w=plunger_sprite->w; old_plunger_h=plunger_sprite->h;
         old_x=next_x; old_y=next_y;
-        if(!game.over && ball_redraw)
+        if(!game.over && ball_redraw) {
+            if(enhanced) ball_shadow(old_x+1,old_y+1);
             sprite(&table.sprites[4],old_x+1,old_y+1);
+            if(enhanced) pixel(old_x+2,old_y+2,15);
+        }
         {
             int flags=(game.tilted?1:0)|(game.tilt_warning?2:0)|
                       (game.kick_delay?4:0)|
@@ -557,6 +585,8 @@ int main(int argc,char **argv)
                 full_launches,game.boundary_hits,
                 game.flipper_contacts[0],game.flipper_contacts[1],
                 game.flipper_power_contacts[0],game.flipper_power_contacts[1]);
+        fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=%d\n",
+                enhanced?"3d":"classic",enhanced);
         fclose(report);
     }
     if(record) {
