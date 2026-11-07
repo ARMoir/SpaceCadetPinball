@@ -177,12 +177,15 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
  * by imported one-way edges in the next data format. */
 static int upper_chute_pass(const Game *g,const Edge *e,int px,int py)
 {
-    if(g->vy<=0 || px<57 || px>108 || py<20 || py>56)
+    /* Skip only the short one-way throat adjacent to the upper-left
+     * skill-shot gate. Broadly skipping this corner's walls makes the
+     * launch lose its intended path and bumper scoring. */
+    if(g->vy<=0 || px<90 || px>105 || py<26 || py>37)
         return 0;
-    return minimum(e->x,e->ex)>=59 &&
+    return minimum(e->x,e->ex)>=89 &&
            maximum(e->x,e->ex)<=106 &&
-           minimum(e->y,e->ey)>=22 &&
-           maximum(e->y,e->ey)<=53;
+           minimum(e->y,e->ey)>=24 &&
+           maximum(e->y,e->ey)<=37;
 }
 
 void game_step(Game *g,const Table *t,unsigned keys)
