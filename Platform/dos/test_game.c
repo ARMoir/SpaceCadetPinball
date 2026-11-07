@@ -375,6 +375,30 @@ int main(int argc,char **argv)
                    was_reflected,g.x/FP,g.y/FP,g.vy);
             fflush(stdout);
             assert(was_reflected && g.balls==3);
+            /* A held, raised flipper must not give only the old weak
+             * ~-21 Q6 passive bounce, even with no fresh key transition. */
+            printf("REAL RIGHT HELD power=%u passive=%u\n",
+                   g.flipper_power_contacts[1],g.flipper_contacts[1]);
+            fflush(stdout);
+            assert(g.flipper_power_contacts[1]>=1 && g.vy<=-35);
+            /* A late fresh right-key press during the ball's actual
+             * incoming y=147..150 path must carry full *moving* boost
+             * all the way through the raised tip, rather than dropping
+             * back to passive immediately after the intermediate edge. */
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=127*FP+32; g.y=147*FP;
+            g.vx=-1; g.vy=11; g.previous=0;
+            was_reflected=0;
+            for(q=0;q<20;q++) {
+                game_step(&g,&t,KEY_RIGHT);
+                if(g.vy<0) { was_reflected=1; break; }
+            }
+            printf("REAL RIGHT PRESS: reflected=%d x=%d y=%d vy=%d power=%u\n",
+                   was_reflected,g.x/FP,g.y/FP,g.vy,
+                   g.flipper_power_contacts[1]);
+            fflush(stdout);
+            assert(was_reflected && g.vy<=-60 &&
+                   g.flipper_power_contacts[1]>=1);
             game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
             g.x=126*FP+45; g.y=162*FP;
             g.vx=-1; g.vy=31; g.previous=0;
@@ -387,6 +411,7 @@ int main(int argc,char **argv)
                    was_reflected,g.x/FP,g.y/FP,g.vy);
             fflush(stdout);
             assert(was_reflected && g.balls==3);
+            assert(g.flipper_power_contacts[1]==0);
         }
         puts("STAGE: real right-flipper playback contact"); fflush(stdout);
         /* Strike from the imported anchors, including offset entries.
