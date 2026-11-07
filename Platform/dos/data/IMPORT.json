@@ -1,7 +1,7 @@
 {
   "source_sha256": "42defd5d2a339a3953fe643716aff4e35b2cea7a3e54505c82d1e78d5325bc04",
   "source": "Windows PINBALL.DAT",
-  "segments": 497,
+  "segments": 521,
   "imported_collision_objects": [
     {
       "group": 280,
@@ -297,6 +297,21 @@
       "group": 396,
       "name": "a_bump4",
       "type": 1005
+    },
+    {
+      "group": 405,
+      "name": "a_bump5",
+      "type": 1005
+    },
+    {
+      "group": 413,
+      "name": "a_bump6",
+      "type": 1005
+    },
+    {
+      "group": 421,
+      "name": "a_bump7",
+      "type": 1005
     }
   ],
   "omitted_collision_objects": [
@@ -444,21 +459,6 @@
       "group": 440,
       "name": "a_targ9",
       "type": 1006
-    },
-    {
-      "group": 405,
-      "name": "a_bump5",
-      "type": 1005
-    },
-    {
-      "group": 413,
-      "name": "a_bump6",
-      "type": 1005
-    },
-    {
-      "group": 421,
-      "name": "a_bump7",
-      "type": 1005
     },
     {
       "group": 500,
@@ -718,7 +718,7 @@
   ],
   "simplifications": [
     "Projected 2D fixed-point physics; not original world-space integrator",
-    "Static ground walls; octagonal bumpers; two-state flipper animation",
+    "Static ground walls; all seven bumper layers flattened to visible sprite caps; two-state flipper animation",
     "No ramp elevation, missions, multiball, target progression, or original audio"
   ],
   "flippers": [
@@ -739,5 +739,65 @@
     181.36222154664918,
     141.36355844627874
   ],
-  "drain_y": 179.16658530937067
+  "drain_y": 179.16658530937067,
+  "kickbacks": [
+    [
+      48,
+      155
+    ],
+    [
+      172,
+      155
+    ]
+  ],
+  "plunger_frames": [
+    [
+      184,
+      156,
+      5,
+      17
+    ],
+    [
+      184,
+      158,
+      5,
+      17
+    ],
+    [
+      184,
+      159,
+      5,
+      17
+    ],
+    [
+      184,
+      160,
+      5,
+      17
+    ],
+    [
+      184,
+      161,
+      5,
+      17
+    ],
+    [
+      184,
+      162,
+      5,
+      17
+    ],
+    [
+      185,
+      164,
+      5,
+      18
+    ],
+    [
+      185,
+      166,
+      5,
+      18
+    ]
+  ]
 }

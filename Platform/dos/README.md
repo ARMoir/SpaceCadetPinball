@@ -17,6 +17,8 @@ not a feature-complete port or a verified 7.16 MHz hardware release.
    an asset-free diagnostic table; it is **not** Space Cadet.
 4. Copy `CADET.EXE`, `TABLE.DAT` and `TABLE.TGA` from `build/dos` to one DOS
    directory and run `CADET`. TABLE.TGA is a raw Tandy bank image, not Targa.
+   Replace the EXE and table files together: this version requires SCP2 packs
+   and rejects older SCP1 TABLE.DAT files.
 
 Controls: **Z** left flipper, **/** right flipper, hold **Space** to pull the
 plunger back and release to launch (about 1.3 seconds to full power, with a
@@ -43,10 +45,11 @@ dropped rather than running unbounded catch-up work.
 ## What comes from the original
 
 * Actual playfield bitmap, default-state object artwork, ball sprite, and
-  resting/raised flipper sprites from PINBALL.DAT; scaled and quantized offline
+  resting/raised flipper sprites and eight plunger frames from PINBALL.DAT; scaled and quantized offline
   to the fixed RGBI palette. Display aspect assumes a 4:3 Tandy monitor.
-* Original camera projection, ground-level static wall paths, bumper centers
-  and radii, flipper endpoints, plunger feed position and drain height.
+* Original camera projection, ground-level static wall paths, flipper endpoints,
+  plunger feed/animation positions, kickback strike centers and drain height.
+  All seven bumper caps have scoring collision outlines fitted to their artwork.
 * The original `TPlunger.cpp` charges in timed 25ms steps, advances the
   pullback sprite as charge grows, and gives the released ball a small
   random addition to launch boost (up to 10% in the original). DOS keeps
@@ -70,7 +73,9 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   Gravity, speed limits, restitution and flipper impulses are tuned constants.
   Spin, material-specific behavior, stochastic drag and continuous swept
   collision detection are absent. A substep caps movement to two pixels/axis.
-* Bumpers use eight-sided outlines. Most static segments are still two-sided
+* Bumpers use eight-sided outlines fitted to the visible sprite caps. All seven
+  are active on the single plane, including the three elevated launch bumpers;
+  this is a deliberate approximation of their original layered collisions. Most static segments are still two-sided
   capsules; collision groups are not reproduced. The upper-left skill-shot
   throat now has a small downhill-only passage, approximating the original
   TOneway gates so a ball does not get trapped by flattened ramp walls.
@@ -82,12 +87,8 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 * Ramps, elevation/occlusion, holes, sinks, gates, kickouts and rollover/target
   rules are not implemented. Their initial artwork can still be visible.
   Ground-only filtering prevents upper-level rails becoming invisible walls.
-* The original silver plunger handle is already visible as a gray shape
-  below the playfield at the far bottom-right of the imported background.
-  The DOS code animates a small chrome highlight over that existing handle
-  (not at the ball's feed location), moving about 10 pixels as Space is held.
-  Importing the original animated plunger frames remains future work.
-  Animation uses small dirty rectangles, not a full-screen redraw.
+* The plunger uses eight original frames at their imported positions, with
+  integer charge selecting the frame. Animation uses small dirty rectangles.
 * Original rest/raised flipper endpoints are retained. Collision checks also
   cover a midpoint during a three-substep fixed-point sweep, approximating
   the original moving flipper without trigonometry. The artwork still has
@@ -103,8 +104,8 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   and inward. Each side gets one save per ball. The original named Hazard
   Target triplets and gate enable/disable rules are not yet imported, so
   their per-side recharge logic remains an intentional approximation.
-  The kicker trigger zones are derived from existing flipper/drain anchors,
-  not yet from the source's world-space collision geometry.
+  Strike centers come from the source collision segments; trigger widths,
+  timing and impulses are simplified. Walls stay solid throughout the return.
   The HUD shows `KICK L R`, or a dash for a consumed side.
 * Reduced precision/two-sided walls can still trap the ball; nudge with X,
   A, or D to free it, but repeated nudges can tilt.
@@ -121,8 +122,13 @@ and single-use gating, drain/restart and a 20,000-step soak. It writes `TEST.OK`
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (raw video memory)
 and `SMOKE.TXT`, and restores DOS. It exercises the backend but does not prove
 physical key responsiveness or real V20 timing.
-`TEST /original` additionally checks that a full-power shot leaves the shooter
-lane and reaches a scoring bumper in the included Space Cadet pack.
+`TEST /original` additionally checks all seven bumpers, both kickbacks at
+three entry offsets, original plunger frame positions, 12 partial-charge
+shooter-return trajectories and full-power scoring shots. Tilted flippers
+retain passive resting collisions. The deterministic smoke test must complete
+360 frames / 1440 steps and a fully charged launch; with `--original`, the
+runner also requires a bumper hit and at least 500 points. Python tests reject
+incomplete, uncharged and zero-score smoke reports.
 `CADET /record` uses real keyboard input and writes `INPUT.TXT` on Esc,
 including observed control bits, launches, nudges, kickbacks, tilts, and
 slow-frame count for hardware timing and control checks.
@@ -142,9 +148,10 @@ See `VALIDATION.md` for measured results and remaining hardware checks.
 
 `convert.py` follows `SpaceCadetPinball/partman.h`, `partman.cpp`, `gdrv.cpp`,
 `GroupData.cpp`, `loader.cpp`, `proj.cpp`, `TFlipperEdge.cpp`, and
-`TEdgeSegment.cpp`. Generated packs are little-endian SCP1: 4-byte magic,
+`TEdgeSegment.cpp`. Generated packs are little-endian SCP2: 4-byte magic,
 four signed shorts (edge count, launch X/Y, drain Y), 12 flipper coordinate
-shorts, nine shorts per edge, then five sprites. Each sprite has X/Y/W/H
+shorts, four kickback center shorts (left X/Y, right X/Y), nine shorts per
+edge, then five ball/flipper sprites followed by eight plunger sprites. Each sprite has X/Y/W/H
 shorts and W*H bytes (0..15 or 255 for transparent). Caps are enforced by
 both converter and runtime. Coordinates are pixels; tangents Q8 and lengths Q6.
 

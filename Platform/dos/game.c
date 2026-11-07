@@ -59,7 +59,7 @@ int table_load(Table *t,const char *path)
     int i,j,ok=0;
     short values[9];
     if(!f) return 0;
-    if(fread(magic,1,4,f)!=4 || memcmp(magic,"SCP1",4)) goto done;
+    if(fread(magic,1,4,f)!=4 || memcmp(magic,"SCP2",4)) goto done;
     if(!read_short(f,&t->count) || t->count<1 || t->count>MAX_EDGES) goto done;
     if(!read_short(f,&t->launch_x) || !read_short(f,&t->launch_y) ||
        !read_short(f,&t->drain_y)) goto done;
@@ -69,12 +69,16 @@ int table_load(Table *t,const char *path)
         if(!read_short(f,&t->flipper[i]) || t->flipper[i]<0 ||
            t->flipper[i]>(i%2?199:239)) goto done;
     }
+    for(i=0;i<4;i++) {
+        if(!read_short(f,&t->kickback[i]) || t->kickback[i]<0 ||
+           t->kickback[i]>(i%2?199:239)) goto done;
+    }
     for(i=0;i<t->count;i++) {
         for(j=0;j<9;j++) if(!read_short(f,&values[j])) goto done;
         memcpy(&t->edges[i],values,sizeof(values));
     }
-    for(i=0;i<5;i++) {
-        Sprite *s=&t->sprites[i];
+    for(i=0;i<13;i++) {
+        Sprite *s=i<5?&t->sprites[i]:&t->plunger[i-5];
         if(!read_short(f,&s->x) || !read_short(f,&s->y) ||
            !read_short(f,&s->w) || !read_short(f,&s->h)) goto done;
         if(s->w<1 || s->h<1 || s->w>64 || s->h>64 ||
@@ -171,7 +175,7 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
 }
 
 /* The upper-left skill-shot chute includes one-way passages in the
- * original (TOneway / skill-shot gates). The current SCP1 pack flattened
+ * original (TOneway / skill-shot gates). The current SCP2 pack flattened
  * adjacent ramp edges into two-sided walls. Let the ball pass downhill
  * through the *interior* upper-left throat, but keep the long external
  * boundaries and all ordinary playfield walls solid. This can be replaced
@@ -192,18 +196,16 @@ static int upper_chute_pass(const Game *g,const Edge *e,int px,int py)
 /* The source TKickback winds up before striking, then its gate closes.
  * In DOS the original target triplets are not imported yet: allow one
  * out-lane save per side per ball, not endless free saves. The centers are
- * relative to the imported flipper pivots and drain for both actual and
- * diagnostic tables. This approximation will be superseded by exported
- * collision components and original target-state gates. */
+ * imported from the source strike segments. Trigger widths, timing and
+ * impulses remain approximations until original target-state gates exist. */
 static int catch_kickback(Game *g,const Table *t)
 {
-    int i,cy=t->drain_y-16,px=g->x/FP,py=g->y/FP;
-    if(g->in_shooter || g->tilted || g->vy<=0 ||
-       py<t->drain_y-27 || py>t->drain_y-5)
+    int i,px=g->x/FP,py=g->y/FP;
+    if(g->in_shooter || g->tilted || g->vy<=0)
         return 0;
     for(i=0;i<2;i++) {
-        int cx=i? t->flipper[6]+54 : t->flipper[0]-55;
-        if(g->kick_armed[i] && abs(px-cx)<=11) {
+        int cx=t->kickback[i*2],cy=t->kickback[i*2+1];
+        if(g->kick_armed[i] && abs(px-cx)<=7 && abs(py-cy)<=5) {
             g->kick_armed[i]=0;
             g->kickbacks++;
             g->kick_side=(unsigned char)(i+1);
@@ -250,7 +252,7 @@ static void apply_nudge(Game *g,int direction)
 
 void game_step(Game *g,const Table *t,unsigned keys)
 {
-    int i,b,pressed,px,py;
+    int i,b,pressed,px,py,shooter_inner_x;
     g->steps++; g->event=0;
     if(g->over) {
         g->shake_frames=0; /* Never leave display offset during game over. */
@@ -301,12 +303,10 @@ void game_step(Game *g,const Table *t,unsigned keys)
     }
     if(g->kick_delay) {
         if(!--g->kick_delay) {
-            /* Burst back toward the center rather than an upward teleport.
-             * Initial travel ignores walls for eight substeps, preventing
-             * the flattened drain wall from immediately re-trapping it. */
-            g->vx=(short)(g->kick_side==1?53:-53);
+            /* Source strike centers are inside the outlane. Keep the walls
+             * solid throughout a mainly upward, slightly inward return. */
+            g->vx=(short)(g->kick_side==1?16:-16);
             g->vy=-126;
-            g->kick_grace=8;
             g->shake_frames=16;
             g->event=4;
         }
@@ -319,6 +319,12 @@ void game_step(Game *g,const Table *t,unsigned keys)
     g->vx=(short)maximum(-128,minimum(128,g->vx));
     g->vy=(short)maximum(-132,minimum(132,g->vy));
     g->x+=g->vx; g->y+=g->vy;
+    /* Capture an incoming ball at the strike face before nearby static
+     * rail contacts reverse its velocity. Walls remain active after firing. */
+    if(catch_kickback(g,t)) {
+        g->previous=(short)keys;
+        return;
+    }
     py=g->y/FP;
     px=g->x/FP;
     b=maximum(0,minimum(BANDS-1,py/8));
@@ -327,18 +333,21 @@ void game_step(Game *g,const Table *t,unsigned keys)
         const EdgeBounds *box=&t->bounds[index];
         if(px<box->left || px>box->right ||
            py<box->top || py>box->bottom) continue;
-        if(g->kick_grace || upper_chute_pass(g,&t->edges[index],px,py))
+        if(upper_chute_pass(g,&t->edges[index],px,py))
             continue;
         collide(g,&t->edges[index],96,0);
         /* Contact correction can move the ball; refresh only for actual
          * nearby candidates instead of dividing for every indexed edge. */
         px=g->x/FP; py=g->y/FP;
     }
-    if(g->kick_grace) g->kick_grace--;
     for(i=0;i<2;i++) {
         int key=1<<i,hit=0;
+        if(g->tilted) {
+            g->sweep[i]=0;
+            collide(g,&g->flips[i][0],192,0);
+            continue;
+        }
         if((keys^g->previous)&key) g->sweep[i]=3;
-        if(g->tilted) continue;
         /* The original flipper is an angular swept capsule. Approximate it
          * with rest, midpoint and raised edges over three substeps. No
          * per-frame trigonometry, allocation or floating-point calculation. */
@@ -351,12 +360,15 @@ void game_step(Game *g,const Table *t,unsigned keys)
         if(!hit)
             collide(g,&g->flips[i][(keys&key)!=0],192,0);
     }
-    /* Once the ball leaves the right-side shooter and crosses left into
-     * the playfield, a later drain must cost a ball normally. */
-    /* Crossing the left boundary of the tube also means playfield,
-     * including near the bottom. Otherwise a right-side main-table
-     * drain could be mistaken for a returned shot. */
-    if(g->in_shooter && g->x<(t->launch_x-10)*FP)
+    /* The tube bends left above the feed point. A constant X cutoff marked
+     * partial shots as in-play while they were still climbing that bend.
+     * Use a conservative sloped inner boundary above the feed, preserving
+     * the lower-table cutoff so ordinary right-side drains still count.
+     * This is an SCP2 approximation, not imported one-way gate geometry. */
+    shooter_inner_x=t->launch_x-10;
+    if(g->y/FP<t->launch_y)
+        shooter_inner_x-=(t->launch_y-g->y/FP)/4;
+    if(g->in_shooter && g->x<shooter_inner_x*FP)
         g->in_shooter=0;
 
     /* The original plunger can catch/relaunch weak shots returning down
@@ -364,9 +376,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
      * diagonal lower end of that tube and let the ball leave the screen.
      * Reset once it comes back to the *bottom* of the shooter, before
      * it reaches the shared playfield drain line. */
-    if(catch_kickback(g,t)) {
-        /* Wind-up begins this substep. Remaining steps are held in place. */
-    } else if(g->in_shooter && g->vy>0 &&
+    if(g->in_shooter && g->vy>0 &&
               g->x>(t->launch_x-18)*FP &&
               g->y>=(t->drain_y-12)*FP) {
         feed(g,t);

@@ -123,27 +123,6 @@ static int ball_overlaps(const Sprite *s,int x,int y,int w,int h)
            y<s->y+s->h && y+h>s->y;
 }
 
-/* The silver plunger artwork is already part of the imported
- * background at the very bottom-right of the table. Draw the moving
- * chrome highlight OVER that existing handle, never at the ball's feed
- * point (which is much farther up the shooter tube). Position is derived
- * from the original launch/drain anchors to avoid a second plunger. */
-static void plunger_rect(int charge,int *x,int *y)
-{
-    *x=table.launch_x+33;
-    *y=table.drain_y-3+charge*10/PLUNGER_MAX_CHARGE;
-}
-
-static void draw_plunger(int x,int y)
-{
-    int j;
-    for(j=1;j<8;j++) {
-        pixel(x+1,y+j,7);
-        pixel(x+2,y+j,8);
-    }
-    for(j=0;j<4;j++) pixel(x+j,y,15);
-}
-
 static int rect_overlaps(int x,int y,int w,int h,
                          int x2,int y2,int w2,int h2)
 {
@@ -316,11 +295,13 @@ int main(int argc,char **argv)
     int old_new=0,event,next_x,next_y,ball_changed,ball_redraw;
     int plunger_x,plunger_y,old_plunger_x=-1,old_plunger_y=-1;
     int plunger_changed,plunger_redraw,plunger_charge;
+    int plunger_frame,old_plunger_frame=-1,old_plunger_w=0,old_plunger_h=0;
+    const Sprite *plunger_sprite;
     int view=0,choice=0,paused=0,exit_requested=0,ui_dirty=0;
     int old_flags=-1;
     unsigned char toggle_sound,toggle_menu,key_up,key_down;
     unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_new;
-    unsigned observed=0,launches=0;
+    unsigned observed=0,launches=0,full_launches=0;
     union REGS r;
     unsigned char old_mode;
     FILE *report;
@@ -339,7 +320,7 @@ int main(int argc,char **argv)
     if(!background) { puts("Not enough conventional memory (32KB background)."); return 1; }
     if(!load_background()) { _ffree(background); puts("Missing/invalid TABLE.TGA (32768 bytes)."); return 1; }
     game_reset(&game,&table);
-    game.plunger_rng^=ticks(); /* New game is no longer seeded identically. */
+    if(!smoke) game.plunger_rng^=ticks(); /* Reproducible smoke, varied interactive play. */
     memset(&r,0,sizeof(r)); r.h.ah=15; int86(0x10,&r,&r); old_mode=r.h.al;
     mode(9);
     video=(unsigned char __far *)MK_FP(0xb800,0);
@@ -377,8 +358,14 @@ int main(int argc,char **argv)
         pressed_keys[49]=0;
         _enable();
         ui_dirty=0;
-        if(smoke) input=(frame%48<16?KEY_LAUNCH:0)|
-                         (frame%20<10?KEY_LEFT:KEY_RIGHT)|(frame%90==0?KEY_NUDGE:0);
+        if(smoke) {
+            /* Hold until fully charged, then release; fixed short pulses
+             * never reached the 96-substep pullback and hid failed shots.
+             * Match the deterministic full-shot regression's flipper phase. */
+            input=((frame-1)%20<10?KEY_LEFT:KEY_RIGHT);
+            if(game.waiting && game.charge<PLUNGER_MAX_CHARGE)
+                input|=KEY_LAUNCH;
+        }
         observed|=input;
         if(toggle_sound) {
             /* Mute before disabling the PSG, so a held note cannot stick. */
@@ -426,22 +413,27 @@ int main(int argc,char **argv)
                 game_step(&game,&table,input);
                 if(game.event) {
                     event=game.event;
-                    if(event==2) launches++;
+                    if(event==2) {
+                        launches++;
+                        if(game.charge==PLUNGER_MAX_CHARGE) full_launches++;
+                    }
                 }
             }
         } else input=0;
+        /* Match the unpowered resting collision surface during tilt. */
+        if(game.tilted) input&=~(KEY_LEFT|KEY_RIGHT);
         play_event(event);
         /* Visible shake comes from the CRTC, never a memory-wide screen
          * redraw. The offset alternates briefly and resets on pause/menu. */
         camera_shift(!view && !paused && !exit_requested &&
                      ((game.shake_frames/4)&1)?1:0);
         plunger_charge=game.waiting?game.charge:0;
-        plunger_rect(plunger_charge,&plunger_x,&plunger_y);
-        plunger_changed=(old_plunger_y<0 ||
-                         plunger_y!=old_plunger_y ||
-                         plunger_x!=old_plunger_x);
+        plunger_frame=plunger_charge*7/PLUNGER_MAX_CHARGE;
+        plunger_sprite=&table.plunger[plunger_frame];
+        plunger_x=plunger_sprite->x; plunger_y=plunger_sprite->y;
+        plunger_changed=(plunger_frame!=old_plunger_frame);
         if(plunger_changed && old_plunger_y>=0)
-            restore(old_plunger_x,old_plunger_y,4,8);
+            restore(old_plunger_x,old_plunger_y,old_plunger_w,old_plunger_h);
         next_x=game.x/FP-table.sprites[4].w/2-1;
         next_y=game.y/FP-table.sprites[4].h/2-1;
         /* Positions are Q6 but only whole screen pixels are displayed.
@@ -452,11 +444,11 @@ int main(int argc,char **argv)
         if(plunger_changed &&
            (rect_overlaps(next_x,next_y,
                           table.sprites[4].w+2,table.sprites[4].h+2,
-                          plunger_x,plunger_y,4,8) ||
+                          plunger_x,plunger_y,plunger_sprite->w,plunger_sprite->h) ||
             (old_plunger_y>=0 &&
              rect_overlaps(next_x,next_y,
                            table.sprites[4].w+2,table.sprites[4].h+2,
-                           old_plunger_x,old_plunger_y,4,8))))
+                           old_plunger_x,old_plunger_y,old_plunger_w,old_plunger_h))))
             ball_redraw=1;
         if(ball_changed)
             restore(old_x,old_y,table.sprites[4].w+2,table.sprites[4].h+2);
@@ -487,9 +479,11 @@ int main(int argc,char **argv)
            (ball_changed &&
             rect_overlaps(old_x,old_y,
                           table.sprites[4].w+2,table.sprites[4].h+2,
-                          plunger_x,plunger_y,4,8));
-        if(plunger_redraw) draw_plunger(plunger_x,plunger_y);
+                          plunger_x,plunger_y,plunger_sprite->w,plunger_sprite->h));
+        if(plunger_redraw) sprite(plunger_sprite,plunger_x,plunger_y);
         old_plunger_x=plunger_x; old_plunger_y=plunger_y;
+        old_plunger_frame=plunger_frame;
+        old_plunger_w=plunger_sprite->w; old_plunger_h=plunger_sprite->h;
         old_x=next_x; old_y=next_y;
         if(!game.over && ball_redraw)
             sprite(&table.sprites[4],old_x+1,old_y+1);
@@ -517,9 +511,9 @@ int main(int argc,char **argv)
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u\n",
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u\n",
                 frame,game.steps,game.score,game.hits,game.balls,slow_frames,
-                observed,launches,game.nudges,game.kickbacks,game.tilts);
+                observed,launches,game.nudges,game.kickbacks,game.tilts,full_launches);
         fclose(report);
     }
     puts("Space Cadet DOS prototype. Original assets; simplified physics/rules.");

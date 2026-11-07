@@ -181,14 +181,24 @@ def export(dat, output):
         attrs = dat.field(group,10) or b''
         shorts = struct.unpack('<'+'h'*(len(attrs)//2),attrs)
         upper = any(shorts[i]==602 and shorts[i+1]!=0 for i in range(0,len(shorts)-1,2))
-        if kind not in (1000,1010,1005) or not wall or upper:
+        if kind not in (1000,1010,1005) or not wall or (upper and kind!=1005):
             if wall:
                 omitted.append({'group':group,'name':dat.name(group),'type':kind})
             continue
         shape = math.floor(wall[0])
         score = (500 if group < 405 else 1500) if kind==1005 else 0
         boost = 35 if kind==1005 else 0
-        if shape == 1:
+        if shape == 1 and kind == 1005:
+            # With no elevation/occlusion, the source's small stem collider
+            # can sit below/outside the visible cap. Flatten every bumper
+            # layer to its actual sprite footprint so visible caps are solid.
+            bw,bh,bx,by,_ = dat.bitmap(group)
+            cx=left+(bx-ox+bw/2)*sx
+            cy=top+(by-oy+bh/2)*sy
+            # Approximate the visible cap with an eight-sided outline.
+            rx,ry=bw*sx*.42,bh*sy*.42
+            pts=[(cx+rx*math.cos(i*math.tau/8),cy+ry*math.sin(i*math.tau/8)) for i in range(9)]
+        elif shape == 1:
             # Eight-sided bumper outline preserves source center/radius.
             pts = [project((wall[1]+wall[3]*math.cos(i*math.tau/8),
                             wall[2]+wall[3]*math.sin(i*math.tau/8))) for i in range(9)]
@@ -222,23 +232,48 @@ def export(dat, output):
     sprites.append((0,0,sw,sh,data))
     launch = project(dat.attr(next(g for k,g in objects if k==1001),601))
     drain = project(dat.attr(next(g for k,g in objects if k==1007),600)[1:3])[1]
-    write_pack(output,pixels,edges,flippers,launch,drain,sprites)
+    plunger_group=next(g for k,g in objects if k==1001)
+    plunger=[]
+    for index in range(8):
+        bw,bh,bx,by,pix=dat.bitmap(plunger_group+index)
+        sw,sh=max(1,round(bw*sx)),max(1,round(bh*sy))
+        data=bytes(255 if pix[min(bh-1,y*bh//sh)][min(bw-1,x*bw//sw)]==0 else
+                   lut[pix[min(bh-1,y*bh//sh)][min(bw-1,x*bw//sw)]] for y in range(sh) for x in range(sw))
+        plunger.append((round(left+(bx-ox)*sx),round(top+(by-oy)*sy),sw,sh,data))
+    kicks=[]
+    for kind,group in objects:
+        if kind==1014:
+            wall=dat.attr(group,600)
+            a,b=project(wall[1:3]),project(wall[3:5])
+            kicks.append((round((a[0]+b[0])/2),round((a[1]+b[1])/2)))
+    kicks.sort()
+    if len(kicks)!=2:
+        raise ValueError('Expected two Space Cadet kickbacks')
+    write_pack(output,pixels,edges,flippers,launch,drain,sprites,plunger,kicks)
     report = {'source_sha256':hashlib.sha256(dat.data).hexdigest(), 'source':'Windows PINBALL.DAT',
               'segments':len(edges),'imported_collision_objects':imported,'omitted_collision_objects':omitted,
               'simplifications':['Projected 2D fixed-point physics; not original world-space integrator',
-              'Static ground walls; octagonal bumpers; two-state flipper animation',
+              'Static ground walls; all seven bumper layers flattened to visible sprite caps; two-state flipper animation',
               'No ramp elevation, missions, multiball, target progression, or original audio'],
-              'flippers':flippers,'launch':launch,'drain_y':drain}
+              'flippers':flippers,'launch':launch,'drain_y':drain,'kickbacks':kicks,
+              'plunger_frames':[list(s[:4]) for s in plunger]}
     (output/'IMPORT.json').write_text(json.dumps(report,indent=2)+'\n')
     print(f'Imported {len(edges)} segments; {len(omitted)} collision objects omitted. See IMPORT.json.')
 
 
-def write_pack(output,pixels,edges,flippers,launch,drain,sprites):
-    if len(edges)>512:
-        raise ValueError('Too many collision segments (limit 512)')
-    body = b'SCP1'+struct.pack('<4h12h',len(edges),round(launch[0]),round(launch[1]),round(drain),*flippers)
+def write_pack(output,pixels,edges,flippers,launch,drain,sprites,plunger=None,kicks=None):
+    if len(edges)>640:
+        raise ValueError('Too many collision segments (limit 640)')
+    if plunger is None:  # Diagnostic table, with no commercial sprites.
+        plunger=[(round(launch[0])-1,round(launch[1])+4+i//2,3,3,bytes([7]*9)) for i in range(8)]
+    if kicks is None:
+        kicks=[(flippers[0]-25,round(drain)-24),(flippers[6]+25,round(drain)-24)]
+    if len(sprites)!=5 or len(plunger)!=8 or len(kicks)!=2:
+        raise ValueError('SCP2 requires five moving sprites, eight plunger frames and two kickbacks')
+    body = b'SCP2'+struct.pack('<4h12h4h',len(edges),round(launch[0]),round(launch[1]),round(drain),*flippers,
+                             *(v for point in kicks for v in point))
     body += b''.join(struct.pack('<9h',*edge) for edge in edges)
-    for x,y,w,h,data in sprites:
+    for x,y,w,h,data in sprites+plunger:
         if w*h > 1024:
             raise ValueError('Sprite exceeds 1024-byte limit')
         body += struct.pack('<4h',x,y,w,h)+data

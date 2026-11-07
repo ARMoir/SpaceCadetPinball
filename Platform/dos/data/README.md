@@ -6,7 +6,7 @@ needed for the playable prototype. The original archive and Windows EXE are
 not included.
 
 * `TABLE.TGA`: 32768-byte raw Tandy mode 09h bank image (not Targa).
-* `TABLE.DAT`: SCP1 geometry and five moving sprites.
+* `TABLE.DAT`: SCP2 geometry, kickback anchors, five ball/flipper sprites and eight plunger frames.
 * `PREVIEW.png`: preview of the converted static background.
 * `IMPORT.json`: source SHA-256, imported/omitted objects and simplifications.
 

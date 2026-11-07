@@ -56,10 +56,10 @@ class ImportTests(unittest.TestCase):
             p=Path(tmp); generate(p)
             self.assertEqual((p/'TABLE.TGA').stat().st_size,32768)
             data=(p/'TABLE.DAT').read_bytes()
-            self.assertEqual(data[:4],b'SCP1')
+            self.assertEqual(data[:4],b'SCP2')
             count=struct.unpack_from('<h',data,4)[0]
-            pos=36+18*count
-            for _ in range(5):
+            pos=44+18*count
+            for _ in range(13):
                 x,y,w,h=struct.unpack_from('<4h',data,pos); pos+=8
                 self.assertLessEqual(w*h,1024)
                 self.assertTrue(all(v<=15 or v==255 for v in data[pos:pos+w*h]))

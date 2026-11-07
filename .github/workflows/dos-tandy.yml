@@ -39,6 +39,8 @@ jobs:
           $env:WATCOM=(Resolve-Path .dos-tools/watcom).Path
           python Platform/dos/test_convert.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_run_tests.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/build.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/verify_build.py

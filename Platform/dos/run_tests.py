@@ -4,7 +4,26 @@ import argparse
 import os
 from pathlib import Path
 import subprocess
+import re
 from convert import png
+
+
+def validate_smoke(report, original=False):
+    """A marker proves exit, not playability. Require a completed full shot."""
+    if not report.startswith('PASS '):
+        raise RuntimeError('Smoke test did not report successful completion')
+    fields = dict(re.findall(r'\b([a-z_]+)=(\d+)\b', report))
+    required = ('frames', 'steps', 'launches', 'full_launches', 'hits', 'score')
+    if any(key not in fields for key in required):
+        raise RuntimeError('Smoke report is missing gameplay counters')
+    counters = {key: int(value) for key, value in fields.items()}
+    if counters['frames'] != 360 or counters['steps'] != 1440:
+        raise RuntimeError('Smoke test did not complete all frames and physics steps')
+    if not 1 <= counters['full_launches'] <= counters['launches']:
+        raise RuntimeError('Smoke test never completed a fully charged launch')
+    if original and (counters['hits'] < 1 or counters['score'] < 500):
+        raise RuntimeError('Space Cadet smoke test did not reach a scoring bumper')
+    return counters
 
 
 def main():
@@ -36,7 +55,9 @@ def main():
                     print(path.read_text(errors='replace')[-4000:])
             raise RuntimeError(f'{label} DOS test failed; see TEST.LOG and {label}.LOG')
     print((directory/'TEST.OK').read_text().strip())
-    print((directory/'SMOKE.TXT').read_text().strip())
+    report=(directory/'SMOKE.TXT').read_text().strip()
+    print(report)
+    validate_smoke(report, original=a.original)
     raw=(directory/'SCREEN.BIN').read_bytes()
     if len(raw)!=32768:
         raise RuntimeError('Incorrect video memory size')

@@ -13,6 +13,8 @@ static void fixture(void)
     memset(&t,0,sizeof(t));
     t.count=1; t.launch_x=200; t.launch_y=150; t.drain_y=190;
     memcpy(t.flipper,flippers,sizeof(flippers));
+    t.kickback[0]=55; t.kickback[1]=166;
+    t.kickback[2]=175; t.kickback[3]=166;
     t.edges[0].x=100; t.edges[0].ex=100;
     t.edges[0].y=20; t.edges[0].ey=120;
     t.edges[0].ty=256; t.edges[0].length=100*FP;
@@ -72,9 +74,27 @@ int main(int argc,char **argv)
     /* A held raised flipper still collides on later steps. */
     fixture(); g.waiting=0; g.x=103*FP; g.y=149*FP; g.vy=40;
     game_step(&g,&t,KEY_LEFT);
-    printf("RAISED: x=%d y=%d vx=%d vy=%d\\n",g.x,g.y,g.vx,g.vy); fflush(stdout);
+    printf("RAISED: x=%d y=%d vx=%d vy=%d\n",g.x,g.y,g.vx,g.vy); fflush(stdout);
     assert(g.vx!=0 || g.vy!=40);
     puts("STAGE: raised"); fflush(stdout);
+    /* Tilt cuts power, not the physical resting paddle. Check both sides
+     * with the button held: contact must match an unpowered resting paddle,
+     * with no sweep/launch impulse or score. */
+    for(i=0;i<2;i++) {
+        short rest_x,rest_y,rest_vx,rest_vy;
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=(i?140:90)*FP; g.y=163*FP; g.vy=30;
+        game_step(&g,&t,0);
+        rest_x=g.x; rest_y=g.y; rest_vx=g.vx; rest_vy=g.vy;
+        assert(rest_vy<0);
+        fixture(); g.waiting=0; g.in_shooter=0; g.tilted=1;
+        g.x=(i?140:90)*FP; g.y=163*FP; g.vy=30;
+        game_step(&g,&t,i?KEY_RIGHT:KEY_LEFT);
+        assert(g.x==rest_x && g.y==rest_y &&
+               g.vx==rest_vx && g.vy==rest_vy);
+        assert(!g.sweep[i] && g.score==0);
+    }
+    puts("STAGE: tilted paddles retain passive collisions"); fflush(stdout);
     /* Directional source-like nudges add velocity and reverse it after
      * ~0.4s; key bounce is suppressed, but repeated bumps build tilt. */
     fixture(); g.waiting=0; g.in_shooter=0;
@@ -107,24 +127,36 @@ int main(int argc,char **argv)
     /* Left kickback captures, winds up, fires into the table and disarms.
      * A second entry cannot trigger another save on the same ball. */
     fixture(); g.waiting=0; g.in_shooter=0;
-    g.x=(t.flipper[0]-55)*FP; g.y=(t.drain_y-19)*FP; g.vy=32;
+    g.x=t.kickback[0]*FP; g.y=t.kickback[1]*FP; g.vy=32;
     game_step(&g,&t,0);
     assert(g.kick_delay==9 && g.kick_side==1 && !g.kick_armed[0] &&
            g.kick_armed[1] && g.kickbacks==1 && g.balls==3);
     for(i=0;i<9;i++) game_step(&g,&t,0);
     assert(g.kick_delay==0 && g.vx>0 && g.vy<0 &&
            g.event==4 && g.shake_frames>0);
-    g.kick_grace=0; g.x=(t.flipper[0]-55)*FP;
-    g.y=(t.drain_y-19)*FP; g.vy=32;
+    g.x=t.kickback[0]*FP;
+    g.y=t.kickback[1]*FP; g.vy=32;
     game_step(&g,&t,0);
     assert(!g.kick_delay && g.kickbacks==1);
     fixture(); g.waiting=0; g.in_shooter=0;
-    g.x=(t.flipper[6]+54)*FP; g.y=(t.drain_y-19)*FP; g.vy=32;
+    g.x=t.kickback[2]*FP; g.y=t.kickback[3]*FP; g.vy=32;
     game_step(&g,&t,0);
     assert(g.kick_delay==9 && g.kick_side==2 && g.kickbacks==1);
     for(i=0;i<9;i++) game_step(&g,&t,0);
     assert(g.kick_delay==0 && g.vx<0 && g.vy<0);
     puts("STAGE: both kickbacks passed"); fflush(stdout);
+    /* A kickback must not disable unrelated walls during its first steps. */
+    fixture();
+    t.edges[0].x=40; t.edges[0].ex=70;
+    t.edges[0].y=t.edges[0].ey=160;
+    t.edges[0].tx=256; t.edges[0].ty=0; t.edges[0].length=30*FP;
+    assert(table_index(&t));
+    g.waiting=0; g.in_shooter=0;
+    g.x=t.kickback[0]*FP; g.y=t.kickback[1]*FP; g.vy=32;
+    game_step(&g,&t,0);
+    assert(g.kick_delay==9);
+    for(i=0;i<13;i++) game_step(&g,&t,0);
+    assert(g.vy>0 && g.y>160*FP);
     /* The original upper-left skill-shot passage is one-way. The
      * projected interior wall must let a descending ball through, but
      * still prevent it coming back upward through the same throat. */
@@ -198,6 +230,79 @@ int main(int argc,char **argv)
     puts("STAGE: imported pack loaded"); fflush(stdout);
     if(argc>1 && !strcmp(argv[1],"/original")) {
         int v;
+        /* Every visible source bumper must exist and respond. The last
+         * three used to be filtered out as upper-layer geometry. Approach
+         * each cap from its right edge on the complete imported table. */
+        int bumper_count=0;
+        for(v=0;v<t.count;v++) if(t.edges[v].score) {
+            int j,right=t.edges[v].x,top=t.edges[v].y,bottom=top;
+            assert(v+7<t.count);
+            for(j=0;j<8;j++) {
+                const Edge *e=&t.edges[v+j];
+                assert(e->score==t.edges[v].score);
+                if(e->x>right) right=e->x;
+                if(e->y<top) top=e->y;
+                if(e->y>bottom) bottom=e->y;
+            }
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(right+4)*FP; g.y=(top+bottom)*FP/2; g.vx=-64;
+            for(j=0;j<20 && !g.hits;j++) game_step(&g,&t,0);
+            assert(g.hits==1 && g.score==(unsigned)t.edges[v].score);
+            bumper_count++; v+=7;
+        }
+        assert(bumper_count==7);
+        /* Strike from the imported anchors, including offset entries.
+         * For the first return arc, both sides must remain on the table. */
+        for(v=0;v<2;v++) {
+            int offset;
+            for(offset=-3;offset<=3;offset+=3) {
+                int highest=t.kickback[v*2+1];
+                game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+                g.x=(t.kickback[v*2]+offset)*FP;
+                g.y=t.kickback[v*2+1]*FP; g.vy=32;
+                game_step(&g,&t,0);
+                assert(g.kick_delay==9 && g.kickbacks==1);
+                for(i=0;i<60;i++) {
+                    game_step(&g,&t,0);
+                    assert(g.x>=30*FP && g.x<=204*FP);
+                    assert(g.y>=4*FP && g.y<t.drain_y*FP);
+                    assert(g.balls==3 && !g.waiting);
+                    if(g.y/FP<highest) highest=g.y/FP;
+                }
+                assert(highest<t.kickback[v*2+1]-20);
+            }
+        }
+        /* Original plunger art belongs in the shooter, not outside the
+         * right-hand frame. Rest and fully pulled frames have distinct art. */
+        assert(t.plunger[0].x==184 && t.plunger[0].y==156);
+        assert(t.plunger[7].x==185 && t.plunger[7].y==166);
+        for(v=0;v<8;v++) {
+            assert(t.plunger[v].x>=t.launch_x-3 && t.plunger[v].x<195);
+            assert(t.plunger[v].y+t.plunger[v].h<=192);
+        }
+        puts("STAGE: seven bumpers, confined kickbacks and source plunger passed"); fflush(stdout);
+        /* Real trajectories, rather than teleporting a ball to the drain:
+         * quarter-power shots turn back inside the curved right-hand tube.
+         * They must return to READY with the same ball and allow relaunch. */
+        for(v=24;v<=26;v++) {
+            int seed;
+            for(seed=0;seed<4;seed++) {
+                game_reset(&g,&t); g.plunger_rng=(unsigned short)seed;
+                for(i=0;i<v;i++) game_step(&g,&t,KEY_LAUNCH);
+                game_step(&g,&t,0);
+                assert(!g.waiting && g.vy<0);
+                for(i=0;i<1500 && !g.waiting && !g.over;i++) {
+                    game_step(&g,&t,0);
+                    assert(g.in_shooter && g.balls==3);
+                }
+                assert(i<1500 && g.waiting && g.balls==3 && !g.over);
+                assert(g.x==t.launch_x*FP && g.y==t.launch_y*FP);
+                assert(g.vx==0 && g.vy==0 && g.charge==0 && g.hits==0);
+                game_step(&g,&t,KEY_LAUNCH); game_step(&g,&t,0);
+                assert(!g.waiting && g.vy<0 && g.event==2);
+            }
+        }
+        puts("STAGE: partial-charge shooter-return trajectories passed"); fflush(stdout);
         /* Full-charge variation must not strand the ball in the shooter.
          * Check the possible 128..129 Q6 launch impulses after charging:
          * unlike phase-zero tests, release occurs at substep 97. */
@@ -210,7 +315,7 @@ int main(int argc,char **argv)
                 game_step(&g,&t,keys);
                 if(g.waiting) break;
             }
-            printf("POWER %d: hits=%lu score=%lu steps=%d\\n",
+            printf("POWER %d: hits=%lu score=%lu steps=%d\n",
                    v,g.hits,g.score,i);
             fflush(stdout);
             assert(g.hits>0 && g.score>=500);
@@ -223,10 +328,10 @@ int main(int argc,char **argv)
                           (i%80<40?KEY_LEFT:KEY_RIGHT);
             game_step(&g,&t,keys);
             if(i==PLUNGER_MAX_CHARGE)
-                printf("RELEASE: vy=%d charge=%d rng=%u\\n",g.vy,g.charge,g.plunger_rng);
+                printf("RELEASE: vy=%d charge=%d rng=%u\n",g.vy,g.charge,g.plunger_rng);
             if(g.waiting && i>PLUNGER_MAX_CHARGE+1) break;
         }
-        printf("ORIGINAL: hits=%lu score=%lu steps=%d x=%d y=%d\\n",
+        printf("ORIGINAL: hits=%lu score=%lu steps=%d x=%d y=%d\n",
                g.hits,g.score,i,g.x/FP,g.y/FP); fflush(stdout);
         assert(g.hits>0 && g.score>=500);
         game_reset(&g,&t);

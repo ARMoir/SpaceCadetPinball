@@ -1,7 +1,7 @@
 #ifndef DOS_GAME_H
 #define DOS_GAME_H
 /* C89, 16-bit int / 32-bit long. No floating point or DOS extender. */
-#define MAX_EDGES 512
+#define MAX_EDGES 640
 #define BANDS 25
 #define BAND_EDGES 256
 #define FP 64
@@ -15,13 +15,15 @@
 #define KEY_NUDGE_RIGHT 32 /* D: bump from right, ball goes left */
 typedef struct { short x,y,ex,ey,tx,ty,length,score,boost; } Edge;
 typedef struct { short x,y,w,h; unsigned char pixels[1024]; } Sprite;
-/* Runtime-only collision AABBs, not part of SCP1 on-disk format. */
+/* Runtime-only collision AABBs, not part of SCP2 on-disk format. */
 typedef struct { short left,right,top,bottom; } EdgeBounds;
 typedef struct {
     short count,launch_x,launch_y,drain_y,flipper[12];
+    short kickback[4]; /* Source-projected left/right strike centers. */
     Edge edges[MAX_EDGES];
     EdgeBounds bounds[MAX_EDGES];
     Sprite sprites[5];
+    Sprite plunger[8];
     unsigned short band[BANDS][BAND_EDGES], band_count[BANDS];
 } Table;
 typedef struct {
@@ -30,7 +32,7 @@ typedef struct {
     /* Set on ball feed, cleared once the ball enters the main playfield.
      * Needed to distinguish an unsuccessful shooter return from a drain. */
     unsigned char in_shooter;
-    unsigned char kick_armed[2],kick_side,kick_delay,kick_grace;
+    unsigned char kick_armed[2],kick_side,kick_delay;
     unsigned char shake_frames,tilted,tilt_warning;
     unsigned char nudge_return_ticks,nudge_decay_ticks;
     short nudge_return_x,nudge_return_y,nudge_heat;
