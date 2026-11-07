@@ -41,6 +41,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_run_tests.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_analyze_logs.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/build.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/verify_build.py
@@ -50,7 +52,7 @@ jobs:
         shell: pwsh
         run: python Platform/dos/run_tests.py --emulator .dos-tools/dosbox/mingw-build/mingw-sdl2/dosbox-x.exe --original
       - name: Upload playable Space Cadet build and validation logs
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: CADET
@@ -65,4 +67,18 @@ jobs:
             build/dos/*.LOG
             build/dos/TEST.OK
             build/dos/SMOKE.TXT
+            build/dos/RUN_SUMMARY.TXT
+            Platform/dos/analyze_logs.py
             build/dos/*.png
+      - name: Upload failed-build diagnostic logs (not a playable CADET.zip)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CADET-DIAGNOSTICS
+          if-no-files-found: warn
+          path: |
+            build/dos/*.LOG
+            build/dos/*.MAP
+            build/dos/RUN_SUMMARY.TXT
+            build/dos/TEST.OK
+            build/dos/SMOKE.TXT
