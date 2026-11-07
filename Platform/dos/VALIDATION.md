@@ -36,6 +36,18 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
   This run reported seven late frames; timing varies with host load.
 * Inspected both the native video-memory dump and the actual DOSBox-X window:
   original table artwork, ball, flippers and HUD render in Tandy mode.
+* **F-007 enhanced 3D artwork (2026-11-07):** offline `enhance_table.py`
+  generates a second 32768-byte raw Tandy background, `TABLE3D.TGA`,
+  from the untouched `TABLE.TGA` and `TABLE.DAT`. Converter tests verify
+  unchanged collision packs, all seven source bumper centers, exact Tandy
+  nibble/bank packing, fixed 16-color palette, unchanged colored lights,
+  no geometry warp, deterministic output and preservation of the original
+  background. DOSBox-X smoke tests exercise the enhanced default.
+  `CADET /classic` selects the original artwork and removes the tiny
+  dynamic ball shadow/glint; `CADET /3d` forces the enhanced artwork.
+  The 3D effect's perceived depth, CRT readability and tiny ball-overlay
+  rendering cost still need **physical V20 hardware confirmation**.
+  Static shading is fully precomputed and adds no work to the physics loop.
 
 The emulator cycle setting is a repeatable test load, **not** a conversion to
 7.16 MHz NEC V20 performance. Timing and sound on a real Tandy are unverified.
