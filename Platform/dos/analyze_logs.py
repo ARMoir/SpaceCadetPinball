@@ -120,6 +120,9 @@ def summary_lines(rows, columns, maximum=15):
     if "RIGHT_RAIL" in columns:
         delta = last["RIGHT_RAIL"] - first["RIGHT_RAIL"]
         lines.append(f"Source-derived outer-right rail recoveries in window: {delta}")
+    if "LEFT_RAIL" in columns:
+        delta = last["LEFT_RAIL"] - first["LEFT_RAIL"]
+        lines.append(f"Source-derived outer-left rail recoveries in window: {delta}")
     if "LATE" in columns:
         lines.append(f"Late frames in window: {last['LATE'] - first['LATE']}")
     # Show the real end of the trajectory, not just an abstract event count.
