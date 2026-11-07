@@ -350,7 +350,7 @@ static void apply_nudge(Game *g,int direction)
 
 void game_step(Game *g,const Table *t,unsigned keys)
 {
-    int i,b,pressed,px,py,shooter_inner_x;
+    int i,b,pressed,px,py,shooter_inner_x,edge_rescue=0;
     g->steps++; g->event=0;
     if(g->over) {
         g->shake_frames=0; /* Never leave display offset during game over. */
@@ -488,16 +488,17 @@ void game_step(Game *g,const Table *t,unsigned keys)
      * limits with a passive 3/4-energy reflection, not a teleport or
      * random kick. Imported nearby rails still do the normal collision. */
     if(g->x<2*FP) {
-        g->x=2*FP;
+        g->x=2*FP; edge_rescue=1;
         if(g->vx<0) g->vx=(short)(-(long)g->vx*3/4);
     } else if(g->x>237*FP) {
-        g->x=237*FP;
+        g->x=237*FP; edge_rescue=1;
         if(g->vx>0) g->vx=(short)(-(long)g->vx*3/4);
     }
     if(g->y<2*FP) {
-        g->y=2*FP;
+        g->y=2*FP; edge_rescue=1;
         if(g->vy<0) g->vy=(short)(-(long)g->vy*3/4);
     }
+    if(edge_rescue) g->boundary_hits++;
 
     /* The original plunger can catch/relaunch weak shots returning down
      * the shooter tube. A simple X+-8 check at drain height missed the
