@@ -257,8 +257,11 @@ int main(int argc,char **argv)
                 sprite(s,s->x,s->y);
             /* Changing a flipper can erase a stationary ball that overlaps
              * it. Repaint the ball once after the flipper when necessary. */
-            if(changed && ball_overlaps(s,next_x,next_y,
-                                      table.sprites[4].w+2,table.sprites[4].h+2))
+            if(changed &&
+               (ball_overlaps(&table.sprites[i*2],next_x,next_y,
+                              table.sprites[4].w+2,table.sprites[4].h+2) ||
+                ball_overlaps(&table.sprites[i*2+1],next_x,next_y,
+                              table.sprites[4].w+2,table.sprites[4].h+2)))
                 ball_redraw=1;
         }
         old_x=next_x; old_y=next_y;
