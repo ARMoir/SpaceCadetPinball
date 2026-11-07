@@ -70,6 +70,20 @@ fidelity status changes.
 
 ## Source of truth
 
+**Input fidelity addition (2026-11-07):** the original desktop
+[`options.cpp`](../../SpaceCadetPinball/options.cpp) assigns mouse
+left/right buttons to the left/right flippers alongside Z and /. The
+DOS port now restores these *same default flipper mappings*, using
+optional DOS `INT 33h` mouse-driver detection. Held and fast-click
+input is translated to the existing `KEY_LEFT`/`KEY_RIGHT` flags.
+It does **not** modify flipper impulses, timing, scoring, collision or
+the source table, so no gameplay-rule exception is needed. Mouse driver
+latency and actual 7 MHz V20 performance remain **unverified** until
+hardware testing. `/nomouse` restores keyboard-only polling cost, and
+driver-absent systems have no extra mouse polling. The source also
+assigns a middle mouse button to the plunger, but **that additional
+binding has not been ported** in this left/right-only input change.
+
 Original code locations (read alongside any proposed DOS implementation):
 
 | Concern | Original reference | Current DOS reference |
