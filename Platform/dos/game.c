@@ -189,7 +189,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
              * The 126..128 Q6 full-charge range reaches the playfield in
              * our original-table emulator tests. No floating point. */
             g->plunger_rng=(unsigned short)(g->plunger_rng*25173U+13849U);
-            base=44+(g->charge*82)/PLUNGER_MAX_CHARGE;
+            base=44+(g->charge*84)/PLUNGER_MAX_CHARGE;
             variation=(base*(int)(g->plunger_rng&3U))/155;
             g->waiting=0;
             g->vx=0;
@@ -207,7 +207,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
      * A full launch must clear the curved lane despite wall restitution. */
     if(g->steps&1) g->vy++;
     g->vx=(short)maximum(-128,minimum(128,g->vx));
-    g->vy=(short)maximum(-128,minimum(128,g->vy));
+    g->vy=(short)maximum(-132,minimum(132,g->vy));
     g->x+=g->vx; g->y+=g->vy;
     py=g->y/FP;
     px=g->x/FP;
