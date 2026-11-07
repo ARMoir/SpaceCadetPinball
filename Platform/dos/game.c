@@ -178,11 +178,9 @@ void game_step(Game *g,const Table *t,unsigned keys)
     if(g->waiting) {
         if(keys&KEY_LAUNCH) { if(g->charge<48) g->charge++; }
         else if(g->previous&KEY_LAUNCH) {
+            /* Preserve the original imported table's reliable launch path.
+             * Variability comes from actual bumper/flipper contact geometry. */
             g->waiting=0; g->vy=(short)(-100-g->charge/2); g->event=2;
-            /* Key timing slightly changes the lateral launch direction,
-             * instead of repeating the exact same ideal trajectory. */
-            g->noise^=(unsigned short)(g->steps+g->charge);
-            g->vx=(short)((g->noise&7)-3);
         }
         g->previous=(short)keys;
         return;
