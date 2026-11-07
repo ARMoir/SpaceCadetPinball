@@ -114,6 +114,7 @@ void game_reset(Game *g,const Table *t)
 {
     int i,j;
     memset(g,0,sizeof(*g)); g->balls=3;
+    g->kick_armed[0]=g->kick_armed[1]=1;
     g->plunger_rng=0xa5c3U; /* BIOS ticks supply a session seed on DOS. */
     for(i=0;i<2;i++) {
         const short *p=t->flipper+i*6;
@@ -188,6 +189,62 @@ static int upper_chute_pass(const Game *g,const Edge *e,int px,int py)
            maximum(e->y,e->ey)<=37;
 }
 
+/* The source TKickback winds up before striking, then its gate closes.
+ * In DOS the original target triplets are not imported yet: allow one
+ * out-lane save per side per ball, not endless free saves. The centers are
+ * relative to the imported flipper pivots and drain for both actual and
+ * diagnostic tables. This approximation will be superseded by exported
+ * collision components and original target-state gates. */
+static int catch_kickback(Game *g,const Table *t)
+{
+    int i,cy=t->drain_y-16,px=g->x/FP,py=g->y/FP;
+    if(g->in_shooter || g->tilted || g->vy<=0 ||
+       py<t->drain_y-27 || py>t->drain_y-5)
+        return 0;
+    for(i=0;i<2;i++) {
+        int cx=i? t->flipper[6]+54 : t->flipper[0]-55;
+        if(g->kick_armed[i] && abs(px-cx)<=11) {
+            g->kick_armed[i]=0;
+            g->kick_side=(unsigned char)(i+1);
+            g->kick_delay=9; /* 0.12s / 72.8Hz, short 8086-friendly wind-up */
+            g->x=(short)(cx*FP); g->y=(short)(cy*FP);
+            g->vx=g->vy=0;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Original nudge::_nudge adds direction-relative velocity, shifts the
+ * render, and applies its inverse after 0.4 seconds; repeated bumps feed
+ * nudge_count and cause a tilt. This uses equivalent additive/reversal
+ * mechanics but Q6 velocities, a short heat meter, and integer timing.
+ * The table camera shake is handled by the DOS video backend. */
+static void apply_nudge(Game *g,int direction)
+{
+    short dx=0,dy=0;
+    if(direction==KEY_NUDGE_LEFT) dx=26;
+    else if(direction==KEY_NUDGE_RIGHT) dx=-26;
+    else if(direction==KEY_NUDGE) dy=-28;
+    if(g->nudge_return_ticks) {
+        /* Cancel the old pending inverse before starting a new impulse. */
+        g->vx-=g->nudge_return_x;
+        g->vy-=g->nudge_return_y;
+    }
+    g->vx=(short)maximum(-128,minimum(128,g->vx+dx));
+    g->vy=(short)maximum(-132,minimum(132,g->vy+dy));
+    g->nudge_return_x=dx; g->nudge_return_y=dy;
+    g->nudge_return_ticks=29; /* About 0.4 seconds */
+    g->nudge_delay=9; /* suppress key bounce; unlike old 1s lockout */
+    g->shake_frames=20;
+    g->nudge_heat=(short)minimum(100,g->nudge_heat+29);
+    g->tilt_warning=(unsigned char)(g->nudge_heat>=45);
+    if(g->nudge_heat>=78) {
+        g->tilted=1;
+        g->event=5;
+    }
+}
+
 void game_step(Game *g,const Table *t,unsigned keys)
 {
     int i,b,pressed,px,py;
@@ -195,6 +252,16 @@ void game_step(Game *g,const Table *t,unsigned keys)
     if(g->over) { g->previous=(short)keys; return; }
     if(g->hit_delay) g->hit_delay--;
     if(g->nudge_delay) g->nudge_delay--;
+    if(g->shake_frames) g->shake_frames--;
+    if(g->nudge_return_ticks && !--g->nudge_return_ticks) {
+        g->vx-=g->nudge_return_x; g->vy-=g->nudge_return_y;
+        g->nudge_return_x=g->nudge_return_y=0;
+    }
+    if(++g->nudge_decay_ticks>=12) {
+        g->nudge_decay_ticks=0;
+        if(g->nudge_heat) g->nudge_heat--;
+        g->tilt_warning=(unsigned char)(g->nudge_heat>=45);
+    }
     pressed=(int)(keys & ~g->previous);
     if(g->waiting) {
         if(keys&KEY_LAUNCH) {
@@ -219,9 +286,25 @@ void game_step(Game *g,const Table *t,unsigned keys)
         g->previous=(short)keys;
         return;
     }
-    if((pressed&KEY_NUDGE) && !g->nudge_delay) {
-        g->vy=-64; g->vx=(short)(g->x/FP>116?-48:48);
-        g->nudge_delay=72;
+    if((pressed&(KEY_NUDGE|KEY_NUDGE_LEFT|KEY_NUDGE_RIGHT)) &&
+       !g->nudge_delay && !g->tilted && !g->in_shooter) {
+        if(pressed&KEY_NUDGE_LEFT) apply_nudge(g,KEY_NUDGE_LEFT);
+        else if(pressed&KEY_NUDGE_RIGHT) apply_nudge(g,KEY_NUDGE_RIGHT);
+        else apply_nudge(g,KEY_NUDGE);
+    }
+    if(g->kick_delay) {
+        if(!--g->kick_delay) {
+            /* Burst back toward the center rather than an upward teleport.
+             * Initial travel ignores walls for eight substeps, preventing
+             * the flattened drain wall from immediately re-trapping it. */
+            g->vx=(short)(g->kick_side==1?53:-53);
+            g->vy=-126;
+            g->kick_grace=8;
+            g->shake_frames=16;
+            g->event=4;
+        }
+        g->previous=(short)keys;
+        return;
     }
     /* Half a Q6 unit/substep on average: about 41 px/s^2 at 72.8 Hz.
      * A full launch must clear the curved lane despite wall restitution. */
@@ -237,15 +320,18 @@ void game_step(Game *g,const Table *t,unsigned keys)
         const EdgeBounds *box=&t->bounds[index];
         if(px<box->left || px>box->right ||
            py<box->top || py>box->bottom) continue;
-        if(upper_chute_pass(g,&t->edges[index],px,py)) continue;
+        if(g->kick_grace || upper_chute_pass(g,&t->edges[index],px,py))
+            continue;
         collide(g,&t->edges[index],96,0);
         /* Contact correction can move the ball; refresh only for actual
          * nearby candidates instead of dividing for every indexed edge. */
         px=g->x/FP; py=g->y/FP;
     }
+    if(g->kick_grace) g->kick_grace--;
     for(i=0;i<2;i++) {
         int key=1<<i,hit=0;
         if((keys^g->previous)&key) g->sweep[i]=3;
+        if(g->tilted) continue;
         /* The original flipper is an angular swept capsule. Approximate it
          * with rest, midpoint and raised edges over three substeps. No
          * per-frame trigonometry, allocation or floating-point calculation. */
@@ -271,15 +357,24 @@ void game_step(Game *g,const Table *t,unsigned keys)
      * diagonal lower end of that tube and let the ball leave the screen.
      * Reset once it comes back to the *bottom* of the shooter, before
      * it reaches the shared playfield drain line. */
-    if(g->in_shooter && g->vy>0 &&
-       g->x>(t->launch_x-18)*FP &&
-       g->y>=(t->drain_y-12)*FP) {
+    if(catch_kickback(g,t)) {
+        /* Wind-up begins this substep. Remaining steps are held in place. */
+    } else if(g->in_shooter && g->vy>0 &&
+              g->x>(t->launch_x-18)*FP &&
+              g->y>=(t->drain_y-12)*FP) {
         feed(g,t);
     } else if(g->y/FP>t->drain_y || g->x<0 ||
               g->x>239*FP || g->y<0) {
         g->balls--; g->event=3;
         if(!g->balls) g->over=1;
-        else feed(g,t);
+        else {
+            feed(g,t);
+            /* New ball, fresh kicker activations and tilt reset. */
+            g->kick_armed[0]=g->kick_armed[1]=1;
+            g->tilted=0; g->tilt_warning=0;
+            g->nudge_heat=0; g->nudge_return_ticks=0;
+            g->nudge_return_x=g->nudge_return_y=0;
+        }
     }
     g->previous=(short)keys;
 }
