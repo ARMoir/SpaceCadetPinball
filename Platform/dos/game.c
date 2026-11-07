@@ -26,11 +26,103 @@ static int read_short(FILE *f,short *out)
     return 1;
 }
 
+/* F-002 solid slingshot cores. SCP2 has two small, closed, irregular
+ * triangle outlines directly above the source flipper pivots. Treating
+ * all 14 perimeter edges as unrelated two-sided capsules can push balls
+ * into their hollow centers. Recover each triangle ONCE from source
+ * segments and use an outward-facing solid hull instead.
+ *
+ * The source loops have ~15x25 pixel bounds, and their positions are
+ * checked relative to the imported flipper pivots, not hardcoded indices.
+ * Synthetic/demo tables without the original slings still work normally.
+ * This scan costs nothing in the 72.8 Hz physics loop. */
+static void index_slings(Table *t)
+{
+    int side,i,j,k,px,py,minx,maxx,miny,maxy,top_l,top_r;
+    int left_y,right_y,dx,dy;
+    unsigned long len;
+    Sling *h;
+    const Edge *e,*first;
+    memset(t->slings,0,sizeof(t->slings));
+    t->sling_count=0;
+    for(side=0;side<MAX_SLINGS;side++) {
+        px=t->flipper[side*6];
+        py=t->flipper[side*6+1];
+        h=&t->slings[side];
+        for(i=0;i<t->count && !h->count;i++) {
+            first=&t->edges[i];
+            if(first->score) continue;
+            minx=maxx=first->x;
+            miny=maxy=first->y;
+            for(j=i;j<t->count && j<i+24;j++) {
+                e=&t->edges[j];
+                if(e->score || (j>i &&
+                   (t->edges[j-1].ex!=e->x ||
+                    t->edges[j-1].ey!=e->y))) break;
+                minx=minimum(minx,minimum(e->x,e->ex));
+                maxx=maximum(maxx,maximum(e->x,e->ex));
+                miny=minimum(miny,minimum(e->y,e->ey));
+                maxy=maximum(maxy,maximum(e->y,e->ey));
+                if(j<i+2 || e->ex!=first->x || e->ey!=first->y)
+                    continue;
+                if(maxx-minx<12 || maxx-minx>18 ||
+                   maxy-miny<22 || maxy-miny>29 ||
+                   miny<py-48 || miny>py-32 ||
+                   maxy<py-22 || maxy>py-10 ||
+                   (side==0 && (minx<px-24 || maxx>px+2)) ||
+                   (side==1 && (minx<px-2 || maxx>px+24)))
+                    break;
+                /* Source top is a short horizontal ridge; each bottom
+                 * corner is the extreme x endpoint of the outline. */
+                top_l=32767; top_r=-32767;
+                left_y=right_y=-1;
+                for(k=i;k<=j;k++) {
+                    const Edge *p=&t->edges[k];
+                    if(p->y==miny) {
+                        top_l=minimum(top_l,p->x);
+                        top_r=maximum(top_r,p->x);
+                    }
+                    if(p->x==minx) left_y=p->y;
+                    if(p->x==maxx) right_y=p->y;
+                }
+                if(left_y<0 || right_y<0 || top_l>top_r)
+                    break;
+                h->x[0]=(short)((top_l+top_r)/2);
+                h->y[0]=(short)miny;
+                h->x[1]=(short)maxx;
+                h->y[1]=(short)right_y;
+                h->x[2]=(short)minx;
+                h->y[2]=(short)left_y;
+                /* top -> right -> left must describe a convex core. */
+                if((long)(h->x[1]-h->x[0])*(h->y[2]-h->y[0])-
+                   (long)(h->y[1]-h->y[0])*(h->x[2]-h->x[0])<=0)
+                    break;
+                h->left=(short)minx; h->right=(short)maxx;
+                h->top=(short)miny; h->bottom=(short)maxy;
+                h->first=(short)i; h->count=(short)(j-i+1);
+                for(k=0;k<3;k++) {
+                    int n=(k+1)%3;
+                    dx=h->x[n]-h->x[k];
+                    dy=h->y[n]-h->y[k];
+                    len=integer_sqrt((unsigned long)((long)dx*dx+
+                                                      (long)dy*dy));
+                    if(!len) len=1;
+                    h->nx[k]=(short)((long)dy*256/(long)len);
+                    h->ny[k]=(short)(-(long)dx*256/(long)len);
+                }
+                t->sling_count++;
+                break;
+            }
+        }
+    }
+}
+
 int table_index(Table *t)
 {
     int i,b,lo,hi,k,minx,maxx,miny,maxy,diameter;
     memset(t->band_count,0,sizeof(t->band_count));
     t->bumper_count=0;
+    index_slings(t);
     t->outer_right_rail=-1;
     t->outer_left_rail=-1;
     /* F-004: Source TBumper uses a radial normal. Reassemble closed eight-
@@ -103,6 +195,15 @@ int table_index(Table *t)
             if(i>=t->bumpers[k].first &&
                i<t->bumpers[k].first+8) break;
         if(k<t->bumper_count) continue;
+        /* A sling is a SOLID face, not a stack of 14 independent
+         * double-sided line segments. Mixing them recreates the
+         * interior trap after we project the ball out of its hull. */
+        for(k=0;k<MAX_SLINGS;k++) {
+            const Sling *h=&t->slings[k];
+            if(h->count && i>=h->first && i<h->first+h->count)
+                break;
+        }
+        if(k<MAX_SLINGS) continue;
         /* Precompute tight screen-space rejection bounds once per table.
          * 8-pixel bands cut candidate checks on a 7 MHz V20. */
         t->bounds[i].left=(short)(minimum(e->x,e->ex)-4);
@@ -311,6 +412,64 @@ static void collide_bumpers(Game *g,const Table *t)
                 g->hit_delay=8; g->event=1;
             }
         }
+    }
+}
+
+/* F-002: solid slingshot interior rejection, including the right
+ * wedge where real Tandy gameplay repeatedly buried the ball. We use
+ * the three Q8 outward half-plane normals of each original-derived
+ * triangular core. If all three signed distances are below the ball
+ * radius, the ball overlaps the solid. Project it to the nearest face
+ * and reflect only incoming velocity. A shallow upward release on an
+ * upper/side face avoids a zero-speed jitter trap, without arbitrary
+ * random kicks or altering the drain. The source outline is excluded
+ * from the generic two-sided wall index to prevent conflicting pushes.
+ *
+ * 2.75 px maximum gameplay movement per substep is below the 6px
+ * collision diameter; a fast moving ball cannot step completely through
+ * the expanded core without entering this test. */
+static void contain_slingshots(Game *g,const Table *t)
+{
+    int i,k,best_nx,best_ny;
+    long px=g->x,py=g->y;
+    if(g->in_shooter) return;
+    for(i=0;i<MAX_SLINGS;i++) {
+        const Sling *h=&t->slings[i];
+        long best=-32767L,d,rx,ry,dot,impulse,push;
+        if(!h->count || px<(h->left-3L)*FP ||
+           px>(h->right+3L)*FP ||
+           py<(h->top-3L)*FP || py>(h->bottom+3L)*FP)
+            continue;
+        best_nx=best_ny=0;
+        for(k=0;k<3;k++) {
+            rx=px-(long)h->x[k]*FP;
+            ry=py-(long)h->y[k]*FP;
+            d=(rx*h->nx[k]+ry*h->ny[k])/256;
+            /* Outside a face by one whole ball radius: not inside. */
+            if(d>=3*FP) break;
+            if(d>best) {
+                best=d;
+                best_nx=h->nx[k];
+                best_ny=h->ny[k];
+            }
+        }
+        if(k<3) continue;
+        /* 1/4-pixel clearance avoids resettling on the exact edge.
+         * The maximum inside correction is only a few screen pixels. */
+        push=3L*FP-best+16;
+        g->x+=(short)(push*best_nx/256);
+        g->y+=(short)(push*best_ny/256);
+        dot=((long)g->vx*best_nx+(long)g->vy*best_ny)/256;
+        if(dot<0) {
+            impulse=-(dot*7)/4;
+            g->vx+=(short)(impulse*best_nx/256);
+            g->vy+=(short)(impulse*best_ny/256);
+        }
+        if(best_ny<0 && g->vy>-24)
+            g->vy=-24; /* tip/upper side: avoid sitting on the ridge */
+        g->vx=(short)maximum(-160,minimum(160,g->vx));
+        g->vy=(short)maximum(-176,minimum(176,g->vy));
+        px=g->x; py=g->y;
     }
 }
 
@@ -562,6 +721,8 @@ void game_step(Game *g,const Table *t,unsigned keys)
      * the upper-left bumper; a second wall correction must not leave the
      * ball buried inside its cap until the following physics step. */
     collide_bumpers(g,t);
+    /* Resolve closed slingshots as SOLID wedges, after wall corrections. */
+    contain_slingshots(g,t);
     /* Restore the source exterior after all two-sided wall corrections.
      * This catches the actual off-right-table flight seen on hardware. */
     contain_outer_right(g,t);
