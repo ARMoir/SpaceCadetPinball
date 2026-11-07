@@ -305,6 +305,32 @@ int main(int argc,char **argv)
     puts("STAGE: imported pack loaded"); fflush(stdout);
     if(argc>1 && !strcmp(argv[1],"/original")) {
         int v;
+        /* F-002: hardware FLIGHT log 2026-11-07 frames 1432-1455
+         * shows an actual ball passing the original right exterior rail
+         * (x ~= 181 at y=100) and reaching x=235 before the SCREEN
+         * fallback kicked in. Require a source-derived right boundary,
+         * not a fabricated speed cap or random kick. */
+        {
+            const Edge *rail;
+            game_reset(&g,&t);
+            assert(t.outer_right_rail>=0);
+            rail=&t.edges[t.outer_right_rail];
+            assert(maximum(rail->x,rail->ex)>=190);
+            g.waiting=0; g.in_shooter=0;
+            g.x=185*FP; g.y=102*FP; g.vx=158; g.vy=33;
+            game_step(&g,&t,0);
+            printf("REAL RIGHT RAIL: x=%d y=%d vx=%d screen=%u rail=%u\\n",
+                   g.x/FP,g.y/FP,g.vx,g.boundary_hits,g.right_rail_saves);
+            fflush(stdout);
+            assert(g.right_rail_saves==1 && g.x/FP<183 &&
+                   g.vx<0 && g.boundary_hits==0 && g.balls==3);
+            /* A ball safely inboard should not be affected by the guard. */
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=153*FP; g.y=100*FP; g.vx=20; g.vy=0;
+            game_step(&g,&t,0);
+            assert(g.right_rail_saves==0 && g.boundary_hits==0);
+        }
+        puts("STAGE: source-right-rail escape guard passed"); fflush(stdout);
         /* Every visible source bumper must exist and respond. The last
          * three used to be filtered out as upper-layer geometry. Approach
          * each cap from its right edge on the complete imported table. */
