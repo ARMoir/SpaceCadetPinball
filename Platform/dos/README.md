@@ -18,8 +18,9 @@ not a feature-complete port or a verified 7.16 MHz hardware release.
 4. Copy `CADET.EXE`, `TABLE.DAT` and `TABLE.TGA` from `build/dos` to one DOS
    directory and run `CADET`. TABLE.TGA is a raw Tandy bank image, not Targa.
 
-Controls: **Z** left flipper, **/** right flipper, hold and release **Space** to
-launch, **X** nudge (one-second cooldown), **N** new game, **Esc** quit. Both flippers can be held together. There
+Controls: **Z** left flipper, **/** right flipper, hold **Space** to pull the
+plunger back and release to launch (about 1.3 seconds to full power, with a
+small <=5% launch variation), **X** nudge (one-second cooldown), **N** new game, **Esc** quit. Both flippers can be held together. There
 are three balls. `/nosound` disables PSG writes. Run on Tandy-compatible video;
 there is no VGA fallback or reliable automatic Tandy detection in this version.
 
@@ -37,6 +38,11 @@ dropped rather than running unbounded catch-up work.
   to the fixed RGBI palette. Display aspect assumes a 4:3 Tandy monitor.
 * Original camera projection, ground-level static wall paths, bumper centers
   and radii, flipper endpoints, plunger feed position and drain height.
+* The original `TPlunger.cpp` charges in timed 25ms steps, advances the
+  pullback sprite as charge grows, and gives the released ball a small
+  random addition to launch boost (up to 10% in the original). DOS keeps
+  this hold/release behavior in integers and narrows the variation to about
+  5% to maintain the imported shooter-lane trajectory.
 * Three-ball game length (`TPinballTable.cpp`) and initial bumper scores of
   500 / 1500 (`control.cpp`). These constants do not implement the complete
   original rule state machine.
@@ -63,6 +69,11 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 * Ramps, elevation/occlusion, holes, sinks, gates, kickouts and rollover/target
   rules are not implemented. Their initial artwork can still be visible.
   Ground-only filtering prevents upper-level rails becoming invisible walls.
+* Until the original plunger sprite states are imported into the SCP1 pack,
+  a small silver plunger head and shaft are drawn below the imported shooter
+  position, moving downward up to 12 pixels as Space is held. These are
+  small dirty-rectangle updates, not a full-screen redraw. On release the
+  plunger snaps back and the launch speed reflects the chosen charge.
 * Original rest/raised flipper endpoints are retained. Collision checks also
   cover a midpoint during a three-substep fixed-point sweep, approximating
   the original moving flipper without trigonometry. The artwork still has
@@ -77,8 +88,9 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
 
 ## Tests and performance
 
-`TEST.EXE` runs the same core using actual 16-bit arithmetic: launch/release,
-wall reflection, bumper scoring, shooter-lane return versus regular drain,
+`TEST.EXE` runs the same core using actual 16-bit arithmetic: progressive
+plunger pullback, weak and full launch, bounded variation, wall reflection,
+bumper scoring, shooter-lane return versus regular drain,
 left/right flippers, drain/restart and a
 20,000-step soak with the current table. It writes `TEST.OK` on success.
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (raw video memory)
