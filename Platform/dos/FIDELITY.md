@@ -1,9 +1,13 @@
 # Original-game fidelity contract and audit (DOS / Tandy)
 
-**Priority: P0 traceability requirement, subordinate only to real Tandy playability.** Last reviewed: **2026-11-07**, DOS commit
-[`f78f87c`](https://github.com/ARMoir/SpaceCadetPinball/commit/f78f87c649edff4b4f0d02bdb65074ea4cfa3e9d).
-This is the standing design and review standard for `Platform/dos/`. It is
-not a claim that the current prototype is already faithful.
+**Priority: P0 traceability requirement, subordinate only to real Tandy playability.**
+Reviewed **2026-11-07**. Original audit baseline:
+[`f78f87c`](https://github.com/ARMoir/SpaceCadetPinball/commit/f78f87c649edff4b4f0d02bdb65074ea4cfa3e9d);
+the exception register below tracks later changes.
+This is the standing design and review standard for `Platform/dos/`, **not**
+a claim that the prototype is already faithful. For a definitive inventory
+of features that work, are simplified, or are **not implemented**, see
+[`FEATURE_STATUS.md`](FEATURE_STATUS.md).
 
 ## Project goal hierarchy
 
