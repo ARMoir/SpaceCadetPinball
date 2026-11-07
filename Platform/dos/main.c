@@ -229,7 +229,9 @@ static void text_color(int x,int y,const char *s,unsigned color)
     while(*s) {
         index=(*s>='0' && *s<='9')?*s-'0':
               ((*s>='A' && *s<='Z')?*s-'A'+10:-1);
-        bits=index<0?0:font[index];
+        /* The 3x5 font has digits/letters; render the flipper key /
+         * explicitly so F1 does not silently omit it. */
+        bits=*s=='/'?4772U:(index<0?0:font[index]);
         for(j=0;j<5;j++) for(i=0;i<3;i++)
             if(bits&(1U<<(14-j*3-i))) pixel(x+i,y+j,color);
         x+=4; s++;
@@ -273,8 +275,8 @@ static void draw_panel(int view,int choice,int paused)
     } else if(view==2) {
         panel_frame(241,63,78,129);
         text_color(245,68,"CONTROLS",13);
-        text_color(245,84,"Z LEFT FLIP",15);
-        text_color(245,96,"/ RIGHT FLIP",15);
+        text_color(245,84,"Z OR LEFT CLICK",15);
+        text_color(245,96,"/ OR RIGHT CLICK",15);
         text_color(245,108,"SPACE PLUNGER",15);
         text_color(245,120,"A LEFT BUMP",15);
         text_color(245,132,"D RIGHT BUMP",15);
