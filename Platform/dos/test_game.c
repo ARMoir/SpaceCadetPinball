@@ -77,6 +77,42 @@ int main(int argc,char **argv)
     printf("RAISED: x=%d y=%d vx=%d vy=%d\n",g.x,g.y,g.vx,g.vy); fflush(stdout);
     assert(g.vx!=0 || g.vy!=40);
     puts("STAGE: raised"); fflush(stdout);
+    /* F-006: original TFlipperEdge::EdgeCollision adds a leverage-based
+     * front-face impulse to the incoming ball velocity. Test that impact
+     * position changes power rather than launching the same fixed shot. */
+    {
+        short heel_vy,tip_vy,left_incoming_vx,right_incoming_vx;
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=84*FP; g.y=159*FP; g.vy=35;
+        game_step(&g,&t,KEY_LEFT);
+        heel_vy=g.vy;
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=100*FP; g.y=167*FP; g.vy=35;
+        game_step(&g,&t,KEY_LEFT);
+        tip_vy=g.vy;
+        printf("FLIPPER LEVER heel=%d tip=%d\n",heel_vy,tip_vy);
+        fflush(stdout);
+        assert(heel_vy<0 && tip_vy<heel_vy-10);
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=90*FP; g.y=163*FP; g.vx=-24; g.vy=35;
+        game_step(&g,&t,KEY_LEFT);
+        left_incoming_vx=g.vx;
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=90*FP; g.y=163*FP; g.vx=24; g.vy=35;
+        game_step(&g,&t,KEY_LEFT);
+        right_incoming_vx=g.vx;
+        assert(abs(right_incoming_vx-left_incoming_vx)>12);
+        /* Launcher has its own 132 Q6 limit, while a moving flipper may
+         * now drive the ball more strongly without being clipped to it. */
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=100*FP; g.y=167*FP; g.vy=35;
+        game_step(&g,&t,KEY_LEFT);
+        g.x=100*FP; g.y=145*FP;
+        g.vy=-169; g.previous=0;
+        game_step(&g,&t,0);
+        assert(g.vy<=-160);
+    }
+    puts("STAGE: contact-sensitive flipper impulse"); fflush(stdout);
     /* Tilt cuts power, not the physical resting paddle. Check both sides
      * with the button held: contact must match an unpowered resting paddle,
      * with no sweep/launch impulse or score. */
@@ -298,8 +334,13 @@ int main(int argc,char **argv)
                 assert(i<1500 && g.waiting && g.balls==3 && !g.over);
                 assert(g.x==t.launch_x*FP && g.y==t.launch_y*FP);
                 assert(g.vx==0 && g.vy==0 && g.charge==0 && g.hits==0);
-                game_step(&g,&t,KEY_LAUNCH); game_step(&g,&t,0);
-                assert(!g.waiting && g.vy<0 && g.event==2);
+                /* Retain the same ball and allow a second deliberate
+                 * plunger pullback with a *different* charge strength. */
+                for(i=0;i<48;i++) game_step(&g,&t,KEY_LAUNCH);
+                assert(g.charge==48 && g.waiting && g.balls==3);
+                game_step(&g,&t,0);
+                assert(!g.waiting && g.vy<-70 && g.event==2 &&
+                       g.balls==3);
             }
         }
         puts("STAGE: partial-charge shooter-return trajectories passed"); fflush(stdout);
