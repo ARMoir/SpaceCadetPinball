@@ -32,6 +32,7 @@ static volatile unsigned char pressed_keys[128];
 static void (__interrupt __far *old_keyboard)(void);
 static int sound_enabled=1, sound_ticks;
 static int shake_enabled=1,video_shift=0;
+static int mouse_available=0; /* Only poll INT 33h when a driver exists. */
 
 /* Shift the 6845 start-address by one unit for a short screen jolt.
  * This shifts the visible image in hardware without copying 32 KB of
@@ -63,6 +64,43 @@ static void __interrupt __far keyboard(void)
         keys[code]=(scan&128)?0:1;
     }
     outp(0x20,0x20);
+}
+
+/* Optional Microsoft/FreeDOS-style mouse driver, INT 33h.
+ * A mouse driver must be loaded in DOS. Probe the vector first: on XT-era
+ * DOS an uninstalled 33h can be 0000:0000 or an IRET stub. No serial
+ * hardware is touched directly; mouse-less systems have zero polling cost.
+ * AX=0 resets driver, hides its cursor, and reports button count in BX. */
+static int mouse_detect(void)
+{
+    const unsigned char __far *handler=
+        (const unsigned char __far *)_dos_getvect(0x33);
+    union REGS r;
+    if(!handler || *handler==0xcf) return 0;
+    memset(&r,0,sizeof(r));
+    r.x.ax=0;
+    int86(0x33,&r,&r);
+    return r.x.ax==0xffff && r.x.bx!=0;
+}
+
+/* Once per displayed frame (18.2 Hz), not in the 72.8 Hz physics loop.
+ * Function 3 captures held buttons. Function 5 also latches presses
+ * released between screen frames, important for short pinball taps.
+ * Left=bit0, right=bit1. Mouse position/cursor/middle button ignored. */
+static unsigned mouse_buttons(void)
+{
+    union REGS r;
+    unsigned bits;
+    r.x.ax=3;
+    int86(0x33,&r,&r);
+    bits=r.x.bx&3U;
+    r.x.ax=5; r.x.bx=0; /* Count and clear left presses. */
+    int86(0x33,&r,&r);
+    if(r.x.bx) bits|=1U;
+    r.x.ax=5; r.x.bx=1; /* Count and clear right presses. */
+    int86(0x33,&r,&r);
+    if(r.x.bx) bits|=2U;
+    return bits;
 }
 
 static unsigned ticks(void)
@@ -336,7 +374,8 @@ int main(int argc,char **argv)
     int old_flags=-1;
     unsigned char toggle_sound,toggle_menu,key_up,key_down;
     unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_new;
-    unsigned observed=0,launches=0,full_launches=0;
+    unsigned observed=0,launches=0,full_launches=0,mouse_input=0;
+    int no_mouse=0;
     union REGS r;
     unsigned char old_mode;
     FILE *report;
@@ -345,9 +384,10 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"/record")) record=1;
         else if(!strcmp(argv[i],"/nosound")) sound_enabled=0;
         else if(!strcmp(argv[i],"/noshake")) shake_enabled=0;
+        else if(!strcmp(argv[i],"/nomouse")) no_mouse=1;
         else if(!strcmp(argv[i],"/classic")) enhanced=0;
         else if(!strcmp(argv[i],"/3d")) enhanced=1;
-        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake] [/classic|/3d]"); return 1; }
+        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake] [/nomouse] [/classic|/3d]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
     if(!table_load(&table,"TABLE.DAT")) {
@@ -364,6 +404,9 @@ int main(int argc,char **argv)
     if(!smoke) game.plunger_rng^=ticks(); /* Reproducible smoke, varied interactive play. */
     memset(&r,0,sizeof(r)); r.h.ah=15; int86(0x10,&r,&r); old_mode=r.h.al;
     mode(9);
+    /* Enable mouse only if a standard DOS mouse driver is present.
+     * Smoke tests stay deterministic even in emulators with built-in mice. */
+    if(!smoke && !no_mouse) mouse_available=mouse_detect();
     video=(unsigned char __far *)MK_FP(0xb800,0);
     _fmemcpy(video,background,32768U);
     draw_title();
@@ -398,6 +441,11 @@ int main(int argc,char **argv)
         pressed_keys[59]=pressed_keys[60]=pressed_keys[61]=0;
         pressed_keys[49]=0;
         _enable();
+        /* OR mouse with existing Z and / controls; either device can
+         * hold or trigger either flipper without altering physics. */
+        mouse_input=mouse_available?
+            MOUSE_FLIPPER_KEYS(mouse_buttons()):0;
+        input|=mouse_input;
         ui_dirty=0;
         if(smoke) {
             /* Hold until fully charged, then release; fixed short pulses
@@ -470,7 +518,9 @@ int main(int argc,char **argv)
             sample->late_frames=(unsigned short)slow_frames;
             sample->steps=game.steps; sample->score=game.score;
             sample->state=(unsigned char)((paused?1:0)|(view?2:0)|
-                                        (game.tilted?4:0)|(game.over?8:0));
+                                        (game.tilted?4:0)|(game.over?8:0)|
+                                        ((mouse_input&KEY_LEFT)?16:0)|
+                                        ((mouse_input&KEY_RIGHT)?32:0));
             sample->flipper_sweep[0]=game.sweep[0];
             sample->flipper_sweep[1]=game.sweep[1];
             sample->x=game.x; sample->y=game.y;
@@ -582,12 +632,13 @@ int main(int argc,char **argv)
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u\n",
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u mouse_driver=%u\n",
                 frame,game.steps,game.score,game.hits,game.balls,slow_frames,
                 observed,launches,game.nudges,game.kickbacks,game.tilts,
                 full_launches,game.boundary_hits,game.right_rail_saves,
                 game.left_rail_saves,game.flipper_contacts[0],game.flipper_contacts[1],
-                game.flipper_power_contacts[0],game.flipper_power_contacts[1]);
+                game.flipper_power_contacts[0],game.flipper_power_contacts[1],
+                mouse_available);
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=%d\n",
                 enhanced?"3d":"classic",enhanced);
         fclose(report);
@@ -598,7 +649,7 @@ int main(int argc,char **argv)
             unsigned j;
             fprintf(report,"# CADET_FLIGHT schema=4 count=%u rate_hz=18.2 scale=64\n",flight_used);
             fprintf(report,"# Q6 positions/velocities divide by 64; INPUT bits 1=Z 2=/ 4=SPACE 8=X 16=A 32=D\n");
-            fprintf(report,"# STATE bits 1=PAUSE 2=MENU 4=TILT 8=GAME_OVER; EVENT 0=none 1=bumper 2=launch 3=drain 4=kickback 5=tilt\n");
+            fprintf(report,"# STATE bits 1=PAUSE 2=MENU 4=TILT 8=GAME_OVER 16=MOUSE_LEFT 32=MOUSE_RIGHT; EVENT 0=none 1=bumper 2=launch 3=drain 4=kickback 5=tilt\n");
             fprintf(report,"# Contact counters (LH RH LP RP), boundary and late-frame counts are cumulative; SWEEP is remaining active substeps.\n");
             fprintf(report,"FRAME XQ6 YQ6 VXQ6 VYQ6 BALLS READY TUBE EVENT CHARGE BORDER RIGHT_RAIL LEFT_RAIL INPUT LEFT_HIT RIGHT_HIT LEFT_POWER RIGHT_POWER STEPS SCORE LATE STATE LEFT_SWEEP RIGHT_SWEEP\n");
             for(j=0;j<flight_used;j++) {
