@@ -5,6 +5,8 @@
 #define BANDS 25
 #define BAND_EDGES 256
 #define FP 64
+/* About 1.3 seconds at 72.8 physics substeps/second. */
+#define PLUNGER_MAX_CHARGE 96
 #define KEY_LEFT 1
 #define KEY_RIGHT 2
 #define KEY_LAUNCH 4
@@ -23,6 +25,7 @@ typedef struct {
 typedef struct {
     short x,y,vx,vy,balls,waiting,over,charge,previous,hit_delay,event,nudge_delay;
     unsigned char sweep[2];
+    unsigned short plunger_rng;
     unsigned long score,steps,hits;
     Edge flips[2][3]; /* rest, raised, intermediate sweep */
 } Game;
