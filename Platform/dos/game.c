@@ -161,12 +161,26 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
     impulse=-(dot*7)/4+e->boost;
     if(dot<0) { g->vx+=(short)(impulse*nx/256); g->vy+=(short)(impulse*ny/256); }
     if(kick) {
-        /* Tip contact has greater leverage than a hit near the pivot;
-         * retain some incoming horizontal motion instead of a fixed shot. */
-        int lever=abs(g->x/FP-e->x);
+        /* F-006 / TFlipperEdge::EdgeCollision:
+         * The source adds flipper angular-motion boost to the reflected
+         * ball vector, scaled by pivot distance and collision direction.
+         * The previous DOS code instead replaced both velocity components
+         * with nearly the same scripted shot at each contact.
+         * Keep the reflected/incoming momentum and add a contact-normal
+         * impulse. An upward-facing front hit is powered; an underside
+         * collision stays passive, like the source flipper's back face.
+         * Q6 / Q8 integers only; no sqrt or trig on normal line contact. */
+        int lever=(int)(along*20/e->length);
+        int power;
+        if(lever<0) lever=0;
         if(lever>20) lever=20;
-        g->vy=(short)(-88-lever*2);
-        g->vx=(short)((g->x/FP-e->x)*3+g->vx/4);
+        if(ny<0) {
+            power=90+lever*4;
+            g->vx+=(short)((long)power*nx/256);
+            g->vy+=(short)((long)power*ny/256);
+            g->vx=(short)maximum(-160,minimum(160,g->vx));
+            g->vy=(short)maximum(-176,minimum(176,g->vy));
+        }
     }
     if(e->score && !g->hit_delay && !g->tilted) {
         g->score+=e->score; g->hits++; g->hit_delay=8; g->event=1;
@@ -316,8 +330,15 @@ void game_step(Game *g,const Table *t,unsigned keys)
     /* Half a Q6 unit/substep on average: about 41 px/s^2 at 72.8 Hz.
      * A full launch must clear the curved lane despite wall restitution. */
     if(g->steps&1) g->vy++;
-    g->vx=(short)maximum(-128,minimum(128,g->vx));
-    g->vy=(short)maximum(-132,minimum(132,g->vy));
+    /* F-006: the old universal -132 Q6 cap clipped powered flipper
+     * shots to the same trajectory as full-strength launcher shots.
+     * Keep the exact tuned shooter limits; permit faster playfield hits
+     * with <=2.75 pixels of motion per physics substep (bounds=4px).
+     * Physical V20 performance and missed-wall tests remain required. */
+    g->vx=(short)maximum(g->in_shooter?-128:-160,
+                         minimum(g->in_shooter?128:160,g->vx));
+    g->vy=(short)maximum(g->in_shooter?-132:-176,
+                         minimum(g->in_shooter?132:176,g->vy));
     g->x+=g->vx; g->y+=g->vy;
     /* Capture an incoming ball at the strike face before nearby static
      * rail contacts reverse its velocity. Walls remain active after firing. */
