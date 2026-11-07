@@ -20,8 +20,12 @@ not a feature-complete port or a verified 7.16 MHz hardware release.
 
 Controls: **Z** left flipper, **/** right flipper, hold **Space** to pull the
 plunger back and release to launch (about 1.3 seconds to full power, with a
-small ~1% launch variation), **X** nudge (one-second cooldown), **N** new game, **Esc** quit. Both flippers can be held together. There
-are three balls. `/nosound` disables PSG writes. Run on Tandy-compatible video;
+small ~1% launch variation), **X** nudge (one-second cooldown),
+**S** toggle sound on/off (shown in the right sidebar), **N** new game,
+**Esc** quit. Both flippers can be held together. There are three balls.
+`/nosound` starts with sound disabled, and **S** can re-enable it during
+play. Switching sound off silences any currently playing tone immediately.
+Run on Tandy-compatible video;
 there is no VGA fallback or reliable automatic Tandy detection in this version.
 
 The native program uses BIOS mode 09h, packed 4bpp B800 video memory with four
