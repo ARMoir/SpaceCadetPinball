@@ -298,6 +298,21 @@ silently treat legacy exceptions as precedent for new ones.
   gameplay/rendering code unchanged. It adds **zero runtime operations**.
   The previously existing tiny moving-ball glint/shadow is unchanged.
   The source screenshot comparison remains unverified on the physical CRT.
+- **F-007 optical-height illusion revision (2026-11-07):** added a
+  third offline-only shading pass to the default `TABLE3D.TGA` generator.
+  It infers a tiered **visual height mask** from the original painted
+  metal and the seven already-imported bumper cap centers. A 1-pixel
+  bright/dark Mach-band pairing emphasizes raised edges; 1-3 pixel
+  internal sidewalls and ordered-dither contact shadows suggest
+  thickness; the high bumper tier gets slightly longer down/right
+  cast shadows. The mask is not serialized into `TABLE.DAT`, and no
+  sprite, C code, collision rules, runtime drawing, screen dimensions,
+  palette, or source geometry changed. All recolored pixels were
+  already neutral gray/white in the original table. `TABLE.TGA` and
+  `/classic` stay untouched. The additional **static effects have
+  zero runtime execution or memory cost** compared to the prior build.
+  Tests check source color preservation and deterministic output.
+  Appearance and readability on the physical CRT are still UNVERIFIED.
 - **Why / evidence:** owner requested more visible depth on their son's
   first impression of the CRT playfield. Original game relies on art,
   highlights and occlusion for a 3D impression. Baking effects offline
