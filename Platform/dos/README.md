@@ -5,6 +5,27 @@ Tandy 1000. It does not use SDL, Windows, a DOS extender, an FPU, XMS or EMS.
 The desktop version is unchanged. This is an initial playable prototype,
 not a feature-complete port or a verified 7.16 MHz hardware release.
 
+## P0 priority: fidelity to the original game
+
+**The original Space Cadet game is the gameplay specification.** Keep the
+original rules, triggers, collision behavior, scoring, charge timing, gate
+states, and art wherever possible. Optimize the implementation (fixed-point
+arithmetic, precomputed geometry, bounded collision checks and cheap Tandy
+drawing), **not the game rules**.
+
+Before each DOS code or data change, consult the standing
+[**fidelity audit, source references and exception register**](FIDELITY.md)
+and the repository [`AGENTS.md`](../../AGENTS.md). If a necessary hardware
+constraint changes gameplay behavior, document the deviation, original
+source, reason, measurement (or explicitly **UNVERIFIED**), tests, and return
+path in the same change. Reference its **F-###** entry in the commit summary.
+An unported feature or unmeasured workaround is not a justified optimization.
+
+**Priority order:** P0 kickback target/gate rules and original collision
+directions/layers; P1 plunger timing/variation, bumper progression,
+nudge/tilt calibration and flippers; P2 enhancements and presentation.
+A successful emulator build does not establish hardware performance or parity.
+
 ## Build and play
 
 1. Unpack Open Watcom 2 and set `WATCOM` to its absolute installation directory.
