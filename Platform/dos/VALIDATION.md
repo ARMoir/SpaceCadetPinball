@@ -96,6 +96,28 @@ state and boundary counters, buffered without gameplay disk writes. This
 can distinguish an off-screen exit/ball drain from an on-screen collision
 trap without relying on a screenshot alone.
 
+**New right-edge real-Tandy observation (2026-11-07):** `FLIGHT(2).TXT`
+shows a ball pass the imported exterior right wall and travel to about
+(235, 113) at frame 1439, then encounter the emergency screen safety
+boundary at frame 1440, followed by a second boundary contact at frame
+1455 near (234, 152). The flight log reports `boundary_hits=2`,
+`nudges=0`, and `tilts=0`. The original SCP2 right outer rail occupies
+approximately (170,40) to (193,166); at y=100 it is around x=181.
+Those observations show the screen safety rail was working as a fallback
+but the ordinary projected rail was not containing the ball.
+
+**F-002 remedy under test:** `table_index` selects the source-derived
+long right exterior edge and a one-sided normal collision now recovers
+balls that cross it before reaching the far side of the screen.
+Regression starts beyond the rail at the reported y=102 with an outward
+velocity and requires an inward reflected shot, without counting a
+screen-edge contact. The `right_rail_saves` counter is separate from
+`boundary_hits`; `FLIGHT.TXT` schema 3 includes a `RIGHT_RAIL` column.
+The 16-bit /original and DOSBox-X checks pass; **correctness, feel, and
+performance on the actual 7.16 MHz Tandy still need confirmation.**
+This is temporary geometry containment, not a faithful import of the
+original 3D ramps and gate groups.
+
 Flattened collision groups, omitted ramps, and one-way gates can still trap
 a ball in the upper-left chute; these tests do not certify every trajectory.
 
