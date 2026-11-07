@@ -68,8 +68,8 @@ class OfflineDepthTests(unittest.TestCase):
         # the table image, never evaluated in the game's 16-bit loop.
         self.assertGreater(changes["height_rim"]+
                            changes["mach_band"], 0)
-        self.assertGreater(changes["height_sidewall"]+
-                           changes["height_contact"]+
+        self.assertGreater(changes["height_sidewall"], 0)
+        self.assertGreater(changes["height_contact"]+
                            changes["height_dither"], 0)
         self.assertGreater(changes["high_cap_shadow"], 0)
         self.assertGreater(sum(changes.values()), 100)
