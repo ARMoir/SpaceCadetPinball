@@ -38,6 +38,11 @@ recovery. Next, restore the highest-impact original rules (P0 kickback/gate and
 collision-layer behavior, then P1 plunger, bumpers, nudging and flippers).
 A successful emulator build does not establish hardware performance or parity.
 
+The F1 help menu now clearly spells out **A LEFT BUMP**, **D RIGHT BUMP**,
+and **X UP BUMP**. An earlier tiny-font defect made the letter A look
+exactly like H; **H is not a control key**. The A glyph is now distinct
+from H and checked by an automated font regression test.
+
 ## Build and play
 
 1. Unpack Open Watcom 2 and set `WATCOM` to its absolute installation directory.
@@ -62,7 +67,8 @@ A successful emulator build does not establish hardware performance or parity.
 Controls: **Z** left flipper, **/** right flipper, hold **Space** to pull the
 plunger back and release to launch (about 1.3 seconds to full power, with a
 small ~1% launch variation), **X** upward bump, **A** bump from the left,
-**D** bump from the right, **S** toggle sound on/off (shown in the
+**D** bump from the right, **X** nudge up, **S** toggle sound on/off
+(shown in the
 right sidebar), **N** new game,
 **Esc** quit. Both flippers can be held together. There are three balls.
 `/nosound` starts with sound disabled, and **S** can re-enable it during
@@ -158,13 +164,14 @@ the CI download. See `data/README.md` for provenance and licensing boundaries.
   two-sided capsules; collision groups are not reproduced. The upper-left skill-shot
   throat now has a small downhill-only passage, approximating the original
   TOneway gates so a ball does not get trapped by flattened ramp walls.
-  The original projected outer-right rail is now also identified from
-  `TABLE.DAT`: if a fast ball slips outside that rail (as observed on the
-  Tandy at frames 1432-1455), a one-sided normal reflection catches it
-  at the *table* edge, not the screen edge. This is a temporary F-002
-  playability guard, not an imported replacement for the original gate
-  or collision-layer rules. The extreme top and side screen limits still
-  reflect instead of consuming balls as an emergency fallback.
+  **Both** original projected exterior rails are identified from
+  `TABLE.DAT`: if a fast in-play ball slips outside a rail, a one-sided
+  normal reflection catches it near the *table* edge, not the screen edge.
+  The source-derived left guard applies only across its actual y=40..166
+  interval; the right guard is **disabled while the ball is legitimately
+  in the shooter tube**. The emergency top/side screen limits remain a
+  final fallback. These are temporary F-002 playability safeguards, not
+  original dynamic gates, ramps, or collision-layer semantics.
   The full ramp/one-way mechanics and final hardware verification remain
   incomplete. Other original gates and one-way edges still need explicit
   data import.
@@ -226,13 +233,14 @@ retain passive resting collisions. The deterministic smoke test must complete
 runner also requires a bumper hit and at least 500 points. Python tests reject
 incomplete, uncharged and zero-score smoke reports.
 `CADET /record` uses real keyboard input and writes `INPUT.TXT` on Esc,
-including observed control bits, launches, nudges, kickbacks, tilts, top/side
-safety contacts (`boundary_hits`), source outer-right-rail catches
-(`right_rail_saves`), and slow-frame count for hardware checks.
+including observed control bits, launches, nudges, kickbacks, tilts,
+top/side safety contacts (`boundary_hits`), source outer-rail recoveries
+(`left_rail_saves` / `right_rail_saves`), and slow-frame count.
 It also writes **`FLIGHT.TXT`**, a rolling trace of the **last 256 rendered
 frames (about 14 seconds)**: Q6 ball position and velocity, remaining balls,
 READY/shooter status, charge, event code and both separate cumulative
-`BORDER` and `RIGHT_RAIL` recovery counters (flight schema 3).
+`BORDER`, `LEFT_RAIL`, and `RIGHT_RAIL` recovery counters
+(flight schema 4).
 Flight data is buffered in memory,
 **not written to disk during gameplay**, so normal play is unaffected. If the
 ball disappears near the upper-left chute, press **Esc immediately** and
