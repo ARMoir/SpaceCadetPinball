@@ -32,6 +32,7 @@ int table_index(Table *t)
     memset(t->band_count,0,sizeof(t->band_count));
     t->bumper_count=0;
     t->outer_right_rail=-1;
+    t->outer_left_rail=-1;
     /* F-004: Source TBumper uses a radial normal. Reassemble closed eight-
      * edge source caps once, replacing the generic inward-facing polygons. */
     for(i=0;i+7<t->count;i++) {
@@ -82,6 +83,20 @@ int table_index(Table *t)
             maximum(t->edges[t->outer_right_rail].x,
                     t->edges[t->outer_right_rail].ex)))
             t->outer_right_rail=(short)i;
+        /* Source x=62,y=40 to x=39,y=166 is the matching left exterior.
+         * Do not extend a blanket rectangular boundary through playable
+         * upper ramps or lower outlanes. This guard uses the actual edge
+         * slope only within its imported vertical interval. */
+        if(!e->score && minimum(e->y,e->ey)<=45 &&
+           maximum(e->y,e->ey)>=160 &&
+           minimum(e->x,e->ex)<=42 &&
+           maximum(e->x,e->ex)>=60 &&
+           abs(e->ey-e->y)>=95 &&
+           (t->outer_left_rail<0 ||
+            minimum(e->x,e->ex)<
+            minimum(t->edges[t->outer_left_rail].x,
+                    t->edges[t->outer_left_rail].ex)))
+            t->outer_left_rail=(short)i;
         /* Each radial bumper is tested once instead of eight conflicting
          * side capsules. Preserve ordinary scored line fixtures. */
         for(k=0;k<t->bumper_count;k++)
@@ -305,7 +320,7 @@ static void contain_outer_right(Game *g,const Table *t)
     const Edge *e;
     long limit,dy,dot,impulse;
     int nx,ny,py=g->y/FP;
-    if(t->outer_right_rail<0) return;
+    if(g->in_shooter || t->outer_right_rail<0) return;
     e=&t->edges[t->outer_right_rail];
     if(py<minimum(e->y,e->ey) || py>maximum(e->y,e->ey) ||
        e->ey==e->y) return;
@@ -324,6 +339,37 @@ static void contain_outer_right(Game *g,const Table *t)
     }
     g->x=(short)limit;
     g->right_rail_saves++;
+}
+
+/* F-002: matching source-derived LEFT outer wall. The single-plane
+ * import can let a fast ball slip through the two-sided rail in the same
+ * way previously observed on the right. Keep it inside the real playfield
+ * without adding random motion or changing shooter/ramp geometry.
+ * No work occurs outside the imported y interval; shooter remains exempt. */
+static void contain_outer_left(Game *g,const Table *t)
+{
+    const Edge *e;
+    long limit,dy,dot,impulse;
+    int nx,ny,py=g->y/FP;
+    if(g->in_shooter || t->outer_left_rail<0) return;
+    e=&t->edges[t->outer_left_rail];
+    if(py<minimum(e->y,e->ey) || py>maximum(e->y,e->ey) ||
+       e->ey==e->y) return;
+    dy=(long)g->y-(long)e->y*FP;
+    limit=(long)e->x*FP+
+          dy*(e->ex-e->x)/(e->ey-e->y)+2*FP;
+    if((long)g->x>=limit) return;
+    /* Left-facing exterior normal; reflect only outward travel. */
+    nx=-abs(e->ty);
+    ny=e->ty>=0?e->tx:-e->tx;
+    dot=((long)g->vx*nx+(long)g->vy*ny)/256;
+    if(dot>0) {
+        impulse=dot*7/4;
+        g->vx-=(short)(impulse*nx/256);
+        g->vy-=(short)(impulse*ny/256);
+    }
+    g->x=(short)limit;
+    g->left_rail_saves++;
 }
 
 /* The upper-left skill-shot chute includes one-way passages in the
@@ -507,6 +553,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
     /* Restore the source exterior after all two-sided wall corrections.
      * This catches the actual off-right-table flight seen on hardware. */
     contain_outer_right(g,t);
+    contain_outer_left(g,t);
     for(i=0;i<2;i++) {
         int key=1<<i,hit=0;
         if(g->tilted) {
