@@ -66,12 +66,39 @@ static void restore(int x,int y,int w,int h)
     }
 }
 
+/* Draw a sprite by scanline. The Tandy's interleaved banks make a
+ * pixel() call (with modulo and address calculation) expensive on a V20. */
 static void sprite(const Sprite *s,int x,int y)
 {
-    int xx,yy;
-    const unsigned char *p=s->pixels;
-    for(yy=0;yy<s->h;yy++) for(xx=0;xx<s->w;xx++,p++)
-        if(*p!=255) pixel(x+xx,y+yy,*p);
+    int xx,yy,start,end,dst_y;
+    unsigned a;
+    for(yy=0;yy<s->h;yy++) {
+        const unsigned char *p=s->pixels+yy*s->w;
+        dst_y=y+yy;
+        if(dst_y<0 || dst_y>=200) continue;
+        start=x<0?-x:0;
+        end=s->w;
+        if(x+end>320) end=320-x;
+        if(start>=end) continue;
+        a=address(x+start,dst_y);
+        for(xx=start;xx<end;xx++) {
+            unsigned char c=p[xx];
+            if(c!=255) {
+                unsigned char old=video[a];
+                if((x+xx)&1) video[a]=(old&0xf0)|c;
+                else video[a]=(old&0x0f)|(unsigned char)(c<<4);
+            }
+            if((x+xx)&1) a++;
+        }
+    }
+}
+
+/* A stationary flipper only needs repainting if the old ball was erased
+ * over it. Otherwise leave its pixels alone until the key state changes. */
+static int ball_overlaps(const Sprite *s,int x,int y,int w,int h)
+{
+    return x<s->x+s->w && x+w>s->x &&
+           y<s->y+s->h && y+h>s->y;
 }
 
 /* Original tiny UI font, 3x5. Table art and moving sprites come from the pack. */
@@ -210,11 +237,16 @@ int main(int argc,char **argv)
         restore(old_x,old_y,table.sprites[4].w+2,table.sprites[4].h+2);
         for(i=0;i<2;i++) {
             const Sprite *s;
-            if((input^previous_input)&(1<<i)) {
+            int changed=(input^previous_input)&(1<<i);
+            if(changed) {
                 s=&table.sprites[i*2]; restore(s->x-1,s->y-1,s->w+2,s->h+2);
                 s++; restore(s->x-1,s->y-1,s->w+2,s->h+2);
             }
-            s=&table.sprites[i*2+((input&(1<<i))!=0)]; sprite(s,s->x,s->y);
+            s=&table.sprites[i*2+((input&(1<<i))!=0)];
+            if(frame==1 || changed ||
+               ball_overlaps(s,old_x,old_y,
+                             table.sprites[4].w+2,table.sprites[4].h+2))
+                sprite(s,s->x,s->y);
         }
         old_x=game.x/FP-table.sprites[4].w/2-1;
         old_y=game.y/FP-table.sprites[4].h/2-1;
