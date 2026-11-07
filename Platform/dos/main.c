@@ -105,15 +105,15 @@ static int ball_overlaps(const Sprite *s,int x,int y,int w,int h)
            y<s->y+s->h && y+h>s->y;
 }
 
-/* The feed point from PINBALL.DAT is where the ball starts inside the
- * tube, NOT where the plunger handle is rendered. The handle belongs at
- * the bottom-right end of the tube near the drain line, as on the source
- * playfield. Keep it a tiny dirty-rect sprite until original plunger frames
- * are available in SCP1. */
+/* The silver plunger artwork is already part of the imported
+ * background at the very bottom-right of the table. Draw the moving
+ * chrome highlight OVER that existing handle, never at the ball's feed
+ * point (which is much farther up the shooter tube). Position is derived
+ * from the original launch/drain anchors to avoid a second plunger. */
 static void plunger_rect(int charge,int *x,int *y)
 {
-    *x=table.launch_x+18;
-    *y=table.drain_y-13+charge*12/PLUNGER_MAX_CHARGE;
+    *x=table.launch_x+33;
+    *y=table.drain_y-3+charge*10/PLUNGER_MAX_CHARGE;
 }
 
 static void draw_plunger(int x,int y)
