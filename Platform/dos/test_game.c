@@ -330,7 +330,7 @@ int main(int argc,char **argv)
             game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
             g.x=(short)(cap->x+cap->radius+FP/2);
             g.y=cap->y; g.vx=-100; g.vy=0;
-            for(j=0;j<12 && !g.hits;j++) game_step(&g,&t,0);
+            for(i=0;i<12 && !g.hits;i++) game_step(&g,&t,0);
             assert(g.hits==1 && g.vx>0);
         }
         puts("STAGE: radial upper-left bumper escape"); fflush(stdout);
