@@ -1,0 +1,743 @@
+{
+  "source_sha256": "42defd5d2a339a3953fe643716aff4e35b2cea7a3e54505c82d1e78d5325bc04",
+  "source": "Windows PINBALL.DAT",
+  "segments": 497,
+  "imported_collision_objects": [
+    {
+      "group": 280,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 281,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 282,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 283,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 284,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 285,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 286,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 287,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 288,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 289,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 290,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 291,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 292,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 293,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 294,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 295,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 296,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 297,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 298,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 299,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 300,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 301,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 302,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 303,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 304,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 305,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 310,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 311,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 312,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 313,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 314,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 315,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 316,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 317,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 318,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 319,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 320,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 321,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 322,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 323,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 324,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 325,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 329,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 330,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 102,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 331,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 332,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 333,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 334,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 335,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 336,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 469,
+      "name": "v_rebo1",
+      "type": 1000
+    },
+    {
+      "group": 470,
+      "name": "v_rebo2",
+      "type": 1000
+    },
+    {
+      "group": 471,
+      "name": "v_rebo3",
+      "type": 1000
+    },
+    {
+      "group": 472,
+      "name": "v_rebo4",
+      "type": 1000
+    },
+    {
+      "group": 372,
+      "name": "a_bump1",
+      "type": 1005
+    },
+    {
+      "group": 380,
+      "name": "a_bump2",
+      "type": 1005
+    },
+    {
+      "group": 388,
+      "name": "a_bump3",
+      "type": 1005
+    },
+    {
+      "group": 396,
+      "name": "a_bump4",
+      "type": 1005
+    }
+  ],
+  "omitted_collision_objects": [
+    {
+      "group": 306,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 307,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 308,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 309,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 326,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 327,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 328,
+      "name": "",
+      "type": 1010
+    },
+    {
+      "group": 103,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 106,
+      "name": "",
+      "type": 1000
+    },
+    {
+      "group": 345,
+      "name": "s_onewy1",
+      "type": 1016
+    },
+    {
+      "group": 346,
+      "name": "s_onewy4",
+      "type": 1016
+    },
+    {
+      "group": 347,
+      "name": "s_onewy7",
+      "type": 1016
+    },
+    {
+      "group": 348,
+      "name": "s_onewy8",
+      "type": 1016
+    },
+    {
+      "group": 349,
+      "name": "s_onewy9",
+      "type": 1016
+    },
+    {
+      "group": 350,
+      "name": "s_onewy10",
+      "type": 1016
+    },
+    {
+      "group": 351,
+      "name": "s_onewy11",
+      "type": 1016
+    },
+    {
+      "group": 352,
+      "name": "s_onewy12",
+      "type": 1016
+    },
+    {
+      "group": 353,
+      "name": "s_onewy13",
+      "type": 1016
+    },
+    {
+      "group": 473,
+      "name": "plunger",
+      "type": 1001
+    },
+    {
+      "group": 499,
+      "name": "drain",
+      "type": 1007
+    },
+    {
+      "group": 432,
+      "name": "a_targ1",
+      "type": 1006
+    },
+    {
+      "group": 433,
+      "name": "a_targ2",
+      "type": 1006
+    },
+    {
+      "group": 434,
+      "name": "a_targ3",
+      "type": 1006
+    },
+    {
+      "group": 435,
+      "name": "a_targ4",
+      "type": 1006
+    },
+    {
+      "group": 436,
+      "name": "a_targ5",
+      "type": 1006
+    },
+    {
+      "group": 437,
+      "name": "a_targ6",
+      "type": 1006
+    },
+    {
+      "group": 438,
+      "name": "a_targ7",
+      "type": 1006
+    },
+    {
+      "group": 439,
+      "name": "a_targ8",
+      "type": 1006
+    },
+    {
+      "group": 440,
+      "name": "a_targ9",
+      "type": 1006
+    },
+    {
+      "group": 405,
+      "name": "a_bump5",
+      "type": 1005
+    },
+    {
+      "group": 413,
+      "name": "a_bump6",
+      "type": 1005
+    },
+    {
+      "group": 421,
+      "name": "a_bump7",
+      "type": 1005
+    },
+    {
+      "group": 500,
+      "name": "v_bloc1",
+      "type": 1011
+    },
+    {
+      "group": 505,
+      "name": "a_kick1",
+      "type": 1014
+    },
+    {
+      "group": 507,
+      "name": "a_kick2",
+      "type": 1014
+    },
+    {
+      "group": 520,
+      "name": "a_roll1",
+      "type": 1015
+    },
+    {
+      "group": 521,
+      "name": "a_roll2",
+      "type": 1015
+    },
+    {
+      "group": 522,
+      "name": "a_roll3",
+      "type": 1015
+    },
+    {
+      "group": 523,
+      "name": "a_roll4",
+      "type": 1015
+    },
+    {
+      "group": 524,
+      "name": "a_roll5",
+      "type": 1015
+    },
+    {
+      "group": 525,
+      "name": "a_roll6",
+      "type": 1015
+    },
+    {
+      "group": 526,
+      "name": "a_roll7",
+      "type": 1015
+    },
+    {
+      "group": 527,
+      "name": "a_roll8",
+      "type": 1015
+    },
+    {
+      "group": 528,
+      "name": "a_roll110",
+      "type": 1015
+    },
+    {
+      "group": 529,
+      "name": "a_roll111",
+      "type": 1015
+    },
+    {
+      "group": 530,
+      "name": "a_roll112",
+      "type": 1015
+    },
+    {
+      "group": 515,
+      "name": "s_trip1",
+      "type": 1024
+    },
+    {
+      "group": 516,
+      "name": "s_trip2",
+      "type": 1024
+    },
+    {
+      "group": 517,
+      "name": "s_trip3",
+      "type": 1024
+    },
+    {
+      "group": 518,
+      "name": "s_trip4",
+      "type": 1024
+    },
+    {
+      "group": 519,
+      "name": "s_trip5",
+      "type": 1024
+    },
+    {
+      "group": 537,
+      "name": "a_roll9",
+      "type": 1020
+    },
+    {
+      "group": 531,
+      "name": "a_roll179",
+      "type": 1015
+    },
+    {
+      "group": 532,
+      "name": "a_roll180",
+      "type": 1015
+    },
+    {
+      "group": 533,
+      "name": "a_roll181",
+      "type": 1015
+    },
+    {
+      "group": 534,
+      "name": "a_roll182",
+      "type": 1015
+    },
+    {
+      "group": 535,
+      "name": "a_roll183",
+      "type": 1015
+    },
+    {
+      "group": 536,
+      "name": "a_roll184",
+      "type": 1015
+    },
+    {
+      "group": 510,
+      "name": "a_kout1",
+      "type": 1029
+    },
+    {
+      "group": 512,
+      "name": "a_kout2",
+      "type": 1012
+    },
+    {
+      "group": 514,
+      "name": "a_kout3",
+      "type": 1012
+    },
+    {
+      "group": 338,
+      "name": "v_sink1",
+      "type": 1017
+    },
+    {
+      "group": 340,
+      "name": "v_sink2",
+      "type": 1017
+    },
+    {
+      "group": 342,
+      "name": "v_sink3",
+      "type": 1017
+    },
+    {
+      "group": 344,
+      "name": "v_sink7",
+      "type": 1017
+    },
+    {
+      "group": 501,
+      "name": "v_gate1",
+      "type": 1013
+    },
+    {
+      "group": 502,
+      "name": "v_gate2",
+      "type": 1013
+    },
+    {
+      "group": 481,
+      "name": "a_flag1",
+      "type": 1018
+    },
+    {
+      "group": 489,
+      "name": "a_flag2",
+      "type": 1018
+    },
+    {
+      "group": 442,
+      "name": "a_targ10",
+      "type": 1019
+    },
+    {
+      "group": 444,
+      "name": "a_targ11",
+      "type": 1019
+    },
+    {
+      "group": 446,
+      "name": "a_targ12",
+      "type": 1019
+    },
+    {
+      "group": 448,
+      "name": "a_targ13",
+      "type": 1019
+    },
+    {
+      "group": 450,
+      "name": "a_targ14",
+      "type": 1019
+    },
+    {
+      "group": 452,
+      "name": "a_targ15",
+      "type": 1019
+    },
+    {
+      "group": 454,
+      "name": "a_targ16",
+      "type": 1019
+    },
+    {
+      "group": 456,
+      "name": "a_targ17",
+      "type": 1019
+    },
+    {
+      "group": 458,
+      "name": "a_targ18",
+      "type": 1019
+    },
+    {
+      "group": 460,
+      "name": "a_targ19",
+      "type": 1019
+    },
+    {
+      "group": 462,
+      "name": "a_targ20",
+      "type": 1019
+    },
+    {
+      "group": 464,
+      "name": "a_targ21",
+      "type": 1019
+    },
+    {
+      "group": 466,
+      "name": "a_targ22",
+      "type": 1019
+    },
+    {
+      "group": 104,
+      "name": "ramp_hole",
+      "type": 1022
+    }
+  ],
+  "simplifications": [
+    "Projected 2D fixed-point physics; not original world-space integrator",
+    "Static ground walls; octagonal bumpers; two-state flipper animation",
+    "No ramp elevation, missions, multiball, target progression, or original audio"
+  ],
+  "flippers": [
+    92,
+    158,
+    106,
+    167,
+    107,
+    149,
+    140,
+    158,
+    125,
+    167,
+    125,
+    149
+  ],
+  "launch": [
+    181.36222154664918,
+    141.36355844627874
+  ],
+  "drain_y": 179.16658530937067
+}

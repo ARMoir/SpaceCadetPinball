@@ -8,6 +8,19 @@ Reverse engineering of `3D Pinball for Windows - Space Cadet`, a game bundled wi
 
 ## How to play
 
+### Native DOS / Tandy prototype (this fork)
+
+An initial 8086/V20 real-mode Space Cadet target is in
+[Platform/dos](Platform/dos/README.md), with a converter for the original
+Windows `PINBALL.DAT`, fixed-point physics, Tandy 320x200 16-color graphics,
+and automated DOS builds/tests. It preserves original artwork and selected
+geometry but has simplified physics and rules; see the port documentation
+for the exact boundaries. The CI artifact includes the converted Space Cadet
+table supplied for this fork. Real 7.16 MHz hardware
+performance is not yet verified.
+
+### Desktop version
+
 Place compiled executable into a folder containing original game resources (not included).\
 Supports data files from Windows and Full Tilt versions of the game.
 

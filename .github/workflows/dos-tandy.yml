@@ -1,0 +1,66 @@
+name: Native DOS Tandy prototype
+on:
+  push:
+    paths: ['Platform/dos/**', '.github/workflows/dos-tandy.yml']
+  pull_request:
+    paths: ['Platform/dos/**', '.github/workflows/dos-tandy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dos:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cache pinned portable tools
+        id: tools
+        uses: actions/cache@v4
+        with:
+          path: .dos-tools
+          key: dos-tools-watcom-2026-11-01-dosbox-x-2026-10-01-v1
+      - name: Fetch and verify tools
+        if: steps.tools.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .dos-tools | Out-Null
+          Invoke-WebRequest 'https://github.com/open-watcom/open-watcom-v2/releases/download/2026-11-01-Build/open-watcom-2_0-c-win-x64.exe' -OutFile .dos-tools/watcom.exe
+          if ((Get-FileHash .dos-tools/watcom.exe).Hash -ne 'D4E496C593EF2ACBC54D1EAEB31B31D9C62F86E39A09E61ADA411EF34FEAA01A') { throw 'Watcom hash mismatch' }
+          python -c "import zipfile; zipfile.ZipFile('.dos-tools/watcom.exe').extractall('.dos-tools/watcom')"
+          Invoke-WebRequest 'https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/dosbox-x-mingw64-2026.10.01-portable.zip' -OutFile .dos-tools/dosbox.zip
+          if ((Get-FileHash .dos-tools/dosbox.zip).Hash -ne 'DEF2D84D4415FC26C77252839B4DAFB6B476E3A4204B896292E6B05505CA8C59') { throw 'DOSBox-X hash mismatch' }
+          Expand-Archive .dos-tools/dosbox.zip .dos-tools/dosbox
+      - name: Test converter and build 8086 binaries
+        shell: pwsh
+        run: |
+          $env:WATCOM=(Resolve-Path .dos-tools/watcom).Path
+          python Platform/dos/test_convert.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/build.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/verify_build.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item Platform/dos/data/TABLE.DAT,Platform/dos/data/TABLE.TGA,Platform/dos/data/IMPORT.json,Platform/dos/data/PREVIEW.png build/dos/
+      - name: Run DOS core and Tandy video tests
+        shell: pwsh
+        run: python Platform/dos/run_tests.py --emulator .dos-tools/dosbox/mingw-build/mingw-sdl2/dosbox-x.exe --original
+      - name: Upload playable Space Cadet build and validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dos-tandy-prototype
+          path: |
+            build/dos/CADET.EXE
+            build/dos/TEST.EXE
+            build/dos/*.MAP
+            build/dos/TABLE.DAT
+            build/dos/TABLE.TGA
+            build/dos/IMPORT.json
+            build/dos/README.TXT
+            build/dos/*.LOG
+            build/dos/TEST.OK
+            build/dos/SMOKE.TXT
+            build/dos/*.png
