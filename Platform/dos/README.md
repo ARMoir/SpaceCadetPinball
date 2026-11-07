@@ -20,7 +20,7 @@ not a feature-complete port or a verified 7.16 MHz hardware release.
 
 Controls: **Z** left flipper, **/** right flipper, hold **Space** to pull the
 plunger back and release to launch (about 1.3 seconds to full power, with a
-small <=5% launch variation), **X** nudge (one-second cooldown), **N** new game, **Esc** quit. Both flippers can be held together. There
+small ~2% launch variation), **X** nudge (one-second cooldown), **N** new game, **Esc** quit. Both flippers can be held together. There
 are three balls. `/nosound` disables PSG writes. Run on Tandy-compatible video;
 there is no VGA fallback or reliable automatic Tandy detection in this version.
 
@@ -42,7 +42,7 @@ dropped rather than running unbounded catch-up work.
   pullback sprite as charge grows, and gives the released ball a small
   random addition to launch boost (up to 10% in the original). DOS keeps
   this hold/release behavior in integers and narrows the variation to about
-  5% to maintain the imported shooter-lane trajectory.
+  2% to maintain the imported shooter-lane trajectory.
 * Three-ball game length (`TPinballTable.cpp`) and initial bumper scores of
   500 / 1500 (`control.cpp`). These constants do not implement the complete
   original rule state machine.
