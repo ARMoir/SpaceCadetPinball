@@ -442,7 +442,8 @@ int main(int argc,char **argv)
            g.kick_armed[1] && g.kickbacks==1 && g.balls==3);
     for(i=0;i<9;i++) game_step(&g,&t,0);
     assert(g.kick_delay==0 && g.vx>0 && g.vy<0 &&
-           g.event==4 && g.shake_frames>0);
+           g.event==4 && g.shake_frames>0 &&
+           g.kick_gate_closed[0] && !g.kick_gate_closed[1]);
     g.x=t.kickback[0]*FP;
     g.y=t.kickback[1]*FP; g.vy=32;
     game_step(&g,&t,0);
@@ -452,8 +453,47 @@ int main(int argc,char **argv)
     game_step(&g,&t,0);
     assert(g.kick_delay==9 && g.kick_side==2 && g.kickbacks==1);
     for(i=0;i<9;i++) game_step(&g,&t,0);
-    assert(g.kick_delay==0 && g.vx<0 && g.vy<0);
+    assert(g.kick_delay==0 && g.vx<0 && g.vy<0 &&
+           g.kick_gate_closed[1] && !g.kick_gate_closed[0]);
     puts("STAGE: both kickbacks passed"); fflush(stdout);
+    /* Source TKickback's expired timer re-enables the matching TGate.
+     * A new ball opens it under our simplified armed-at-start rule. */
+    fixture(); g.waiting=0; g.in_shooter=0;
+    g.kick_gate_closed[0]=g.kick_gate_closed[1]=1;
+    g.kick_armed[0]=g.kick_armed[1]=0;
+    g.x=80*FP; g.y=(t.drain_y+1)*FP; g.vy=64;
+    game_step(&g,&t,0);
+    assert(g.waiting && g.balls==2 &&
+           !g.kick_gate_closed[0] && !g.kick_gate_closed[1] &&
+           g.kick_armed[0] && g.kick_armed[1]);
+    /* An open narrow gate must not reflect the ball; the same edge
+     * becomes physically solid as soon as TGateEnable closes it. */
+    for(i=0;i<2;i++) {
+        int wallx=i?165:59;
+        short vx=(short)(i?128:-128);
+        fixture();
+        t.edges[0].x=(short)wallx; t.edges[0].ex=(short)wallx;
+        t.edges[0].y=119; t.edges[0].ey=139;
+        t.edges[0].tx=0; t.edges[0].ty=256;
+        t.edges[0].length=20*FP;
+        assert(table_index(&t));
+        t.gate_first[i]=0; /* isolated synthetic gate segment */
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        g.x=(short)((i?wallx-2:wallx+2)*FP);
+        g.y=130*FP; g.vx=vx; g.vy=0;
+        game_step(&g,&t,0);
+        assert((i?g.vx>0:g.vx<0) && !g.wall_crossings &&
+               !g.kick_gate_closed[i]);
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        g.kick_gate_closed[i]=1;
+        g.x=(short)((i?wallx-2:wallx+2)*FP);
+        g.y=130*FP; g.vx=vx; g.vy=0;
+        game_step(&g,&t,0);
+        assert((i?g.vx<0:g.vx>0) && g.kick_gate_closed[i] &&
+               g.balls==3 && !g.waiting);
+    }
+    puts("STAGE: source kicker gate open/close and new-ball rearm");
+    fflush(stdout);
     /* F-001: real SCP2 strike centers, including the right x=172.
      * A valid save MUST get to the upper quarter on an inward path,
      * then hand control back to standard collision and scoring. */
@@ -580,6 +620,27 @@ int main(int argc,char **argv)
             }
         }
         t.sling_count=2;
+        /* Back faces must remain solid but passive, without creating
+         * an active sling hit, a bounce or a phantom anti-loop count.
+         * Inner/front faces still rebound and count genuine strikes. */
+        for(side=0;side<2;side++) {
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)((side?155:65)*FP);
+            g.y=132*FP; g.vx=(short)(side?-96:96); g.vy=0;
+            game_step(&g,&t,0);
+            assert(!overlaps_sling(&g,&t.slings[side]) &&
+                   g.sling_rescues[side]>0 &&
+                   !g.sling_chain_hits && !g.sling_loop_breaks);
+            assert(side?g.vx<=0:g.vx>=0);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)((side?145:75)*FP);
+            g.y=132*FP; g.vx=(short)(side?96:-96); g.vy=0;
+            game_step(&g,&t,0);
+            assert(!overlaps_sling(&g,&t.slings[side]) &&
+                   g.sling_rescues[side]>0 &&
+                   g.sling_chain_hits==1 &&
+                   (side?g.vx<0:g.vx>0));
+        }
         game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
         /* The first three alternating impacts are legitimate pinball. */
         for(j=0;j<3;j++) {
@@ -676,6 +737,28 @@ int main(int argc,char **argv)
     puts("STAGE: synthetic tests passed; loading imported table"); fflush(stdout);
     assert(table_load(&t,"TABLE.DAT")); game_reset(&g,&t);
     puts("STAGE: imported pack loaded"); fflush(stdout);
+    /* Original SCP2 has narrow four-edge v_gate1/v_gate2 source
+     * groups inside the kicker lanes, not at invented coordinates. */
+    assert(t.gate_first[0]>=0 && t.gate_first[1]>=0);
+    assert(t.gate_left[0]>=55 && t.gate_right[0]<=72 &&
+           t.gate_top[0]>=115 && t.gate_bottom[0]<=145);
+    assert(t.gate_left[1]>=160 && t.gate_right[1]<=170 &&
+           t.gate_top[1]>=115 && t.gate_bottom[1]<=145);
+    printf("SOURCE GATES L:%d x%d..%d y%d..%d R:%d x%d..%d y%d..%d\n",
+           t.gate_first[0],t.gate_left[0],t.gate_right[0],
+           t.gate_top[0],t.gate_bottom[0],t.gate_first[1],
+           t.gate_left[1],t.gate_right[1],
+           t.gate_top[1],t.gate_bottom[1]);
+    fflush(stdout);
+    /* Redundant closed detail loops inside solid slingshot hulls
+     * (SCP2 edges 446..453) must not create secondary rebounds. */
+    for(i=0;i<BANDS;i++) {
+        int k;
+        for(k=0;k<t.band_count[i];k++) {
+            int e=t.band[i][k];
+            assert(e<446 || e>453);
+        }
+    }
     /* F-002: slingshots are irregular CLOSED source outlines, not
      * collections of independent two-sided wall capsules. Both must
      * index as solid faces, especially the problem right sling. */
