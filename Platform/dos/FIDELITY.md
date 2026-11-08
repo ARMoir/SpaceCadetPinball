@@ -85,9 +85,13 @@ It does **not** modify flipper impulses, timing, scoring, collision or
 the source table, so no gameplay-rule exception is needed. Mouse driver
 latency and actual 7 MHz V20 performance remain **unverified** until
 hardware testing. `/nomouse` restores keyboard-only polling cost, and
-driver-absent systems have no extra mouse polling. The source also
-assigns a middle mouse button to the plunger, but **that additional
-binding has not been ported** in this left/right-only input change.
+driver-absent systems have no extra mouse polling. **2026-11-07
+follow-up:** source `options.cpp` also uses mouse middle button to
+launch, F5 to toggle sound and F8 to show controls. DOS now maps these
+to the same existing game/menu actions, conditionally polling the
+middle button only when an INT 33h driver reports at least three
+buttons. No physics or rule changes; live driver latency remains
+UNVERIFIED.
 
 Original code locations (read alongside any proposed DOS implementation):
 
@@ -101,6 +105,8 @@ Original code locations (read alongside any proposed DOS implementation):
 | Nudge / tilt | [`nudge.cpp`](../../SpaceCadetPinball/nudge.cpp), [`pb.cpp`](../../SpaceCadetPinball/pb.cpp) | [`nudge.inc`](nudge.inc), [`control.inc`](control.inc), [`video_shake.inc`](video_shake.inc) |
 | Stuck ball recovery | [`control.cpp`](../../SpaceCadetPinball/control.cpp), `control::UnstuckBall`; [`TBall.h`](../../SpaceCadetPinball/TBall.h) `StuckCounter` | [`unstuck.inc`](unstuck.inc) included by [`game.c`](game.c), `watch_stuck` / `stuck_clear_at` |
 | Resource import / projection | [`loader.cpp`](../../SpaceCadetPinball/loader.cpp), [`proj.cpp`](../../SpaceCadetPinball/proj.cpp) | [`convert.py`](convert.py), [`data/IMPORT.json`](data/IMPORT.json) |
+| High-score ranking/persistence | [`high_score.cpp`](../../SpaceCadetPinball/high_score.cpp) | [`scores.c`](scores.c), [`scores.h`](scores.h), [`hud.inc`](hud.inc) (F-009) |
+| Timed status messaging | [`TTextBox.cpp`](../../SpaceCadetPinball/TTextBox.cpp) | [`hud.inc`](hud.inc) (F-007) |
 
 The original game also uses resource-driven component rules. Source constants
 should be checked in context, not copied without their event/state transitions.
@@ -136,7 +142,8 @@ without certifying physical hardware performance or original-rule parity.
 | **P0** | Trapped ball / anti-stuck | The original defines `control::UnstuckBall`: exclude flipper/plunger capture zones, throw upward, eventually relaunch. DOS uses a small position-progress watchdog and staged, verified local moves before a free relaunch. | **Source-inspired playability safety net; exact source trigger/timing not established** | [F-008](#f-008-universal-trapped-ball-recovery) |
 | **P1** | Flipper physics | Original angular flippers collide throughout rotation. DOS preserves endpoints but uses rest/midpoint/raised fixed-point edges and only two art states. | **Performance-oriented approximation; fidelity still unverified** | [F-006](#f-006-flipper-and-collision-response) |
 | **P2** | Material physics / gravity | Original ball direction, spin, elasticity, smoothness, group masks and geometry are richer. DOS uses Q6, fixed restitution, 2D gravity, speed clamps and finite substeps. | **Known incomplete port** | [F-006](#f-006-flipper-and-collision-response) |
-| **P2** | Audio, layout and effects | Original sound/visual states are richer. DOS has PSG substitutes and 16-color rendering; an optional offline-generated 3D-shaded TABLE3D.TGA retains the untouched classic art and identical collision data. The moving ball uses its imported original sprite without the later-removed dynamic shadow/glint. | **Presentation-only adaptation**, gameplay parity unchanged; CRT benefit unverified | [F-007](#f-007-rendering-audio-and-frame-rate) |
+| **P2** | Audio, layout and effects | Original sound/visual states are richer. DOS has PSG substitutes and 16-color rendering; the compact HUD now displays timed status-event messages but not the original queued TTextBox priorities. Optional TABLE3D.TGA shading is precomputed, and the moving ball is the unchanged source sprite. | **Presentation-only adaptation**, gameplay parity unchanged; CRT benefit unverified | [F-007](#f-007-rendering-audio-and-frame-rate) |
+| **P2** | High scores | Original `high_score.cpp` ranks and stores five entries with long names and desktop settings. DOS has a sorted top-five file and three-initial dialog, but not full original settings/UI. | **Partially implemented; DOS storage/UI adaptation** | [F-009](#f-009-high-scores-and-initials) |
 
 **Verified progress, not full parity:** original-source table artwork, eight
 plunger frames and kickback strike centers are imported; seven bumper outlines
@@ -471,6 +478,17 @@ silently treat legacy exceptions as precedent for new ones.
   and no gameplay change. Prior physical feedback supports removal;
   the corrected silhouette and frame timing on real hardware are
   **UNVERIFIED** pending a new CRT test.
+- **F-007 timed status messages (2026-11-07):** original
+  `TTextBox.cpp` stores prioritized, queued, timed text messages.
+  The Tandy port uses its already available 80px HUD status line to show
+  the last reported physics event for 26 rendered frames (~1.4s): bumper,
+  launch, drain, kickback or tilt. This intentionally **does not**
+  implement source message priority/queue, full mission/status wording,
+  or original text rendering. It adds an integer timer and a short
+  status redraw only on event/start/expiry, without a full-table redraw
+  or source physics modifications. The memory/time cost on actual
+  7.16 MHz V20 hardware is UNVERIFIED. Tests exercise the display
+  contract, and DOSBox-X Tandy/VGA parity remains required.
 - **Why / evidence:** owner requested more visible depth on their son's
   first impression of the CRT playfield. Original game relies on art,
   highlights and occlusion for a 3D impression. Baking effects offline
@@ -553,6 +571,42 @@ silently treat legacy exceptions as precedent for new ones.
   tune `UNSTICK_*` thresholds with recorded evidence or restore the
   original component-specific approach when full layer/gate data
   becomes available. **Hardware success is UNVERIFIED.**
+
+### F-009 High scores and initials
+
+- **Status / priority:** OPEN, P2, partial original UI and persistence.
+- **Original source behavior:** `SpaceCadetPinball/high_score.cpp`
+  maintains five scores, moves lower scores down on insertion, accepts
+  player names up to 31 characters via a desktop modal dialog, and
+  saves entries with a verification checksum in application settings.
+  `options.cpp` supplies keyboard shortcuts.
+- **DOS behavior / difference:** `scores.c` implements five ordered
+  `unsigned long` scores; three uppercase ASCII initials are captured
+  by `input.inc` and shown in `hud.inc`. At game-over, a positive
+  qualifying score opens entry; Enter inserts/saves, Esc skips.
+  The source-relative ordering is retained for equal scores, but
+  DOS stores a fixed-width, versioned text `SCORES.DAT` in the
+  current directory, not settings. A missing/corrupt file resets
+  the table and file save failures are shown. Menu HIGH SCORES
+  displays the current top five; no original long-name dialog,
+  multiple players or settings persistence.
+- **Why:** 80px side HUD and 16-bit DOS do not include the desktop
+  ImGui/settings UI. Three letters fit without a new font,
+  large image assets or a window manager; the save is outside
+  active gameplay. This is a UI/storage adaptation, not a measured
+  CPU performance requirement. Actual V20/disk compatibility is
+  UNVERIFIED.
+- **Evidence/tests:** `TEST.EXE` covers rank ordering, tie/overflow
+  rejection, name validation, valid save/load and corrupted-file
+  rejection. Host regression tests check the input queue and
+  menu/shortcut source. The main DOSBox-X smoke remains intentionally
+  score-I/O free; manual physical verification of three-initial entry,
+  saved-file reload, disk-full/readonly save failure, and exit/return
+  is still required.
+- **Restoration:** preserve the current top-five logic, then compare
+  Windows score eligibility, multi-player handling and long-name
+  entry against source before considering richer UI. Do not add disk
+  I/O to the active physics loop.
 
 ## Required fidelity review for EVERY gameplay-affecting change
 

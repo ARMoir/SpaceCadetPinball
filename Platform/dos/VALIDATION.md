@@ -317,3 +317,31 @@ test checks to `hud.inc` and `input.inc` corrected the issue.
 performance, or exact source-level game-rule fidelity. These remain
 distinct from the passing emulator/build tests, and all F-001 through
 F-008 exceptions remain open.
+
+## Middle mouse, timed HUD and high scores (2026-11-07)
+
+- Original `options.cpp` bindings for middle mouse launch, F5 sound
+  and F8 controls are restored alongside existing keyboard controls.
+  Only INT 33h drivers reporting three buttons are queried for middle
+  press counts. Rapid scan codes for three-letter score entry go into
+  a bounded IRQ-to-main queue; no DOS file access occurs in IRQ1.
+- The `TTextBox.cpp`-inspired HUD uses one 26-frame event message,
+  preserving gameplay and sprite art but not the original message queue
+  and priority system. Menu HIGH SCORES is available without altering
+  the table graphics.
+- The separate `scores.c` module keeps a local five-entry table
+  in `SCORES.DAT`; loads at startup, and saves only on confirmation
+  following a qualifying game-over. Invalid/missing files reset to
+  blank scores; `/smoke` never accesses the file. No file access
+  occurs during active ball physics.
+- Native `TEST.EXE` assertions cover rank/tie order, middle mouse
+  button masks, file roundtrip, invalid names and corrupt file rejection.
+  Host input/HUD tests check original shortcuts and initial-entry routing.
+  Standard DOSBox-X Tandy/VGA gameplay and frame parity are required.
+- **Physical acceptance pending:** on the real EX/V20, test held
+  middle plunger, quick tap, driver with only two reported buttons,
+  F5/F8, timed messages and the entire score-entry/save/reload flow.
+  Measure score prompt redraw and test a read-only/disk-full directory
+  for the visible SAVE FAILED indicator. Behavior and V20 cost are
+  UNVERIFIED pending those hardware tests. F-007 and new F-009 remain
+  open for original UI/score parity.

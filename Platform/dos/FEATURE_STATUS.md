@@ -26,15 +26,15 @@ Tandy 1000 EX/V20.
 | Appearance | Classic `TABLE.TGA`; optional default `TABLE3D.TGA` with **offline-only static** fake-depth shading; `/classic` comparison | Both styles share the same `TABLE.DAT`; original colored artwork remains intact |
 | Ball and paddles | Imported ball and two rest/raised flipper sprites, fixed-point movement and collisions | Playable but simplified physics, not continuous original sweep |
 | Plunger | Eight original animation frames, hold/release, full/weak launch; weak shooter returns can be launched again | DOS charge curve differs from source (F-003) |
-| Game lifecycle | Three balls, score, drain, game over, restart, basic ball reset | No complete rules/bonus/multiplayer |
+| Game lifecycle | Three balls, score, drain, game over, restart, basic ball reset and persistent local top-five high scores with initials | No complete scoring rules/bonus/multiplayer (F-009 is the simplified high-score file/entry) |
 | Bumpers | Seven source-derived visible caps have radial contact, static initial 500/1500 scoring | No original per-bumper rule progression or vertical layers (F-004) |
 | Kickback saves | Left/right outlane catch, wind-up and return; one use per side per ball | **Not** original Hazard Target/gate state logic (F-001) |
 | Nudge / tilt | X / A / D impulses and tilt-warning/lockout | Custom thresholds, not exact original accumulation (F-005) |
 | Universal anti-stuck | Q6 position progress watchdog, upward nudge, 2 verified-clear local moves, free same-ball plunger return | Original `UnstuckBall` detection/counter timing not reproduced; V20 behavior not physically verified (F-008) |
-| Inputs and UI | Z and / flippers **plus optional DOS mouse left/right buttons**, Space plunger, keyboard menu, pause, new game, help/controls, sound toggle, exit | Standard INT 33h DOS mouse driver required, mouse click behavior unverified on real V20; menu is a compact substitute |
+| Inputs and UI | Z and / flippers, optional left/right mouse; **middle mouse plunger** on three-button drivers; Space launch; F5 sound, F8 controls, temporary event messages, initials/top-five panel | DOS INT 33h mouse driver required; keyboard and file/menu flow need physical V20 verification; reduced original TTextBox behavior (F-007/F-009) |
 | Sound | Short Tandy PSG tones in mode 09h, PC-speaker event tones in VGA mode 13h; `/nosound`, S toggle | Original sound samples/music and exact source timing not ported; physical VGA speaker test pending |
 | Diagnostics | `/record`, `INPUT.TXT`, `FLIGHT.TXT` (schema 4), slow-frame and both outer-rail counters; PC-side `analyze_logs.py` | Buffer until exit, not long-term historical telemetry |
-| Build/repro | Open Watcom C89 compilation of `main.c`, `game.c`, `table.c` with named `.inc` fragments; source-layout, converter and gameplay tests; DOSBox-X Tandy/VGA parity and `CADET.zip` artifact | [Post-refactor CI run 42422864888](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888) passed; emulator pass does not prove physical V20 or VGA timing |
+| Build/repro | Open Watcom C89 compilation of `main.c`, `game.c`, `table.c`, `scores.c` with named `.inc` fragments; source-layout, converter, high-score and gameplay tests; DOSBox-X Tandy/VGA parity and `CADET.zip` artifact | [Post-refactor CI run 42422864888](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888) passed; emulator pass does not prove physical V20 or VGA timing |
 
 **Video compatibility addition (2026-11-07):** both standard BIOS
 Tandy/PCjr mode 09h and VGA mode 13h are implemented in the **same**
@@ -101,9 +101,11 @@ secretly available behind a menu:
 - **Physical target and ramp event logic:** proper rollover lanes and switches,
   stand-up/drop/spot target events, sinks, holes, kickouts, tripwires,
   flags, live gate logic, ramp entry/exit and their state-driven animations.
-- **Multiplayer and high-score system:** multiple alternating players,
-  high-score table, initials entry, persistent scores/settings and the full
-  Windows Game/Options dialogs.
+- **Full multiplayer/settings system:** multiple alternating players,
+  original long-name/high-score dialog and desktop configuration-backed
+  persistence, plus the full Windows Game/Options dialogs. The DOS
+  top-five `SCORES.DAT` and three-initial entry are now implemented,
+  but remain a simplified standalone version of `high_score.cpp` (F-009).
 - **Original audiovisual presentation:** complete sound/music resources,
   synchronized lamps and other dynamic object sprites, full-resolution art
   and original renderer/layered camera.
@@ -168,6 +170,18 @@ For investigation, run `CADET /record`, quit with Esc immediately after a
 failure, then collect `INPUT.TXT` and `FLIGHT.TXT`. `analyze_logs.py` on a
 PC can summarize them. `FLIGHT.TXT` stores only the last 256 rendered
 frames (~14 seconds), so it is not a permanent replay.
+
+## UI and high-score additions (2026-11-07)
+
+The existing side panel now displays short event messages from the
+original event codes. The menu exposes `HIGH SCORES` and the program
+prompts for three initials only if a completed game enters its top
+five. `scores.c` validates and persists five ordered scores in local
+`SCORES.DAT`; it is not a Windows settings file. Middle-click launch,
+F5 sound and F8 controls restore original options.cpp bindings. This
+work has **no new physics behaviors** and adds no disk I/O to the
+active gameplay loop. The full original `TTextBox` queue, Windows
+score dialog/settings and source missions remain incomplete (F-007/F-009).
 
 ## Source-aligned implementation
 

@@ -32,13 +32,15 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | Nudge and tilt | [`nudge.inc`](nudge.inc), [`control.inc`](control.inc) | `nudge.cpp`, `pb.cpp` (F-005) |
 | Stuck-ball rescue | [`unstuck.inc`](unstuck.inc) | `control.cpp::UnstuckBall` (F-008) |
 | Ball appearance, Tandy/VGA drawing | [`video.inc`](video.inc), [`assets.inc`](assets.inc), [`main.c`](main.c) | `render.cpp`, `gdrv.cpp` (F-007) |
-| Menu/help, mouse, sound | [`hud.inc`](hud.inc), [`input.inc`](input.inc), [`audio.inc`](audio.inc) | `winmain.cpp`, `options.cpp`, `Sound.cpp` (F-007) |
+| Menu/help, mouse, sound | [`hud.inc`](hud.inc), [`input.inc`](input.inc), [`audio.inc`](audio.inc) | `winmain.cpp`, `options.cpp`, `TTextBox.cpp`, `Sound.cpp` (F-007) |
+| High-score table, initials and file persistence | [`scores.c`](scores.c), [`scores.h`](scores.h), [`hud.inc`](hud.inc) | `high_score.cpp` (F-009) |
 
 ## File and original function map
 
 | DOS implementation | Original code to consult | Matches (limited) | Diverges (F-###) |
 | --- | --- | --- | --- |
 | [`table.c`](table.c) `table_load`, `table_index`, `index_slings` | [`loader.cpp`](../../SpaceCadetPinball/loader.cpp); [`proj.cpp`](../../SpaceCadetPinball/proj.cpp); [`TEdgeManager.cpp`](../../SpaceCadetPinball/TEdgeManager.cpp); [`TBumper.cpp`](../../SpaceCadetPinball/TBumper.cpp) | Source-derived static geometry, sprite data and offline geometry index | SCP2 reduced 2D layout, no full gate/layer/component semantics (F-002, F-004) |
+| [`scores.c`](scores.c) `scores_load`, `scores_save`, `scores_rank`, `scores_insert` | [`high_score.cpp`](../../SpaceCadetPinball/high_score.cpp) | Five ranked scores, stable insertion, load/save and name entry | DOS local `SCORES.DAT`, three-character initials instead of long names and config-backed source (F-009) |
 | [`game.c`](game.c) `integer_sqrt` | [`maths.cpp`](../../SpaceCadetPinball/maths.cpp) | Integer-length calculation for fixed-point contact geometry | No original float/3D math pipeline (F-006) |
 | [`state.inc`](state.inc) | [`TPinballTable.cpp`](../../SpaceCadetPinball/TPinballTable.cpp); [`TFlipper.cpp`](../../SpaceCadetPinball/TFlipper.cpp); [`TPlunger.cpp`](../../SpaceCadetPinball/TPlunger.cpp) | three-ball feed and source flipper endpoints | fixed-point three-position flipper and reset conventions (F-003, F-006, F-008) |
 | [`ball_collision.inc`](ball_collision.inc) | [`TBall.cpp`](../../SpaceCadetPinball/TBall.cpp); [`TEdgeSegment.cpp`](../../SpaceCadetPinball/TEdgeSegment.cpp); [`maths.cpp`](../../SpaceCadetPinball/maths.cpp) | contact normal, response impulse and correction | Q6/Q8 2D capsules and sampled impulses (F-002, F-006) |
@@ -57,9 +59,9 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | DOS file | Original code to consult | Matches / divergence |
 | --- | --- | --- |
 | [`video_shake.inc`](video_shake.inc) | [`render.cpp`](../../SpaceCadetPinball/render.cpp) | DOS-ONLY; nudge visual feedback; Tandy CRTC only; VGA disabled (F-007) |
-| [`input.inc`](input.inc) | [`options.cpp`](../../SpaceCadetPinball/options.cpp); [`winmain.cpp`](../../SpaceCadetPinball/winmain.cpp) | ADAPTED; Z and /, mouse left/right flippers; DOS IRQ1 / INT33h; middle click not ported (F-007) |
+| [`input.inc`](input.inc) | [`options.cpp`](../../SpaceCadetPinball/options.cpp); [`winmain.cpp`](../../SpaceCadetPinball/winmain.cpp) | ADAPTED; original left/right mouse flippers, middle mouse launch, F5 sound and F8 controls; DOS IRQ1 / INT33h, initials scan queue (F-007/F-009) |
 | [`video.inc`](video.inc) | [`render.cpp`](../../SpaceCadetPinball/render.cpp); [`gdrv.cpp`](../../SpaceCadetPinball/gdrv.cpp) | ADAPTED; transparent source sprite compositing; banked B800h or A000h, 16-color, no Z layers (F-007) |
-| [`hud.inc`](hud.inc) | [`TTextBox.cpp`](../../SpaceCadetPinball/TTextBox.cpp); [`winmain.cpp`](../../SpaceCadetPinball/winmain.cpp) | ADAPTED; score, balls, game status; compact UI/font, incomplete menus (F-007) |
+| [`hud.inc`](hud.inc) | [`TTextBox.cpp`](../../SpaceCadetPinball/TTextBox.cpp); [`high_score.cpp`](../../SpaceCadetPinball/high_score.cpp); [`winmain.cpp`](../../SpaceCadetPinball/winmain.cpp) | ADAPTED; compact timed event messages, top-five/initials screens; not original prioritized text queue or long-name dialog (F-007/F-009) |
 | [`audio.inc`](audio.inc) | [`Sound.cpp`](../../SpaceCadetPinball/Sound.cpp); [`TSound.cpp`](../../SpaceCadetPinball/TSound.cpp) | DOS-ONLY; event feedback; PSG/PC-speaker substitute rather than samples (F-007) |
 | [`assets.inc`](assets.inc) | [`loader.cpp`](../../SpaceCadetPinball/loader.cpp); [`gdrv.cpp`](../../SpaceCadetPinball/gdrv.cpp) | DOS-ONLY; source-derived ball/table assets; SCP2 and DOS-specific Tandy/VGA unpacking (F-007) |
 | [`main.c`](main.c) DOS game loop | [`pb.cpp`](../../SpaceCadetPinball/pb.cpp); [`winmain.cpp`](../../SpaceCadetPinball/winmain.cpp) | DOS 18.2 Hz display and 4 substeps, keyboard/game status, diagnostics (F-007) |
@@ -67,7 +69,8 @@ specific aspects in the MATCHES column are more limited than whole functions.
 ## How it is compiled and why
 
 `table.c` is an independently compiled object for file parsing, geometry
-indexing and setup. `game.c` retains the time-critical
+indexing and setup; `scores.c` is another separate C89 object for rare
+startup/finished-game/menu operations and file persistence. `game.c` retains the time-critical
 collision/control code in **one translation unit**, with no new calls
 per physics step. Each `.inc` is a source fragment included exactly once;
 the `flipper.inc` and `plunger.inc` statements are included *inside*
@@ -79,9 +82,10 @@ were before. This is deliberate to protect the V20's stack, CPU and
 memory budget, not an invitation to compile `.inc` files individually.
 
 `game.h` still defines `Game`, `Table`, `Edge`, Q6 constants and
-the external API. `build.py` now builds `CADET.EXE` from
-`main.c + game.c + table.c`, and `TEST.EXE` from
-`test_game.c + game.c + table.c`. There are no new external data files,
+the gameplay API. `scores.h` supplies the separate top-five C89 API.
+`build.py` builds `CADET.EXE` from
+`main.c + game.c + table.c + scores.c`, and `TEST.EXE` from
+`test_game.c + game.c + table.c + scores.c`. There are no new external data files,
 no changed `TABLE.DAT` format, and no changes to original table art.
 
 Source order matters: `game_step` still handles input/nudge/charging,
@@ -101,7 +105,9 @@ real 7.16 MHz V20 performance or full original-rule parity.
 **MISSING:** multiball, mission and rank progression, award/jackpot/bonus,
 per-bumper control/scoring states, target/gate progression, full ramp
 heights/collision groups, original rotating flipper collision, original
-sound/music and high-score/multiplayer UI. These are tracked in
+sound/music, complete Windows high-score dialog and multiplayer UI.
+Basic persistent DOS top-five scores are implemented (F-009). The
+remaining differences are tracked in
 [FEATURE_STATUS.md](FEATURE_STATUS.md) and in the open F-001 through
 F-008 entries. Their absence is not a performance optimization.
 

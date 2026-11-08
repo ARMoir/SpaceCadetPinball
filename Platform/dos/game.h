@@ -25,10 +25,12 @@
 #define KEY_NUDGE 8 /* X: nudge upward */
 #define KEY_NUDGE_LEFT 16 /* A: bump from left, ball goes right */
 #define KEY_NUDGE_RIGHT 32 /* D: bump from right, ball goes left */
-/* Standard DOS INT 33h mouse state: bit 0=left, bit 1=right.
- * Mouse and keyboard share exactly the same existing flipper game bits. */
+/* Standard DOS INT 33h: bit0=left, bit1=right, bit2=middle.
+ * Optional third button matches the original options.cpp plunger bind. */
 #define MOUSE_FLIPPER_KEYS(buttons) \
     ((((buttons)&1U)?KEY_LEFT:0U) | (((buttons)&2U)?KEY_RIGHT:0U))
+#define MOUSE_GAME_KEYS(buttons) \
+    (MOUSE_FLIPPER_KEYS(buttons) | (((buttons)&4U)?KEY_LAUNCH:0U))
 typedef struct { short x,y,ex,ey,tx,ty,length,score,boost; } Edge;
 typedef struct { short x,y,w,h; unsigned char pixels[1024]; } Sprite;
 /* Runtime-only collision AABBs, not part of SCP2 on-disk format. */

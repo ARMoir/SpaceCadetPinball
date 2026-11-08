@@ -34,8 +34,8 @@ class SourceLayoutTests(unittest.TestCase):
 
     def test_build_links_table_setup_once(self):
         script = (DOS/"build.py").read_text()
-        self.assertIn("['main.c','game.c','table.c']", script)
-        self.assertIn("['test_game.c','game.c','table.c']", script)
+        self.assertIn("['main.c','game.c','table.c','scores.c']", script)
+        self.assertIn("['test_game.c','game.c','table.c','scores.c']", script)
         self.assertIn("integer_sqrt(", (DOS/"game.c").read_text())
         self.assertIn("table_index(", (DOS/"table.c").read_text())
 

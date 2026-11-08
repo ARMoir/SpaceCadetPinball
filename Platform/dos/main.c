@@ -1,5 +1,6 @@
 /* Native 8086 real-mode DOS: Tandy mode 09h and standard VGA mode 13h. */
 #include "game.h"
+#include "scores.h"
 #include "menu_art.h"
 #include <dos.h>
 #include <conio.h>
@@ -56,7 +57,9 @@ int main(int argc,char **argv)
     int view=0,choice=0,paused=0,exit_requested=0,ui_dirty=0;
     int old_flags=-1;
     unsigned char toggle_sound,toggle_menu,key_up,key_down;
-    unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_new;
+    unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_f5,key_f8,key_new;
+    unsigned char key_backspace;
+    unsigned score_scan;
     unsigned observed=0,launches=0,full_launches=0,mouse_input=0;
     int no_mouse=0,video_choice=-1; /* -1 detect VGA; 0 Tandy; 1 VGA */
     union REGS r;
@@ -95,6 +98,10 @@ int main(int argc,char **argv)
         return 1;
     }
     game_reset(&game,&table);
+    /* Read once, before installing the keyboard IRQ hook. /smoke avoids
+     * all high-score I/O so deterministic emulator tests never write it. */
+    scores_reset();
+    if(!smoke) scores_load("SCORES.DAT");
     if(!smoke) game.plunger_rng^=ticks(); /* Reproducible smoke, varied interactive play. */
     memset(&r,0,sizeof(r)); r.h.ah=15; int86(0x10,&r,&r); old_mode=r.h.al;
     mode((unsigned char)(vga_mode?0x13:9));
@@ -129,17 +136,20 @@ int main(int argc,char **argv)
         toggle_menu=pressed_keys[50]; /* M */
         key_up=pressed_keys[72]; key_down=pressed_keys[80];
         key_enter=pressed_keys[28]; key_esc=pressed_keys[1];
+        key_backspace=pressed_keys[14];
         key_f1=pressed_keys[59]; key_f2=pressed_keys[60];
-        key_f3=pressed_keys[61]; key_new=pressed_keys[49];
+        key_f3=pressed_keys[61]; key_f5=pressed_keys[63];
+        key_f8=pressed_keys[66]; key_new=pressed_keys[49];
         pressed_keys[31]=pressed_keys[50]=pressed_keys[72]=0;
         pressed_keys[80]=pressed_keys[28]=pressed_keys[1]=0;
         pressed_keys[59]=pressed_keys[60]=pressed_keys[61]=0;
+        pressed_keys[63]=pressed_keys[66]=pressed_keys[14]=0;
         pressed_keys[49]=0;
         _enable();
         /* OR mouse with existing Z and / controls; either device can
          * hold or trigger either flipper without altering physics. */
         mouse_input=mouse_available?
-            MOUSE_FLIPPER_KEYS(mouse_buttons()):0;
+            MOUSE_GAME_KEYS(mouse_buttons()):0;
         input|=mouse_input;
         ui_dirty=0;
         if(smoke) {
@@ -151,39 +161,63 @@ int main(int argc,char **argv)
                 input|=KEY_LAUNCH;
         }
         observed|=input;
-        if(toggle_sound) {
+        if(!score_capture && (toggle_sound || key_f5)) {
             /* Mute before disabling the PSG, so a held note cannot stick. */
             if(sound_enabled) { silence(); sound_ticks=0; sound_enabled=0; }
             else { sound_enabled=1; sound_ticks=0; }
             ui_dirty=1;
         }
-        if(toggle_menu) {
-            view=view?0:1;
-            ui_dirty=1;
-        }
-        if(key_f1) { view=2; ui_dirty=1; }
-        if(key_esc) {
-            if(view) { view=0; ui_dirty=1; }
-            else exit_requested=1;
-        }
-        if(view==1) {
-            if(key_up) { choice=(choice+4)%5; ui_dirty=1; }
-            if(key_down) { choice=(choice+1)%5; ui_dirty=1; }
-            if(key_enter) {
-                ui_dirty=1;
-                if(choice==0) key_new=1;
-                else if(choice==1) { paused=!paused; view=0; }
-                else if(choice==2) {
-                    if(sound_enabled) { silence(); sound_ticks=0; sound_enabled=0; }
-                    else { sound_enabled=1; sound_ticks=0; }
-                } else if(choice==3) view=2;
-                else exit_requested=1;
+        if(view==4) {
+            /* The ball is already over and physics is frozen. Process every
+             * queued letter in press order, including rapid XT key taps. */
+            while((score_scan=score_next_scan())!=0) {
+                char ch=score_letter(score_scan);
+                if(ch && score_name_length<3) {
+                    score_name[score_name_length++]=ch;
+                    ui_dirty=1;
+                }
             }
-        } else if(view==2 && key_enter) {
-            view=1; ui_dirty=1;
+            if(key_backspace && score_name_length) {
+                score_name[--score_name_length]='A';
+                ui_dirty=1;
+            }
+            if(key_enter) {
+                scores_insert(game.score,score_name);
+                score_save_failed=!scores_save("SCORES.DAT");
+                score_capture=0;
+                view=3; ui_dirty=1;
+            } else if(key_esc) {
+                score_capture=0; view=0; ui_dirty=1;
+            }
+        } else {
+            if(toggle_menu) { view=view?0:1; ui_dirty=1; }
+            if(key_f1 || key_f8) { view=2; ui_dirty=1; }
+            if(key_esc) {
+                if(view==2 || view==3) view=1;
+                else if(view) view=0;
+                else exit_requested=1;
+                ui_dirty=1;
+            }
+            if(view==1) {
+                if(key_up) { choice=(choice+5)%6; ui_dirty=1; }
+                if(key_down) { choice=(choice+1)%6; ui_dirty=1; }
+                if(key_enter) {
+                    ui_dirty=1;
+                    if(choice==0) key_new=1;
+                    else if(choice==1) { paused=!paused; view=0; }
+                    else if(choice==2) {
+                        if(sound_enabled) { silence(); sound_ticks=0; sound_enabled=0; }
+                        else { sound_enabled=1; sound_ticks=0; }
+                    } else if(choice==3) view=2;
+                    else if(choice==4) view=3;
+                    else exit_requested=1;
+                }
+            } else if((view==2 || view==3) && key_enter) {
+                view=1; ui_dirty=1;
+            }
+            if(key_f3) { paused=!paused; ui_dirty=1; }
         }
-        if(key_f3) { paused=!paused; ui_dirty=1; }
-        if(key_f2 || key_new) {
+        if(view!=4 && (key_f2 || key_new)) {
             game_reset(&game,&table);
             game.plunger_rng^=ticks();
             paused=0; view=0; ui_dirty=1;
@@ -207,6 +241,24 @@ int main(int argc,char **argv)
         /* Match the unpowered resting collision surface during tilt. */
         if(game.tilted) input&=~(KEY_LEFT|KEY_RIGHT);
         play_event(event);
+        /* TTextBox-inspired single transient message. Only UI changes,
+         * with no source physics or rendering asset modifications. */
+        if(event) {
+            hud_event=event; hud_event_frames=26; ui_dirty=1;
+        } else if(hud_event_frames && !view && !paused) {
+            if(!--hud_event_frames) ui_dirty=1;
+        }
+        /* Detect a completed qualifying game exactly once. Keyboard/menu
+         * entry and subsequent score file writes occur with physics stopped.
+         * Never start score entry on the deterministic /smoke path. */
+        if(!smoke && old_over==0 && game.over &&
+           scores_rank(game.score)>=0) {
+            score_name[0]=score_name[1]=score_name[2]='A';
+            score_name[3]=0; score_name_length=0;
+            score_head=score_tail=0;
+            score_capture=1;
+            view=4; ui_dirty=1;
+        }
         if(record) {
             FlightTrace *sample=&flight[flight_next];
             sample->frame=frame;
@@ -320,6 +372,7 @@ int main(int argc,char **argv)
         old_wait=game.waiting; old_over=game.over;
         previous_input=input;
     }
+    score_capture=0;
     _disable(); _dos_setvect(9,old_keyboard); _enable();
     camera_shift(0);
     silence();

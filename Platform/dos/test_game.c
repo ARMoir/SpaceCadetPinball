@@ -1,4 +1,5 @@
 #include "game.h"
+#include "scores.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,7 +49,40 @@ int main(int argc,char **argv)
     assert(MOUSE_FLIPPER_KEYS(1)==KEY_LEFT);
     assert(MOUSE_FLIPPER_KEYS(2)==KEY_RIGHT);
     assert(MOUSE_FLIPPER_KEYS(3)==(KEY_LEFT|KEY_RIGHT));
-    assert(MOUSE_FLIPPER_KEYS(4)==0); /* middle button ignored */
+    assert(MOUSE_FLIPPER_KEYS(4)==0); /* No third-button flipper. */
+    assert(MOUSE_GAME_KEYS(4)==KEY_LAUNCH);
+    assert(MOUSE_GAME_KEYS(7)==(KEY_LEFT|KEY_RIGHT|KEY_LAUNCH));
+    assert(MOUSE_GAME_KEYS(8)==0);
+    /* High-score table: sort, reject ties at full capacity, validate,
+     * persist five scores, and fail safely on malformed/truncated data. */
+    scores_reset();
+    assert(scores_rank(0)==-1 && scores_rank(10)==0);
+    assert(scores_insert(1000UL,"ABC")==0);
+    assert(scores_insert(500UL,"XYZ")==1);
+    assert(scores_insert(1000UL,"DEF")==1);
+    assert(scores_insert(200UL,"BAD!")==-1);
+    assert(scores_table[0].score==1000UL &&
+           !strcmp(scores_table[0].initials,"ABC"));
+    assert(scores_table[1].score==1000UL &&
+           !strcmp(scores_table[1].initials,"DEF"));
+    assert(scores_table[2].score==500UL &&
+           !strcmp(scores_table[2].initials,"XYZ"));
+    assert(scores_insert(300UL,"AAA")==3);
+    assert(scores_insert(100UL,"BBB")==4);
+    assert(scores_rank(100UL)==-1);
+    assert(scores_save("SCTEST.DAT"));
+    scores_reset();
+    assert(scores_load("SCTEST.DAT"));
+    assert(scores_table[0].score==1000UL &&
+           !strcmp(scores_table[1].initials,"DEF") &&
+           scores_table[4].score==100UL);
+    f=fopen("SCTEST.DAT","w"); assert(f);
+    fputs("SC1\nABC 9999999999\n",f); fclose(f);
+    assert(!scores_load("SCTEST.DAT"));
+    assert(scores_table[0].score==0);
+    remove("SCTEST.DAT");
+    puts("STAGE: source high-score ranks, file roundtrip and corrupt input");
+    fflush(stdout);
     fixture(); g.waiting=0; g.x=90*FP; g.y=163*FP; g.vy=30;
     game_step(&g,&t,MOUSE_FLIPPER_KEYS(1));
     assert(g.vy<0 && g.flipper_contacts[0]>0);

@@ -1,12 +1,31 @@
 /* SOURCE MAP: HUD and menus
  * ORIGINAL: TTextBox.cpp; winmain.cpp
  * STATUS: ADAPTED
- * MATCHES: score, balls, game status
- * DIVERGES: compact UI/font, incomplete menus
+ * MATCHES: score, balls, game status, five high-score entries
+ * DIVERGES: compact UI/font, reduced single-message TTextBox queue
  * EXCEPTIONS: F-007
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
  */
+/* One TTextBox-inspired event at a time; displayed for ~1.4s at 18.2Hz.
+ * No redraw of static playfield and no physics code in this module. */
+static int hud_event=0,hud_event_frames=0;
+static char score_name[4]={'A','A','A',0};
+static unsigned char score_name_length=0;
+static int score_save_failed=0;
+
+static const char *hud_event_text(int event)
+{
+    switch(event) {
+        case 1: return "BUMPER HIT";
+        case 2: return "BALL LAUNCHED";
+        case 3: return "BALL LOST";
+        case 4: return "KICKBACK";
+        case 5: return "TILT";
+        default: return "IN PLAY";
+    }
+}
+
 /* Original tiny UI font, 3x5. Table art and moving sprites come from the pack. */
 static const unsigned short font[]={
     31599,11415,29671,29647,23497,31183,31215,29257,31727,31695,
@@ -67,13 +86,11 @@ static void panel_frame(int x,int y,int w,int h)
     for(i=y;i<y+h;i++) { pixel(x,i,8); pixel(x+w-1,i,7); }
 }
 
-/* view: 0 = score, 1 = Game/Options menu, 2 = controls.
- * The original top menu actions that are implemented by this DOS port are
- * keyboard-operable; unsupported music, players and high scores are not
- * falsely advertised as functional. */
+/* view: 0=score, 1=menu, 2=controls, 3=top five, 4=initials input.
+ * Compact DOS UI substitutes the original Windows dialogs. */
 static void draw_panel(int view,int choice,int paused)
 {
-    static const char *items[]={"NEW GAME","PAUSE","SOUND","CONTROLS","EXIT"};
+    static const char *items[]={"NEW GAME","PAUSE","SOUND","CONTROLS","HIGH SCORES","EXIT"};
     int i,y;
     char buf[24];
     restore(240,61,80,139);
@@ -81,8 +98,8 @@ static void draw_panel(int view,int choice,int paused)
         panel_frame(241,63,78,110);
         text_color(245,67,"GAME OPT HELP",13);
         text_color(245,79,"MENU",14);
-        for(i=0;i<5;i++) {
-            y=92+i*15;
+        for(i=0;i<6;i++) {
+            y=89+i*15;
             if(i==choice) {
                 pixel(244,y+2,14); pixel(245,y+2,14);
             }
@@ -99,13 +116,33 @@ static void draw_panel(int view,int choice,int paused)
         text_color(245,68,"CONTROLS",13);
         text_color(245,84,"Z OR LEFT CLICK",15);
         text_color(245,96,"/ OR RIGHT CLICK",15);
-        text_color(245,108,"SPACE PLUNGER",15);
+        text_color(245,108,"SPACE OR MID CLK",15);
         text_color(245,120,"A LEFT BUMP",15);
         text_color(245,132,"D RIGHT BUMP",15);
         text_color(245,144,"X UP BUMP",15);
-        text_color(245,156,"S SOUND F2 NEW",15);
-        text_color(245,168,"F3 PAUSE",15);
+        text_color(245,156,"F5 SOUND F2 NEW",15);
+        text_color(245,168,"F3 PAUSE F8 HELP",15);
         text_color(245,180,"ENTER BACK",7);
+    } else if(view==3) {
+        panel_frame(241,63,78,129);
+        text_color(245,68,"HIGH SCORES",13);
+        for(i=0;i<SCORE_COUNT;i++) {
+            sprintf(buf,"%d %s",i+1,scores_table[i].initials);
+            text_color(245,83+i*17,buf,15);
+            sprintf(buf,"%lu",scores_table[i].score);
+            text_color(274,83+i*17,buf,7);
+        }
+        text_color(245,179,score_save_failed?"SAVE FAILED":"ENTER BACK",7);
+    } else if(view==4) {
+        panel_frame(241,63,78,129);
+        text_color(245,68,"NEW HIGH SCORE",13);
+        sprintf(buf,"%lu",game.score);
+        text_color(245,86,buf,15);
+        text_color(245,108,"ENTER INITIALS",14);
+        text_color(270,123,score_name,15);
+        text_color(245,150,"A-Z BACKSPACE",7);
+        text_color(245,165,"ENTER SAVE",15);
+        text_color(245,180,"ESC SKIP",7);
     } else {
         panel_frame(241,63,78,30);
         text_color(245,67,"BALL",13);
@@ -117,6 +154,7 @@ static void draw_panel(int view,int choice,int paused)
         panel_frame(241,97,78,41);
         text_color(245,101,"STATUS",13);
         text_color(245,113,paused?"PAUSED":game.over?"GAME OVER":
+                      hud_event_frames?hud_event_text(hud_event):
                       game.tilted?"TILT":game.tilt_warning?"WARNING":
                       game.kick_delay?"KICKING":game.waiting?"READY":"IN PLAY",
                       game.tilted?12:15);
@@ -129,7 +167,7 @@ static void draw_panel(int view,int choice,int paused)
                       "SPACE LAUNCH",7);
         panel_frame(241,142,78,51);
         text_color(245,147,"M MENU F3 PAUSE",15);
-        text_color(245,158,sound_enabled?"S SOUND ON":"S SOUND OFF",15);
+        text_color(245,158,sound_enabled?"F5 SOUND ON":"F5 SOUND OFF",15);
         text_color(245,170,"Z / FLIPPERS",15);
         text_color(245,182,"ESC EXIT",7);
     }

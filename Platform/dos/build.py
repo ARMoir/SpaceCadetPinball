@@ -21,8 +21,8 @@ def main():
               '-k4096', '-i='+str(ROOT/'Platform/dos')]
     # Table setup is independently compiled. .inc logic stays in its original
     # hot translation units to avoid new 8086 per-contact calls.
-    for exe, sources in [('CADET',['main.c','game.c','table.c']),
-                         ('TEST',['test_game.c','game.c','table.c'])]:
+    for exe, sources in [('CADET',['main.c','game.c','table.c','scores.c']),
+                         ('TEST',['test_game.c','game.c','table.c','scores.c'])]:
         subprocess.run(common+['-fe='+exe+'.EXE','-fm='+exe+'.MAP']+
                        [str(ROOT/'Platform/dos'/s) for s in sources],cwd=OUT,env=env,check=True)
     shutil.copy(ROOT/'Platform/dos/README.md',OUT/'README.TXT')

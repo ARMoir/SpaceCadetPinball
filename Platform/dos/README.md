@@ -54,9 +54,10 @@ from H and checked by an automated font regression test.
 1. Unpack Open Watcom 2 and set `WATCOM` to its absolute installation directory.
 2. From the repository root, run `python Platform/dos/build.py` (Python 3.9+).
    This builds `CADET.EXE` from `main.c`, `game.c`, and `table.c`,
-   and `TEST.EXE` from `test_game.c`, `game.c`, and `table.c`.
-   Named `.inc` fragments are included by those files, never compiled
-   as independent objects.
+   and `TEST.EXE` from `test_game.c`, `game.c`, `table.c`.
+   Both link `scores.c`, a separate setup/menu-only C89 high-score module.
+   Named `.inc` fragments are included by their parent files, never
+   compiled as independent objects.
 3. Copy `TABLE.DAT`, `TABLE.TGA` and `IMPORT.json` from
    `Platform/dos/data` into `build/dos`, or regenerate these from a Windows
    `PINBALL.DAT` using
@@ -80,11 +81,28 @@ from H and checked by an automated font regression test.
 
 Controls: **Z** or **left mouse button** for the left flipper,
 **/** or **right mouse button** for the right flipper. Any combination
-works simultaneously. Hold **Space** to pull back the plunger and release
-to launch (about 1.3 seconds to full power, with ~1% launch variation).
-**A** nudges from the left, **D** from the right, **X** nudges upward,
-**S** toggles sound, **N** starts a new game, and **Esc** exits.
-There are three balls. F1 also shows the mouse/keyboard flipper controls.
+works simultaneously. Hold **Space** or the **middle mouse button** to
+pull back the plunger and release to launch (about 1.3 seconds to full
+power, with ~1% launch variation). Middle click requires a driver
+reporting three buttons. **A** nudges from the left, **D** from the
+right, **X** nudges upward. **F5** (or S) toggles sound, **F8** (or F1)
+shows controls, **F2** (or N) starts a new game and **F3** pauses/resumes.
+**M** opens the menu, including **HIGH SCORES**. **Esc** goes back or
+exits from normal play. There are three balls.
+
+**Top-five high scores:** qualifying game-over scores open an initials
+entry screen automatically. Type up to three A-Z initials (unfilled
+positions default to A); **Backspace** edits, **Enter** saves, and
+**Esc** skips the entry. The five highest scores are visible from the
+menu, including after saving. `SCORES.DAT` is a small local file kept
+beside `CADET.EXE`. The file is optional: a missing or malformed file
+starts an empty table, and an unwritable directory displays
+`SAVE FAILED`. The game **never writes score files while a ball is in
+play**, and `CADET /smoke` reads/writes no score file. To retain
+records across game upgrades, preserve `SCORES.DAT` when copying a
+new CADET build. The original desktop five-entry high-score ordering
+is preserved, but DOS uses three-letter initials instead of the
+desktop's longer names and does not persist other menu settings (F-009).
 
 **Optional DOS mouse controls:** load a standard DOS-compatible mouse
 driver (such as MOUSE.COM or CTMOUSE) **before** starting CADET. The game
@@ -92,8 +110,10 @@ detects it using `INT 33h`. Without a mouse driver, no mouse polling
 occurs and Z and / work normally. The mouse cursor is not needed, and
 moving the pointer does not move the ball or paddle. Held buttons act
 like held keys; DOS mouse-driver press counters also catch quick clicks
-between the 18.2 Hz display frames. Mouse polling occurs only once per
-rendered frame, never in the 72.8 Hz physics steps.
+between the 18.2 Hz display frames. A driver reporting three buttons
+also enables middle-click plunger input (held and quick-click).
+Mouse polling occurs only once per rendered frame, never in the
+72.8 Hz physics steps.
 
 Start with `CADET /nomouse` to disable mouse detection and polling if
 your driver is incompatible or you want to compare real V20 performance.
@@ -103,7 +123,8 @@ working serial-mouse driver is required; an attached mouse alone does
 not provide an `INT 33h` driver. Mouse support is still pending physical
 hardware verification.
 `/nosound` starts with sound disabled, and **S** can re-enable it during
-play. Switching sound off silences any currently playing tone immediately.
+play. **F5** also toggles sound using the original desktop shortcut.
+Switching sound off silences any currently playing tone immediately.
 `/nomouse` disables optional DOS mouse input without affecting the keyboard.
 `/noshake` disables optional hardware viewport shaking (use this if the
 display shifts incorrectly on actual hardware). The small one-character
@@ -168,22 +189,25 @@ F-### exceptions. File names do not imply exact source-rule equivalence.
 | DOS implementation | Responsibility | Original C++ references |
 | --- | --- | --- |
 | [`table.c`](table.c) | SCP2 file loading, geometry indexing, bumper/slingshot detection | `loader.cpp`, `proj.cpp`, `TEdgeManager.cpp` |
+| [`scores.c`](scores.c), [`scores.h`](scores.h) | Top-five score ranking, validated file load/save after qualifying game ends | `high_score.cpp`; three-letter local file adaptation (F-009) |
 | [`game.c`](game.c) + [`state.inc`](state.inc), [`control.inc`](control.inc) | Fixed-point state, feed/reset, frame-step collision and rules dispatch | `TBall.cpp`, `TPinballTable.cpp`, `control.cpp` |
 | [`ball_collision.inc`](ball_collision.inc), [`bumper.inc`](bumper.inc), [`slingshot.inc`](slingshot.inc), [`rail_collision.inc`](rail_collision.inc) | Static/dynamic contact and simplified source-projected geometry | `TBall.cpp`, `TBumper.cpp`, `TEdgeManager.cpp` |
 | [`flipper.inc`](flipper.inc), [`plunger.inc`](plunger.inc) | Inlined branches inside `game_step` | `TFlipper.cpp`, `TFlipperEdge.cpp`, `TPlunger.cpp` |
 | [`kickback.inc`](kickback.inc), [`nudge.inc`](nudge.inc), [`unstuck.inc`](unstuck.inc) | Outlane saves, tilt and recovery | `TKickback.cpp`, `nudge.cpp`, `control.cpp` |
 | [`main.c`](main.c) + [`input.inc`](input.inc), [`video.inc`](video.inc), [`video_shake.inc`](video_shake.inc) | DOS main loop, IRQ/mouse input and Tandy/VGA output | `winmain.cpp`, `options.cpp`, `render.cpp` |
-| [`hud.inc`](hud.inc), [`audio.inc`](audio.inc), [`assets.inc`](assets.inc) | HUD/help, sound hardware and background loading | `TTextBox.cpp`, `Sound.cpp`, `gdrv.cpp` |
+| [`hud.inc`](hud.inc), [`audio.inc`](audio.inc), [`assets.inc`](assets.inc) | Transient event messages, HUD, initials/high-score panels, sound hardware and assets | `TTextBox.cpp`, `high_score.cpp`, `Sound.cpp`, `gdrv.cpp` |
 | [`game.h`](game.h), [`convert.py`](convert.py) | Shared 16-bit state and offline asset conversion | `maths.cpp`, `loader.cpp` and original resource data |
 
-**Compilation rule:** `table.c` is a separate C89 object because it
-loads and indexes assets outside active gameplay. `game.c` includes
+**Compilation rule:** `table.c` and `scores.c` are separate C89 objects,
+the latter used only for startup, game-over and paused-menu operations.
+Table loading and indexing occur outside active gameplay. `game.c` includes
 the physics/control fragments in their existing order, preserving
 static-helper visibility with no additional V20 per-collision calls.
 `flipper.inc` and `plunger.inc` are inserted *inside* `game_step`,
 not called as new functions. `main.c` similarly contains its DOS
-platform fragments in one translation unit. The refactor preserves
-`Game`/`Table` structures, constants, SCP2 format and assets.
+platform fragments in one translation unit. The source layout preserves `Game`/`Table` structures, physics
+constants, SCP2 format and imported assets. High scores and messages
+change only the DOS user-interface layer; no physics rule is added.
 
 **Contributor workflow:** Start with the matching original
 `SpaceCadetPinball/*.cpp` behavior; update [SOURCE_MAP.md](SOURCE_MAP.md)
@@ -228,6 +252,17 @@ Compare the same shot in `CADET /classic` versus `CADET /3d`. Use
 `CADET /record /classic` or `CADET /record /3d` to capture timing and
 confirm the enhanced appearance does not produce an unacceptable slowdown.
 The two artwork modes use the **same** collision and gameplay logic.
+
+## Lightweight gameplay feedback
+
+The HUD now displays the latest collision/event message for about
+1.4 seconds in its existing status area: `BUMPER HIT`,
+`BALL LAUNCHED`, `BALL LOST`, `KICKBACK` or `TILT`.
+The original `TTextBox.cpp` uses prioritized queued timed messages.
+This compact DOS version displays one event at a time, without allocating
+a queue or redrawing the whole 320x200 playfield. A score-entry panel
+or menu suspends game physics. These are user-interface additions
+rather than new target/mission rules (F-007, F-009).
 
 ## What comes from the original
 
@@ -376,7 +411,9 @@ outlane kickbacks and single-use gating, solid slingshot center
 recognition/anti-trapping, **universal stuck-ball detection, upward
 release, verified local relocation, free same-ball relaunch, and
 negative checks for shooter/flipper/normal drain**, drain/restart
-and a 20,000-step soak. It writes `TEST.OK` on success.
+and a 20,000-step soak. It also tests middle-button plunger
+mapping and the top-five scores' ordering, persistence and corrupted-file
+handling. It writes `TEST.OK` on success.
 `CADET /smoke` runs 360 timed frames, writes `SCREEN.BIN` (32768 bytes
 in Tandy mode, 64000 in VGA mode) and `SMOKE.TXT`, and restores DOS.
 The CI runner tests Tandy auto-detection, forced VGA, and VGA auto-detection

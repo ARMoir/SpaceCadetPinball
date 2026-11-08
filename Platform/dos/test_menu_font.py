@@ -45,6 +45,14 @@ class HelpTextTests(unittest.TestCase):
         self.assertIn("r.x.ax=3;", INPUT)
         self.assertIn("r.x.ax=5; r.x.bx=0;", INPUT)
         self.assertIn("r.x.ax=5; r.x.bx=1;", INPUT)
+        self.assertIn("r.x.ax=5; r.x.bx=2;", INPUT)
+        self.assertIn("if(mouse_middle_available)", INPUT)
+        self.assertIn("key_f5=pressed_keys[63]", MAIN)
+        self.assertIn("key_f8=pressed_keys[66]", MAIN)
+        self.assertIn("score_next_scan()", MAIN)
+        self.assertIn('"HIGH SCORES"', HUD)
+        self.assertIn('"NEW HIGH SCORE"', HUD)
+        self.assertIn('"BUMPER HIT"', HUD)
         self.assertIn('"/nomouse"', MAIN)
 
     def test_help_shows_real_nudge_keys(self):
