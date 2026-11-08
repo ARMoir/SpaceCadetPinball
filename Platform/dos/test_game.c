@@ -581,8 +581,8 @@ int main(int argc,char **argv)
         }
         t.sling_count=2;
         game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
-        /* The first five alternating impacts are legitimate pinball. */
-        for(j=0;j<5;j++) {
+        /* The first three alternating impacts are legitimate pinball. */
+        for(j=0;j<3;j++) {
             side=j&1;
             g.x=(short)((side?144:76)*FP);
             g.y=135*FP;
@@ -593,7 +593,7 @@ int main(int argc,char **argv)
                    g.sling_loop_breaks==0 &&
                    g.balls==3 && !g.waiting);
         }
-        /* The sixth true reversal escapes upward, not down the drain. */
+        /* The fourth true reversal escapes upward, not down the drain. */
         g.x=144*FP; g.y=135*FP; g.vx=96; g.vy=0;
         game_step(&g,&t,0);
         assert(g.sling_loop_breaks==1 &&
@@ -619,7 +619,7 @@ int main(int argc,char **argv)
         game_step(&g,&t,0);
         assert(!g.sling_chain_hits && !g.sling_chain_time);
         /* No rescue is granted to an active shooter or tilted ball. */
-        g.sling_chain_hits=5; g.sling_chain_time=100;
+        g.sling_chain_hits=3; g.sling_chain_time=100;
         g.sling_chain_side=1; g.tilted=1;
         g.x=144*FP; g.y=135*FP; g.vx=96; g.vy=0;
         game_step(&g,&t,0);

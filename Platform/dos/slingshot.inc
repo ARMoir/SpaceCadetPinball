@@ -10,15 +10,15 @@
 /* F-008: the original UnstuckBall-inspired 3px position watchdog cannot
  * detect a ball that repeatedly travels from left to right slingshot and
  * back. Count actual incoming contacts with ALTERNATING hulls, not mere
- * near-sling positions or repeated overlap corrections. Six distinct,
+ * near-sling positions or repeated overlap corrections. Four distinct,
  * alternating rebounds, each no more than ~2 seconds after the last,
  * get one
  * deterministic upward/inward impulse. A real volley can still happen:
- * three or four alternating hits are left completely alone.
+ * up to three alternating hits are left completely alone.
  * No free balls, teleport, scoring, mission change or timer overhead.
  * See F-002 / F-008: this is a DOS flattened-layer playability guard,
  * not a source TLight or TEdgeSegment rule. */
-#define SLING_LOOP_HITS 6
+#define SLING_LOOP_HITS 4
 #define SLING_LOOP_WINDOW 144
 static void sling_contact(Game *g,int side)
 {

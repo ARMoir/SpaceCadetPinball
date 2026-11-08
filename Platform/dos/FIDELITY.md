@@ -687,7 +687,7 @@ this upgrade does not resolve missing 3D collision/occlusion or mission rules.
   is no upper bound on a repeated two-sling cycle. DOS now records only
   actual incoming/reflecting contacts with the two source-derived
   solid sling hulls (F-002), rather than overlapping their collision
-  boxes. Six alternating contacts, with no gap longer than 144 Q6
+  boxes. Four alternating contacts, with no gap longer than 144 Q6
   substeps (~2 seconds), trigger one bounded upward-and-inward escape
   impulse. The immediate return is ordinary physics: the ball is **not**
   teleported or moved through walls, has no score or ball count changes,
@@ -707,7 +707,7 @@ this upgrade does not resolve missing 3D collision/occlusion or mission rules.
   `unstick_moves`, `unstick_relaunches` into
   `INPUT.TXT`; `/smoke` writes the same counters to `SMOKE.TXT`.
 - **Tests:** synthetic alternating genuine approach-side reflections
-  (six sides, correct inward/upward vector), five-hit ordinary
+  (four sides, correct inward/upward vector), three-hit ordinary
   volleys, same-side recontacts, expired progress, upper-table
   departure, tilt exclusion; plus prior
   synthetic stuck/jitter loops with zero or nonzero velocity;

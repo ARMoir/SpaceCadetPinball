@@ -107,8 +107,8 @@ quality and real CRT timing remain to be confirmed.
 A ball that keeps bouncing left/right between the two triangular
 slingshots moves too far for the original 3-pixel anti-stuck watchdog.
 The native DOS simulation now detects genuine incoming alternating
-sling collisions. **Five or fewer consecutive left/right contacts are
-normal pinball gameplay.** On the sixth sustained alternating hit
+sling collisions. **Three or fewer consecutive left/right contacts are
+normal pinball gameplay.** On the fourth sustained alternating hit
 (with no gap over roughly 2 seconds), the ball receives a modest
 upward-and-inward escape impulse. Physics continues normally: no
 teleport, no free ball, no invented points and no altered kickback
