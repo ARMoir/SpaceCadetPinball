@@ -52,6 +52,11 @@ class HelpTextTests(unittest.TestCase):
         self.assertIn("score_next_scan()", MAIN)
         self.assertIn('"HIGH SCORES"', HUD)
         self.assertIn('"NEW HIGH SCORE"', HUD)
+        self.assertIn("key_new=0; key_f2=0;", MAIN)
+        self.assertIn("if(!smoke && old_over==0 && game.over", MAIN)
+        self.assertIn('scores_load("SCORES.DAT")', MAIN)
+        self.assertIn('scores_save("SCORES.DAT")', MAIN)
+        self.assertIn("score_capture && !(scan&128) && !keys[code]", INPUT)
         self.assertIn('"BUMPER HIT"', HUD)
         self.assertIn('"/nomouse"', MAIN)
 

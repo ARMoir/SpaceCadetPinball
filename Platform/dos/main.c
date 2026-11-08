@@ -168,6 +168,9 @@ int main(int argc,char **argv)
             ui_dirty=1;
         }
         if(view==4) {
+            /* Initials may contain N. Do not treat the same N key as NEW
+             * GAME if Enter also confirms the score on this frame. */
+            key_new=0; key_f2=0;
             /* The ball is already over and physics is frozen. Process every
              * queued letter in press order, including rapid XT key taps. */
             while((score_scan=score_next_scan())!=0) {
