@@ -692,7 +692,7 @@ this upgrade does not resolve missing 3D collision/occlusion or mission rules.
   impulse. The immediate return is ordinary physics: the ball is **not**
   teleported or moved through walls, has no score or ball count changes,
   and remains vulnerable to normal drains. The sequence expires after
-  a quiet interval, leaving the x=105..165 pixel sling zone, entering
+  a quiet interval, leaving the y=105..165 pixel sling zone, entering
   a shooter/kickback/tilt state, or on a ball feed; contact on the same
   sling does not advance it. Local true-jitter rescue remains separate.
   This is a **DOS playability adaptation** caused by 2D projected
