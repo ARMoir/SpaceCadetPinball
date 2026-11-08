@@ -115,11 +115,14 @@ static void draw_title(void)
                     menu_art[y*(MENU_ART_W/2)+x];
         }
     }
-    for(x=241;x<=318;x++) {
-        pixel(x,2,7); pixel(x,58,7);
+    /* Metallic 2px frame around source title art. The lower BALL
+     * inset is drawn by draw_panel() when the ball count changes. */
+    for(x=240;x<320;x++) {
+        pixel(x,2,7); pixel(x,3,8); pixel(x,58,8);
     }
     for(y=2;y<=58;y++) {
-        pixel(240,y,8); pixel(319,y,7);
+        pixel(240,y,7); pixel(241,y,8);
+        pixel(318,y,7); pixel(319,y,8);
     }
 }
 
@@ -139,97 +142,164 @@ static void text_color(int x,int y,const char *s,unsigned color)
     }
 }
 
-static void panel_frame(int x,int y,int w,int h)
+/* F-007: source-inspired metallic box edges. Two pixels of cool gray
+ * highlight/shadow fit the native 80px DOS sidebar in mode09 and mode13
+ * without using a new palette, alpha blending or frame-time assets. */
+static void panel_frame(int x,int y,int w,int ht)
 {
     int i;
-    for(i=x;i<x+w;i++) { pixel(i,y,8); pixel(i,y+h-1,7); }
-    for(i=y;i<y+h;i++) { pixel(x,i,8); pixel(x+w-1,i,7); }
+    for(i=x;i<x+w;i++) {
+        pixel(i,y,7); pixel(i,y+1,8);
+        pixel(i,y+ht-2,7); pixel(i,y+ht-1,8);
+    }
+    for(i=y;i<y+ht;i++) {
+        pixel(x,i,7); pixel(x+1,i,8);
+        pixel(x+w-2,i,7); pixel(x+w-1,i,8);
+    }
 }
 
-/* view: 0=score, 1=menu, 2=controls, 3=top five, 4=initials input.
- * Compact DOS UI substitutes the original Windows dialogs. */
+/* Source FONT.DAT: ten original 15x22 score-digit bitmaps, converted
+ * offline to 5x8 RGBI and packed at 2 bits/pixel (100 bytes total).
+ * 0 transparent, 1 shadow, 2 lavender, 3 pale highlight.
+ * Text still uses the narrower 3x5 alphabet so controls fit. */
+static void score_digit(int x,int y,unsigned digit)
+{
+    static const unsigned char colors[4]={0,1,13,15};
+    unsigned i;
+    if(digit>9) return;
+    for(i=0;i<40;i++) {
+        unsigned char b=score_digits[digit][i>>2];
+        unsigned c=(b>>(6U-2U*(i&3U)))&3U;
+        if(c) pixel(x+(int)(i%5U),y+(int)(i/5U),colors[c]);
+    }
+}
+
+static void score_number(int right,int y,const char *digits)
+{
+    unsigned count=(unsigned)strlen(digits);
+    int x=right-5*(int)count;
+    while(*digits) {
+        if(*digits>='0' && *digits<='9')
+            score_digit(x,y,(unsigned)(*digits-'0'));
+        x+=5;
+        digits++;
+    }
+}
+
+/* Source-styled lavender message with a deep-blue one-pixel shadow.
+ * We intentionally keep 3x5 glyphs for 12..17-character instructions. */
+static void source_message(int x,int y,const char *label)
+{
+    text_color(x+1,y+1,label,1);
+    text_color(x,y,label,13);
+}
+
+/* view: 0=score; 1=menu; 2=controls; 3=top five; 4=initials.
+ * The main HUD follows the owner's original Space Cadet screenshot:
+ * title/ball, player/score, two-line command, large status box. */
 static void draw_panel(int view,int choice,int paused)
 {
-    static const char *items[]={"NEW GAME","PAUSE","SOUND","CONTROLS","HIGH SCORES","EXIT"};
+    static const char *items[]={
+        "NEW GAME","PAUSE","SOUND","CONTROLS","HIGH SCORES","EXIT"
+    };
     int i,y;
     char buf[24];
-    restore(240,61,80,139);
+    /* Keep the unchanged 76x53 title art; only refresh its lower band
+     * and the panels when score/ball/state changes, never every frame. */
+    restore(240,59,80,141);
+    panel_frame(240,59,80,24);
+    text_color(274,68,"BALL",12);
+    panel_frame(302,63,15,17);
+    sprintf(buf,"%u",(unsigned)(4-game.balls));
+    score_number(312,68,buf);
+
     if(view==1) {
-        panel_frame(241,63,78,110);
-        text_color(245,67,"GAME OPT HELP",13);
-        text_color(245,79,"MENU",14);
+        panel_frame(240,86,80,111);
+        source_message(245,91,"OPTIONS");
         for(i=0;i<6;i++) {
-            y=89+i*15;
+            y=105+i*14;
             if(i==choice) {
                 pixel(244,y+2,14); pixel(245,y+2,14);
             }
             if(i==1) text_color(251,y,paused?"RESUME":"PAUSE",
-                                 i==choice?14:15);
+                                i==choice?14:15);
             else if(i==2) text_color(251,y,sound_enabled?
                                      "SOUND ON":"SOUND OFF",i==choice?14:15);
             else text_color(251,y,items[i],i==choice?14:15);
         }
-        text_color(245,177,"UP DN ENTER",7);
-        text_color(245,188,"ESC BACK",7);
+        text_color(245,190,"ESC BACK",7);
     } else if(view==2) {
-        panel_frame(241,63,78,129);
-        text_color(245,68,"CONTROLS",13);
-        text_color(245,84,"Z OR LEFT CLICK",15);
-        text_color(245,96,"/ OR RIGHT CLICK",15);
-        text_color(245,108,"SPACE OR MID CLK",15);
-        text_color(245,120,"A LEFT BUMP",15);
-        text_color(245,132,"D RIGHT BUMP",15);
-        text_color(245,144,"X UP BUMP",15);
-        text_color(245,156,"F5 SOUND F2 NEW",15);
-        text_color(245,168,"F3 PAUSE F8 HELP",15);
-        text_color(245,180,"ENTER BACK",7);
+        panel_frame(240,86,80,111);
+        source_message(245,90,"CONTROLS");
+        text_color(245,103,"Z OR LEFT CLICK",15);
+        text_color(245,113,"/ OR RIGHT CLICK",15);
+        text_color(245,123,"SPACE OR MID CLK",15);
+        text_color(245,133,"A LEFT BUMP",15);
+        text_color(245,143,"D RIGHT BUMP",15);
+        text_color(245,153,"X UP BUMP",15);
+        text_color(245,163,"F5 SOUND F2 NEW",15);
+        text_color(245,173,"F3 PAUSE F8 HELP",15);
+        text_color(245,186,"ENTER BACK",7);
     } else if(view==3) {
-        panel_frame(241,63,78,129);
-        text_color(245,68,"HIGH SCORES",13);
+        panel_frame(240,86,80,111);
+        source_message(245,90,"HIGH SCORES");
         for(i=0;i<SCORE_COUNT;i++) {
             sprintf(buf,"%d %s",i+1,scores_table[i].initials);
-            text_color(245,83+i*17,buf,15);
+            text_color(245,105+i*15,buf,15);
             sprintf(buf,"%lu",scores_table[i].score);
-            text_color(274,83+i*17,buf,7);
+            text_color(275,105+i*15,buf,7);
         }
-        text_color(245,179,score_save_failed?"SAVE FAILED":"ENTER BACK",7);
+        text_color(245,186,score_save_failed?"SAVE FAILED":"ENTER BACK",7);
     } else if(view==4) {
-        panel_frame(241,63,78,129);
-        text_color(245,68,"NEW HIGH SCORE",13);
+        panel_frame(240,86,80,111);
+        source_message(245,90,"NEW HIGH SCORE");
         sprintf(buf,"%lu",game.score);
-        text_color(245,86,buf,15);
-        text_color(245,108,"ENTER INITIALS",14);
-        text_color(270,123,score_name,15);
-        text_color(245,150,"A-Z BACKSPACE",7);
-        text_color(245,165,"ENTER SAVE",15);
-        text_color(245,180,"ESC SKIP",7);
+        text_color(245,103,buf,15);
+        source_message(245,121,"ENTER INITIALS");
+        text_color(269,133,score_name,15);
+        text_color(245,156,"A-Z BACKSPACE",7);
+        text_color(245,173,"ENTER SAVE",15);
+        text_color(245,186,"ESC SKIP",7);
     } else {
-        panel_frame(241,63,78,30);
-        text_color(245,67,"BALL",13);
-        sprintf(buf,"%d",4-game.balls);
-        text_color(269,67,buf,15);
-        text_color(245,78,"SCORE",13);
-        sprintf(buf,"%010lu",game.score);
-        text_color(245,86,buf,15);
-        panel_frame(241,97,78,41);
-        text_color(245,101,"STATUS",13);
-        text_color(245,113,paused?"PAUSED":game.over?"GAME OVER":
-                      hud_event_frames?hud_event_text(hud_event):
-                      game.tilted?"TILT":game.tilt_warning?"WARNING":
-                      game.kick_delay?"KICKING":game.waiting?"READY":"IN PLAY",
-                      game.tilted?12:15);
-        if(!paused && !game.over && !game.waiting) {
+        /* Compact source-style score box: player 1 and the actual score
+         * (not ten padded zeros). A full 10-digit score still fits. */
+        panel_frame(240,86,80,24);
+        panel_frame(241,87,21,22);
+        panel_frame(264,87,54,22);
+        score_digit(248,94,1);
+        sprintf(buf,"%lu",game.score);
+        score_number(316,94,buf);
+
+        panel_frame(240,113,80,30);
+        if(paused) {
+            source_message(245,118,"CONTINUE PLAY");
+            source_message(245,128,"F3 RESUME");
+        } else if(game.over) {
+            source_message(245,118,"GAME OVER");
+            source_message(245,128,"F2 NEW GAME");
+        } else {
+            source_message(245,118,"F2 STARTS NEW");
+            source_message(245,128,"GAME");
+        }
+
+        panel_frame(240,146,80,52);
+        source_message(245,152,"3D PINBALL");
+        source_message(245,162,"SPACE CADET");
+        if(hud_event_frames) {
+            text_color(245,182,hud_event_text(hud_event),15);
+        } else if(game.tilted) {
+            text_color(245,182,"TILT",12);
+        } else if(game.over) {
+            text_color(245,182,"GAME OVER",15);
+        } else if(game.waiting) {
+            text_color(245,180,"AWAITING",7);
+            text_color(245,188,"DEPLOYMENT",7);
+        } else if(game.kick_delay) {
+            text_color(245,182,"KICKBACK",15);
+        } else {
             sprintf(buf,"KICK %c %c",game.kick_armed[0]?'L':'-',
-                                  game.kick_armed[1]?'R':'-');
-            text_color(245,126,buf,7);
-        } else
-            text_color(245,126,paused?"F3 RESUME":game.over?"N NEW GAME":
-                      "SPACE LAUNCH",7);
-        panel_frame(241,142,78,51);
-        text_color(245,147,"M MENU F3 PAUSE",15);
-        text_color(245,158,sound_enabled?"F5 SOUND ON":"F5 SOUND OFF",15);
-        text_color(245,170,"Z / FLIPPERS",15);
-        text_color(245,182,"ESC EXIT",7);
+                                    game.kick_armed[1]?'R':'-');
+            text_color(245,184,buf,7);
+        }
     }
 }
-

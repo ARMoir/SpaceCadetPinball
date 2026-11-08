@@ -2,6 +2,7 @@
 #include "game.h"
 #include "scores.h"
 #include "menu_art.h"
+#include "score_font.h"
 #include <dos.h>
 #include <conio.h>
 #include <malloc.h>
