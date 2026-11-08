@@ -177,11 +177,16 @@ static void score_digit(int x,int y,unsigned digit)
 static void score_number(int right,int y,const char *digits)
 {
     unsigned count=(unsigned)strlen(digits);
-    int x=right-5*(int)count;
+    int step=(count<=8U)?6:5;
+    int x;
+    if(!count) return;
+    /* Source digit has a shadow edging; leave a gap on normal scores.
+     * Very large 9/10-digit scores use compact spacing to fit 52px. */
+    x=right-((int)(count-1U)*step+5);
     while(*digits) {
         if(*digits>='0' && *digits<='9')
             score_digit(x,y,(unsigned)(*digits-'0'));
-        x+=5;
+        x+=step;
         digits++;
     }
 }

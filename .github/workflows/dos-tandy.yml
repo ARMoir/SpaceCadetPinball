@@ -47,6 +47,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_menu_font.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_source_sidebar.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_audio_lamps.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_menu_art.py

@@ -459,6 +459,28 @@ contacts, measured against real Tandy responsiveness.
 
 ### F-007 Rendering, audio and frame rate
 
+- **2026-11-08 source-style UI revision:** the user supplied original
+  Space Cadet sidebar screenshots and requested the source layout, not
+  only a different font. The prior default DOS HUD listed BALL, SCORE,
+  STATUS and controls as separate generic rows. The revised sidebar
+  preserves the 76x53 original title image, adds the source-like red
+  BALL number box, a player/score strip, a two-line action box and
+  a larger lavender status box, all inside fixed 80px metallic frames.
+  Original `FONT.DAT` is a 10-glyph 15x22 numeric score resource
+  (copyright 1994 Cinematronics), **not** an alphabet. Its digits were
+  mirrored from file storage orientation, box-sampled to 5x8 pixels,
+  and packed as 100 bytes of 2bpp indexed color in
+  `score_font.h`; the existing 3x5 text font remains for instructions.
+  Only up to 10 score digits, not zero-padded, are drawn in the 54px
+  score cell. The resource is converted offline, never loaded during
+  DOS gameplay, and no original source glyph geometry is claimed
+  at this lower resolution. Main view updates use the existing
+  dirty rectangle and preserve menu/help/high-score/initials flows.
+  Test coverage verifies glyph dimensions, palette and full score
+  bounds, sidebar sections and shared source for both video modes.
+  Physical CRT readability and performance are **UNVERIFIED**.
+
+
 - **Status / priority:** OPEN, P2, platform-specific adaptation.
 - **Original:** multi-resolution artwork, dynamic effects, original audio,
   original update/render pipeline.

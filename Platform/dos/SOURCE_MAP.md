@@ -33,7 +33,7 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | Stuck-ball rescue | [`unstuck.inc`](unstuck.inc), [`slingshot.inc`](slingshot.inc), [`control.inc`](control.inc) | `control.cpp::UnstuckBall`; position watchdog plus DOS-only alternate sling contact sequence (F-002/F-008) |
 | Ball appearance, Tandy/VGA drawing | [`video.inc`](video.inc), [`assets.inc`](assets.inc), [`main.c`](main.c) | `render.cpp`, `gdrv.cpp` (F-007) |
 | Original title/splash image, paused DOS menu | [`build_menu_art.py`](build_menu_art.py), [`data/menu_art.b64`](data/menu_art.b64), [`hud.inc`](hud.inc), [`main.c`](main.c) | `SpaceCadetPinball/splash_bitmap.bmp`, `winmain.cpp` and supplied 600x600 Space Cadet art; RGBI conversion / 240x200 static splash adaptation (F-007) |
-| Menu/help, mouse, sound | [`hud.inc`](hud.inc), [`input.inc`](input.inc), [`audio.inc`](audio.inc) | `winmain.cpp`, `options.cpp`, `TTextBox.cpp`, `Sound.cpp` (F-007) |
+| Menu/help, mouse, sound | [`hud.inc`](hud.inc), [`score_font.h`](score_font.h), [`input.inc`](input.inc), [`audio.inc`](audio.inc) | `winmain.cpp`, `options.cpp`, `TTextBox.cpp`, `score.cpp`, `Sound.cpp` (F-007) |
 | Gameplay lamps | [`lamps.inc`](lamps.inc), [`bumper.inc`](bumper.inc), [`main.c`](main.c) | `TLight.cpp`, `TLightGroup.cpp`, `control.cpp`; event-driven 16-color sampled lamps, not the original mission-driven lamp state (F-007) |
 | High-score table, initials and file persistence | [`scores.c`](scores.c), [`scores.h`](scores.h), [`hud.inc`](hud.inc) | `high_score.cpp` (F-009) |
 

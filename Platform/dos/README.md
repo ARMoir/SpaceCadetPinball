@@ -80,6 +80,35 @@ its original 24-bit colors. The reference video illustrates the desktop
 game, but DOS remains a simplified 320x200 port; exact desktop visual
 parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 
+## Source-style sidebar and original score numerals (F-007)
+
+The default 80-pixel sidebar now follows the original game's boxed
+layout shown in the owner's source screenshots: large title artwork and
+red BALL counter at the top; separate player number and score boxes;
+a two-line F2/continue/game-over action box; and a large lavender
+3D PINBALL / SPACE CADET status panel. The former generic BALL/SCORE/
+STATUS/control stack is no longer shown during regular gameplay.
+Menu, controls, initials, and high-score screens still use the same
+keys and provide the existing information.
+
+The displayed score digits were extracted from the owner's original
+`FONT.DAT` (PARTOUT(4.0)RESOURCE, copyright 1994 Cinematronics).
+The ten 15x22 source bitmaps are converted offline to 5x8 2-bit
+shaded RGBI glyphs, requiring **100 bytes** of static DOS font data.
+Typical scores use one pixel of glyph spacing; 9/10-digit scores
+tighten spacing so they still fit the 54-pixel score box. The full
+font resource is **not loaded by the DOS game**. The existing 3x5
+alphabet is preserved for long controls/menu instructions.
+
+Both Tandy mode 09h and VGA mode 13h draw the same 16-color borders,
+labels and original numeral shapes. The menu art still comes from
+`MENU.DAT` (with the prior fallback when absent). Only the sidebar
+dirty rectangle changes on score, ball or status updates; the
+playfield, flippers, physics, and 18.2Hz frame cadence are unchanged.
+The appearance is source-inspired rather than pixel-identical,
+particularly because the Windows sidebar is much larger. Physical
+Tandy CRT readability and real V20 timing are **UNVERIFIED**.
+
 ## Working event lights and richer sound (F-007)
 
 The native 16-bit game now uses **eight short hardware tone patterns** for
