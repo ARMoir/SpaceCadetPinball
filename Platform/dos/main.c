@@ -320,7 +320,7 @@ int main(int argc,char **argv)
             draw_title();
             old_x=-10; old_y=-10; old_plunger_y=-1;
             old_plunger_frame=-1;
-            previous_input=3U; /* Force both flipper states to redraw. */
+            previous_input=input^3U; /* Force both flipper states to redraw. */
             old_score=~0UL;
             old_balls=old_wait=old_over=old_flags=-1;
             prior_view=0; ui_dirty=1;
