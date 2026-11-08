@@ -49,6 +49,37 @@ and **X UP BUMP**. An earlier tiny-font defect made the letter A look
 exactly like H; **H is not a control key**. The A glyph is now distinct
 from H and checked by an automated font regression test.
 
+## Space Cadet title graphics for Tandy and VGA (F-007)
+
+The owner's 600x600 Space Cadet splash is now the source for both DOS
+menu presentations. An **offline**, checksum-checked RGBI conversion
+produces `MENU.DAT` from `data/menu_art.b64` using
+`build_menu_art.py`. It includes a **240x200** full-height, left-side
+Space Cadet illustration and a **76x53** copy for the right-hand HUD
+logo. The six-file runtime package includes `MENU.DAT`; copy it with
+the other files from the same build.
+
+Open **M** to display the new title illustration on the left and the
+keyboard-controlled game menu at right. Other dialogs (controls, high
+scores and initials) retain that title illustration. The gameplay
+playfield is restored when you close the menu, with ball, flippers and
+plunger repainted. **Neither physics nor the imported playfield/sprite
+artwork is changed.** Both video modes use precisely the same 16 RGBI
+indices. Tandy copies 120 packed bytes per image scanline into mode 09h
+banked B800h video; VGA expands those pairs to A000h mode 13h. This is
+a one-time menu-transition operation; there is **no image decoding,
+file access or full-screen redraw on each gameplay frame**.
+
+The pack uses 26,014 bytes of additional far memory only if the file is
+available, and is loaded before gameplay. If `MENU.DAT` is missing,
+corrupt or cannot be allocated, the earlier source-derived title/menu
+still works without it. `build_menu_art.py` also generates
+`MENU_PREVIEW.png` for review without DOSBox-X. This title conversion
+preserves the supplied composition with the fixed Tandy palette, not
+its original 24-bit colors. The reference video illustrates the desktop
+game, but DOS remains a simplified 320x200 port; exact desktop visual
+parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
+
 ## Build and play
 
 1. Unpack Open Watcom 2 and set `WATCOM` to its absolute installation directory.
@@ -67,7 +98,7 @@ from H and checked by an automated font regression test.
 4. Generate the optional, CPU-free enhanced static background on your PC:
    `python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png`.
    GitHub Actions already runs this step and packages both looks.
-5. Copy **`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, and `TABLE3D.TGA`** into
+5. Copy **`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`, `VGA.DAT`, and `MENU.DAT`** into
    the same DOS directory. `CADET` uses the enhanced background by default;
    `CADET /classic` loads the original unmodified background.
    `CADET /3d` requests the enhanced style explicitly. Both modes now
