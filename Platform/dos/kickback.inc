@@ -46,7 +46,9 @@ static void advance_kickback_flight(Game *g)
     if(g->y>110*FP)
         g->vx=(short)(g->kick_side==1?55:-16);
     else
-        g->vx=(short)(g->kick_side==1?64:-72);
+        /* Left curves further inward to miss source bumper #4 at
+         * (69,93), which the previous +64 vector intersected. */
+        g->vx=(short)(g->kick_side==1?128:-72);
     g->vy=-160;
     g->x=(short)(g->x+g->vx);
     g->y=(short)(g->y+g->vy);
