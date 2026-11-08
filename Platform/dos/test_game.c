@@ -936,9 +936,16 @@ int main(int argc,char **argv)
         unsigned keys=(i%192<48?KEY_LAUNCH:0)|(i%80<40?KEY_LEFT:KEY_RIGHT);
         if(g.over) game_reset(&g,&t);
         game_step(&g,&t,keys);
+        if(!(g.x>=0 && g.x<240*FP && g.y>=0 && g.y<200*FP &&
+             abs(g.vx)<1024 && abs(g.vy)<1024)) {
+            printf("SOAK20 BAD step=%d xy=%d,%d velocity=%d,%d kick=%d delay=%d side=%d balls=%d\n",
+                   i,g.x,g.y,g.vx,g.vy,g.kick_flight,g.kick_delay,
+                   g.kick_side,g.balls); fflush(stdout);
+        }
         assert(g.x>=0 && g.x<240*FP && g.y>=0 && g.y<200*FP);
         assert(abs(g.vx)<1024 && abs(g.vy)<1024);
     }
+    puts("STAGE: 20000-step soak completed"); fflush(stdout);
     /* Multiple full-charge games and varied controls: invariants after
      * EVERY step, rather than only a final screenshot or screen bounds. */
     {
@@ -955,6 +962,11 @@ int main(int argc,char **argv)
                 if(step%503==0) keys|=KEY_NUDGE;
                 if(g.over) game_reset(&g,&t);
                 game_step(&g,&t,keys);
+                if(!(g.x>=2*FP && g.x<=237*FP && g.y>=2*FP && g.y<200*FP)) {
+                    printf("SOAK80 BOUNDS seed=%d step=%d xy=%d,%d kick=%d side=%d\n",
+                           seed,step,g.x,g.y,g.kick_flight,g.kick_side);
+                    fflush(stdout);
+                }
                 assert(g.x>=2*FP && g.x<=237*FP && g.y>=2*FP && g.y<200*FP);
                 if(g.waiting || g.in_shooter || g.over) continue;
                 for(side=0;side<2;side++) {
@@ -965,6 +977,11 @@ int main(int argc,char **argv)
                     if(g.y/FP>=low && g.y/FP<=high) {
                         long limit=(long)e->x*FP+
                             ((long)g.y-(long)e->y*FP)*(e->ex-e->x)/(e->ey-e->y);
+                        if(!(side ? g.x<=limit-2*FP : g.x>=limit+2*FP)) {
+                            printf("SOAK80 RAIL seed=%d step=%d side=%d xy=%d,%d limit=%ld kick=%d\n",
+                                   seed,step,side,g.x,g.y,limit,g.kick_flight);
+                            fflush(stdout);
+                        }
                         assert(side ? g.x<=limit-2*FP : g.x>=limit+2*FP);
                     }
                     if(overlaps_sling(&g,&t.slings[side])) {
@@ -976,6 +993,11 @@ int main(int argc,char **argv)
                 for(k=0;k<t.bumper_count;k++) {
                     const Bumper *b=&t.bumpers[k];
                     long dx=(long)g.x-b->x,dy=(long)g.y-b->y;
+                    if(dx*dx+dy*dy<(long)b->radius*b->radius) {
+                        printf("SOAK80 BUMPER seed=%d step=%d bumper=%d xy=%d,%d center=%d,%d r=%d kick=%d\n",
+                               seed,step,k,g.x,g.y,b->x,b->y,b->radius,g.kick_flight);
+                        fflush(stdout);
+                    }
                     assert(dx*dx+dy*dy>=(long)b->radius*b->radius);
                 }
             }
