@@ -355,3 +355,11 @@ score sorting, roundtrip persistence and malformed-file recovery. The
 18.2 Hz `/smoke` mode deliberately skips score-file I/O, so live
 initials entry, mouse-driver compatibility and physical V20 performance
 must still be tested manually after the DOS build succeeds.
+
+### CI verification request (2026-11-08)
+
+This documentation-only PR exists to exercise the pull-request build
+workflow on top of the current DOS branch after GitHub App push events
+failed to create Actions runs. Acceptance requires a new successful
+Windows/Open Watcom build, DOSBox-X Tandy and VGA checks, and a CADET
+artifact from this exact branch revision. No gameplay files are changed.
