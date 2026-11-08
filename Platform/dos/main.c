@@ -48,6 +48,7 @@ static int vga_mode=0; /* Selected once before display setup. */
 #include "audio.inc"
 #include "lamps.inc"
 #include "assets.inc"
+#include "round_ball.inc"
 int main(int argc,char **argv)
 {
     unsigned last,now,frame=0,input,previous_input=0;
@@ -67,7 +68,7 @@ int main(int argc,char **argv)
     unsigned char key_backspace;
     unsigned score_scan;
     unsigned observed=0,launches=0,full_launches=0,mouse_input=0;
-    int no_mouse=0,video_choice=-1; /* -1 detect VGA; 0 Tandy; 1 VGA */
+    int no_mouse=0,video_choice=-1,source_ball=0; /* -1 detect VGA */
     union REGS r;
     unsigned char old_mode;
     FILE *report;
@@ -81,9 +82,10 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"/tandy")) video_choice=0;
         else if(!strcmp(argv[i],"/vga")) video_choice=1;
         else if(!strcmp(argv[i],"/rgbi")) rgbi_mode=1;
+        else if(!strcmp(argv[i],"/sourceball")) source_ball=1;
         else if(!strcmp(argv[i],"/classic")) enhanced=0;
         else if(!strcmp(argv[i],"/3d")) enhanced=1;
-        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/nolights] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d] [/rgbi]"); return 1; }
+        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/nolights] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d] [/rgbi] [/sourceball]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
     if(video_choice==1 && !detect_vga()) {
@@ -105,6 +107,10 @@ int main(int argc,char **argv)
         puts("Missing or invalid table artwork (32768 bytes).");
         return 1;
     }
+    /* Install the presentation-only round sprite after SCP2/VGA1
+     * validation. Gameplay/collision radius, coordinates, imported
+     * assets and plunger seating stay unchanged. */
+    if(!source_ball) install_round_ball(&table.sprites[4]);
     /* MENU.DAT is generated offline from the owner's title image.
      * Optional: legacy UI remains available if the pack is missing. */
     load_menu_background();
@@ -429,9 +435,9 @@ int main(int argc,char **argv)
         old_plunger_w=plunger_sprite->w; old_plunger_h=plunger_sprite->h;
         old_x=next_x; old_y=next_y;
         if(!game.over && ball_redraw) {
-            /* F-007: preserve the source-derived round metallic ball.
-             * Extra shadow/glint pixels distorted its tiny silhouette on
-             * the Tandy CRT. Both art modes draw the sprite unchanged. */
+            /* F-007: source asymmetric 4x4 (optional /sourceball),
+             * or default symmetric unshaded 6x5 circular sprite.
+             * No extra shadow/glint; ball remains the topmost sprite. */
             sprite(&table.sprites[4],old_x+1,old_y+1);
         }
         {
