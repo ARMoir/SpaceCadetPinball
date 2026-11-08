@@ -1,6 +1,9 @@
 /* F-007: ROUND silhouette is preferred to fake 3D at 320x200.
  * ORIGINAL: Windows PINBALL.DAT 4x4 ball in TABLE.DAT/VGA.DAT.
  * STATUS: ADAPTED (owner preference; see FIDELITY.md).
+ * MATCHES: transparent sprite compositing, source-centered ball rendering.
+ * DIVERGES: symmetric unshaded display sprite replaces source 4x4 by default.
+ * EXCEPTIONS: F-007
  *
  * A 320x200 pixel on a 4:3 CRT is about 20% taller than it is wide.
  * A symmetric 6x5 indexed mask therefore appears nearly circular,
