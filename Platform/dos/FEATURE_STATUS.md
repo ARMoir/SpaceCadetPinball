@@ -230,3 +230,12 @@ graphics but remains **incomplete**. Future work can use
 prioritizing real Tandy playability and documenting deviations in
 [FIDELITY.md](FIDELITY.md). Missing systems are not optimizations,
 and an emulated pass is not measured V20 performance.
+
+## VGA graphics update (2026-11-08)
+
+VGA1 source-color table and thirteen moving sprites are now implemented at
+320x200, with source-derived palette colors plus reserved RGBI UI colors.
+This supersedes earlier RGBI-only VGA notes. `/rgbi` retains the older look
+and parity tests. Source geometry and gameplay are unchanged; original
+high-resolution presentation, dynamic lighting and Z-buffer layers are still
+missing. See F-007 and SOURCE_MAP.md for the adaptation and hardware limits.

@@ -7,12 +7,51 @@
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
  */
+/* VGA1 is an optional presentation-only companion to SCP2 (F-007).
+ * Reuse the VGA far background allocation, with 768 DAC bytes at its end.
+ * The thirteen sprite headers must exactly match the geometry pack. */
+static int load_vga_art(void)
+{
+    FILE *f=fopen("VGA.DAT","rb");
+    unsigned char buf[500];
+    unsigned i,j;
+    int ok=1;
+    if(!f) return -1; /* Legacy RGBI fallback when the optional pack is absent. */
+    if(fread(buf,1,4,f)!=4 || memcmp(buf,"VGA1",4)) ok=0;
+    for(i=0;i<3 && ok;i++) {
+        if(fread(buf,1,256,f)!=256) { ok=0; break; }
+        for(j=0;j<256;j++) if(buf[j]>63) ok=0;
+        _fmemcpy(background+64000U+i*256U,buf,256);
+    }
+    for(i=0;i<128 && ok;i++) {
+        if(fread(buf,1,500,f)!=500) { ok=0; break; }
+        _fmemcpy(background+i*500U,buf,500);
+    }
+    for(i=0;i<13 && ok;i++) {
+        Sprite *s=i<5?&table.sprites[i]:&table.plunger[i-5];
+        short dims[4];
+        if(fread(dims,sizeof(short),4,f)!=4 || dims[0]!=s->x ||
+           dims[1]!=s->y || dims[2]!=s->w || dims[3]!=s->h) {
+            ok=0; break;
+        }
+        if(fread(s->pixels,1,s->w*s->h,f)!=(unsigned)(s->w*s->h)) ok=0;
+    }
+    if(fgetc(f)!=EOF) ok=0;
+    fclose(f);
+    if(ok) vga_colors=1;
+    return ok;
+}
+
 static int load_background(int *enhanced)
 {
     FILE *f=0;
     unsigned i;
     unsigned char buf[512];
     int ok=1;
+    if(vga_mode && !rgbi_mode) {
+        int result=load_vga_art();
+        if(result>=0) { *enhanced=0; return result; }
+    }
     if(*enhanced) f=fopen("TABLE3D.TGA","rb");
     if(!f) {
         if(*enhanced)

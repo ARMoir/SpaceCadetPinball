@@ -124,3 +124,13 @@ F-008 entries. Their absence is not a performance optimization.
    unless a measured reason justifies change. Run `test_source_layout.py`,
    the native DOS regression suite, both video modes, executable memory
    checks and physical V20 tests where available.
+
+## VGA source-color presentation update (2026-11-08)
+
+`convert.py --vga` follows `gdrv.cpp::display_palette` / `ApplyPalette` to
+write VGA1 artwork and palette without changing SCP2. `assets.inc` validates
+and loads it into the existing VGA background/sprite storage; `video.inc`
+programs its DAC, retaining RGBI HUD indices. The thirteen sprite dimensions
+and transparency masks match SCP2. `main.c` adds `/rgbi` for fallback/parity.
+This supersedes the earlier statement that VGA uses only RGBI. See F-007:
+320x200 downsampling and reserved UI colors remain presentation adaptations.

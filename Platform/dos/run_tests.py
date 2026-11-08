@@ -41,6 +41,7 @@ def main():
                    help='Test actual Tandy 09h or VGA 13h memory layout')
     p.add_argument('--auto-video',action='store_true',
                    help='Use BIOS video auto-detection instead of an explicit switch')
+    p.add_argument('--rgbi',action='store_true',help='Force legacy 16-color VGA for Tandy parity tests')
     a=p.parse_args()
     directory=a.directory.resolve()
     summary=[
@@ -55,7 +56,7 @@ def main():
         "video_cycles_per_ms="+str(a.cycles),
         "original_table="+str(int(a.original)),
     ]
-    for asset in ("CADET.EXE","TEST.EXE","TABLE.DAT","TABLE.TGA","TABLE3D.TGA"):
+    for asset in ("CADET.EXE","TEST.EXE","TABLE.DAT","TABLE.TGA","TABLE3D.TGA","VGA.DAT"):
         target=directory/asset
         if target.is_file():
             summary.append("%s bytes=%d sha256=%s" % (
@@ -70,6 +71,7 @@ def main():
         env=dict(os.environ,SDL_VIDEODRIVER='dummy',SDL_AUDIODRIVER='dummy')
         test_command='test.exe'+(' /original' if a.original else '')+' > TEST.LOG'
         video_switch='' if a.auto_video else ' /'+a.video
+        if a.rgbi: video_switch+=' /rgbi'
         for label,cycles,command,marker in [('CORE',100000,test_command,'TEST.OK'),
                                          ('VIDEO',a.cycles,'cadet.exe /smoke'+video_switch,'SMOKE.TXT')]:
             commands=[str(a.emulator.resolve()),'-conf',str(conf),'-fastlaunch','-exit',
@@ -105,6 +107,15 @@ def main():
         raw=(directory/'SCREEN.BIN').read_bytes()
         if len(raw)!=(64000 if a.video=='vga' else 32768):
             raise RuntimeError('Incorrect video memory size for '+a.video)
+        rich=(a.video=='vga' and not a.rgbi and (directory/'VGA.DAT').exists())
+        if counters.get('vga_colors')!=int(rich):
+            raise RuntimeError('Wrong VGA artwork selection')
+        palette=None
+        if rich:
+            packed=(directory/'VGA.DAT').read_bytes()
+            palette=[tuple(c*255//63 for c in packed[i:i+3]) for i in range(4,772,3)]
+            if len(set(raw))<=16:
+                raise RuntimeError('Source-color VGA did not use its richer palette')
         pixels=[]
         for y in range(200):
             row=[]
@@ -114,13 +125,15 @@ def main():
                 else:
                     value=raw[(y&3)*8192+(y>>2)*160+x//2]
                     color=value&15 if x&1 else value>>4
-                if color>=16:
+                if color>=16 and not rich:
                     raise RuntimeError('VGA image has unexpected non-RGBI palette pixels')
                 row.append(color)
             pixels.append(row)
-        png(directory/('SMOKE-VGA.png' if a.video=='vga' else 'SMOKE.png'),pixels)
+        capture='VGA-COLOR' if rich else ('VGA' if a.video=='vga' else 'TANDY')
+        if rich: png(directory/'SMOKE-VGA-COLOR.png',pixels,palette)
+        else: png(directory/('SMOKE-VGA.png' if a.video=='vga' else 'SMOKE.png'),pixels)
         # Retain both display dumps for pixel-for-pixel parity validation.
-        (directory/('SCREEN-VGA.BIN' if a.video=='vga' else 'SCREEN-TANDY.BIN')).write_bytes(raw)
+        (directory/('SCREEN-'+capture+'.BIN')).write_bytes(raw)
         summary.append("result=PASS")
     except Exception as exc:
         summary.append('result=FAIL error='+type(exc).__name__+': '+str(exc))

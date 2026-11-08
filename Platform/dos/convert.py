@@ -86,11 +86,11 @@ class Dat:
         return None
 
 
-def png(path, pixels):
+def png(path, pixels, palette=PALETTE):
     h, w = len(pixels), len(pixels[0])
     def chunk(kind, data):
         return struct.pack('>I', len(data))+kind+data+struct.pack('>I', zlib.crc32(kind+data))
-    raw = b''.join(b'\0'+bytes(c for p in row for c in PALETTE[p]) for row in pixels)
+    raw = b''.join(b'\0'+bytes(c for p in row for c in palette[p]) for row in pixels)
     Path(path).write_bytes(b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR', struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+
                            chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b''))
 
@@ -123,7 +123,7 @@ def segment(a, b, score=0, boost=0):
                                     (ey-y)*256/length,length*64,score,boost))
 
 
-def export(dat, output):
+def export(dat, output, vga=False):
     output.mkdir(parents=True, exist_ok=True)
     table = dat.named('table')
     w,h,ox,oy,base = dat.bitmap(table)
@@ -138,8 +138,12 @@ def export(dat, output):
                 (128,0,128),(0,128,128),(192,192,192),(192,220,192),(166,202,240)]
     rgb[246:255] = [(0,0,0)]*9
     rgb[255] = (255,255,255)
+    # Reserve RGBI 0..15 for the existing HUD; 255 remains transparency.
+    # gdrv::display_palette supplies source colors 10..245 plus system colors.
+    colors = PALETTE + rgb[10:246] + [(0,0,0)]*4 if vga else PALETTE
+    color_count = 252 if vga else 16
     def nearest(color):
-        return min(range(16), key=lambda i: sum((color[c]-PALETTE[i][c])**2 for c in range(3)))
+        return min(range(color_count), key=lambda i: sum((color[c]-colors[i][c])**2 for c in range(3)))
     lut = [nearest(c) for c in rgb]
     objects = dat.attr(dat.named('table_objects'),1025,kind=10)
     objects = list(zip(objects[::2],objects[1::2]))
@@ -249,6 +253,24 @@ def export(dat, output):
     kicks.sort()
     if len(kicks)!=2:
         raise ValueError('Expected two Space Cadet kickbacks')
+    if vga:
+        # VGA1: RGB DAC bytes, linear 320x200 indices, then the same thirteen
+        # sprite headers/pixels as SCP2. Geometry remains in TABLE.DAT.
+        body=b'VGA1'+bytes(c*63//255 for color in colors for c in color)
+        body+=bytes(p for row in pixels for p in row)
+        for x,y,sw,sh,data in sprites+plunger:
+            body+=struct.pack('<4h',x,y,sw,sh)+data
+        (output/'VGA.DAT').write_bytes(body)
+        png(output/'PREVIEW-VGA.png',pixels,colors)
+        (output/'VGA.json').write_text(json.dumps({
+            'source_sha256':hashlib.sha256(dat.data).hexdigest(),
+            'source':'Windows PINBALL.DAT', 'format':'VGA1',
+            'size':[320,200], 'palette_entries':252,
+            'adaptations':['RGBI HUD slots reserved', 'Box-filtered source artwork',
+                           'Source sprites with existing DOS dimensions; no geometry changes']
+        },indent=2)+'\n')
+        print('Exported VGA.DAT: source-color table and thirteen sprites')
+        return
     write_pack(output,pixels,edges,flippers,launch,drain,sprites,plunger,kicks)
     report = {'source_sha256':hashlib.sha256(dat.data).hexdigest(), 'source':'Windows PINBALL.DAT',
               'segments':len(edges),'imported_collision_objects':imported,'omitted_collision_objects':omitted,
@@ -286,10 +308,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('dat', type=Path)
     parser.add_argument('--inspect', action='store_true')
+    parser.add_argument('--vga', action='store_true', help='Export original-color VGA artwork without changing the Tandy pack')
     parser.add_argument('--output', type=Path, default=Path('build/dos'))
     args = parser.parse_args()
     dat = Dat(args.dat.read_bytes())
     if args.inspect:
         inspect(dat)
     else:
-        export(dat,args.output)
+        export(dat,args.output,args.vga)

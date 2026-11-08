@@ -34,6 +34,7 @@ static void (__interrupt __far *old_keyboard)(void);
 static int sound_enabled=1, sound_ticks;
 static int shake_enabled=1,video_shift=0;
 static int mouse_available=0; /* Only poll INT 33h when a driver exists. */
+static int vga_colors=0,rgbi_mode=0;
 static int vga_mode=0; /* Selected once before display setup. */
 
 /* Platform fragments retain one DOS translation unit and their original
@@ -73,9 +74,10 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"/nomouse")) no_mouse=1;
         else if(!strcmp(argv[i],"/tandy")) video_choice=0;
         else if(!strcmp(argv[i],"/vga")) video_choice=1;
+        else if(!strcmp(argv[i],"/rgbi")) rgbi_mode=1;
         else if(!strcmp(argv[i],"/classic")) enhanced=0;
         else if(!strcmp(argv[i],"/3d")) enhanced=1;
-        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d]"); return 1; }
+        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d] [/rgbi]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
     if(video_choice==1 && !detect_vga()) {
@@ -87,7 +89,7 @@ int main(int argc,char **argv)
     if(!table_load(&table,"TABLE.DAT")) {
         puts("Missing or invalid TABLE.DAT. Run convert.py or make_demo.py first."); return 1;
     }
-    background=_fmalloc(vga_mode?64000UL:32768UL);
+    background=_fmalloc(vga_mode?64768UL:32768UL);
     if(!background) {
         puts("Not enough conventional memory for selected video background.");
         return 1;
@@ -396,6 +398,7 @@ int main(int argc,char **argv)
                 game.unstick_nudges,game.unstick_moves,game.unstick_relaunches);
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=0\n",
                 enhanced?"3d":"classic");
+        fprintf(report,"# vga_colors=%d\n",vga_colors);
         fclose(report);
     }
     if(record) {

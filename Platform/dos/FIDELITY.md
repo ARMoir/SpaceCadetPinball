@@ -511,6 +511,30 @@ silently treat legacy exceptions as precedent for new ones.
   prefer `/classic` and revise the offline shader, never gameplay
   collision behavior for decorative depth.
 
+#### F-007 source-color VGA upgrade (2026-11-08)
+
+Original `gdrv.cpp::display_palette` and `ApplyPalette` use the indexed
+Windows resource palette. VGA previously displayed only the reduced Tandy
+RGBI artwork. VGA now loads optional `VGA.DAT` (VGA1): 320x200 source-derived
+art, a 256-entry DAC palette and thirteen moving sprites. Slots 0..15 retain
+RGBI for the HUD; slots 16..251 reproduce source colors 10..245. Box-filtered
+background colors and sprite colors map to this palette; this is not exact
+full-resolution Windows rendering. Positions, transparency masks, collision
+geometry, physics, scoring and Tandy artwork are unchanged. No AI artwork.
+
+The VGA far background adds 768 palette bytes (64768 total); sprite storage
+is reused. No per-frame conversion or extra pixel writes are introduced.
+Missing VGA.DAT or `/rgbi` selects the prior RGBI path; a malformed present
+pack fails startup. `/classic` and `/3d` still select Tandy/RGBI backgrounds;
+source-color VGA uses its original-art background for both switches.
+
+Tests validate palette reservation, all thirteen sprite bounds/transparency,
+truncation/mismatch rejection, richer-color emulator capture, and unchanged
+VGA simulation counters. RGBI Tandy/VGA parity is still tested separately.
+Physical VGA display quality and timing remain UNVERIFIED. Restore closer
+source presentation through richer source lighting/animation states in future;
+this upgrade does not resolve missing 3D collision/occlusion or mission rules.
+
 ### F-008 Universal trapped-ball recovery
 
 - **Status / priority:** OPEN, P0 playability safeguard; 7.16 MHz V20

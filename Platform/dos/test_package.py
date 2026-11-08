@@ -9,8 +9,9 @@ class PackageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             source, destination = Path(tmp)/"source", Path(tmp)/"runtime"
             source.mkdir()
-            for name, data in {"CADET.EXE": b"MZtest", "TABLE.DAT": b"SCP2test",
+            for name, data in {"CADET.EXE": b"MZtest", "TABLE.DAT": (Path(__file__).parent/"data/TABLE.DAT").read_bytes(),
                                "TABLE.TGA": bytes(32768), "TABLE3D.TGA": bytes(32768),
+                               "VGA.DAT": (Path(__file__).parent/"data/VGA.DAT").read_bytes(),
                                "SCORES.DAT": b"private", "TEST.EXE": b"test",
                                "SMOKE.TXT": b"logs"}.items():
                 (source/name).write_bytes(data)

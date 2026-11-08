@@ -371,3 +371,13 @@ TABLE3D.TGA. Packaging rejects missing/invalid required inputs and excludes
 local high scores and developer/test files. Successful branch workflows
 publish a versioned prerelease only after all checks; validation evidence
 is a separate artifact.
+
+## VGA source-color upgrade, 2026-11-08
+
+The new VGA1 asset is checked against all thirteen SCP2 sprite dimensions and
+transparency masks, including corrupt/truncated inputs. The runtime uses a
+64768-byte far VGA graphics allocation (64000 pixels plus 768 palette bytes).
+Tandy allocation and source collision data are unchanged. RGBI VGA remains
+available for pixel parity with Tandy; source-color VGA has its own capture
+and must match all gameplay/input counters from the RGBI run. Physical
+monitor color quality and V20 performance remain unverified.

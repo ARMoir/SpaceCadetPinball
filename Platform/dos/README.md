@@ -480,10 +480,10 @@ Compiler: https://github.com/open-watcom/open-watcom-v2
 
 ## Runtime-only downloads and published builds (2026-11-08)
 
-The Actions **CADET** artifact downloads as **CADET.zip** with exactly four
-files at its root: `CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`.
+The Actions **CADET** artifact downloads as **CADET.zip** with exactly five
+files at its root: `CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`, `VGA.DAT`.
 The enhanced image preserves the default appearance; `/classic` selects the
-original background. Extract all four together and run CADET from that
+original background. Extract all five together and run CADET from that
 folder. Keep an existing `SCORES.DAT`: scores are created locally and never
 bundled. No emulator, test program, Python, maps or logs are needed to play.
 
@@ -493,3 +493,19 @@ for the native core, Tandy/VGA auto/forced smoke and video-parity checks.
 Pull requests and other branches do not publish releases. Test evidence is
 available separately as **CADET-VALIDATION**; failed runs expose diagnostics
 without publishing a playable package. Physical V20 timing remains unverified.
+
+## Improved VGA artwork (2026-11-08)
+
+VGA now automatically uses `VGA.DAT` for richer original-source colors,
+smoother metal shading and colored ball/flipper/plunger sprites at 320x200.
+The HUD retains its existing readable colors. This adds 768 bytes to the
+VGA graphics allocation; Tandy keeps its banked 32KB background and original
+16-color assets. Physics, layout and collision positions are unchanged.
+
+`CADET /vga /rgbi` selects the earlier 16-color look; a missing VGA.DAT also
+falls back to it. `/classic` and `/3d` affect only the Tandy/RGBI background,
+while source-color VGA always uses the newly converted original artwork.
+To regenerate: `python Platform/dos/convert.py /path/to/PINBALL.DAT --vga
+--output Platform/dos/data` (on one line). VGA1 contains four magic bytes,
+768 six-bit DAC bytes, 64000 pixel indices, and thirteen SCP2-compatible
+sprite records. No extra runtime dependencies or source archive are needed.

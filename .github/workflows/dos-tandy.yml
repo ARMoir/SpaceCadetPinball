@@ -51,13 +51,17 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_enhance_table.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/verify_vga_art.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_vga_art.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_package.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/build.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/verify_build.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          Copy-Item Platform/dos/data/TABLE.DAT,Platform/dos/data/TABLE.TGA,Platform/dos/data/IMPORT.json,Platform/dos/data/PREVIEW.png build/dos/
+          Copy-Item Platform/dos/data/TABLE.DAT,Platform/dos/data/TABLE.TGA,Platform/dos/data/IMPORT.json,Platform/dos/data/PREVIEW.png,Platform/dos/data/VGA.DAT build/dos/
           python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           if ((Get-Item build/dos/TABLE3D.TGA).Length -ne 32768) { throw 'Wrong enhanced artwork size' }
@@ -74,15 +78,23 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_SUMMARY.TXT
           # Standard VGA machines must support both explicit and auto mode.
-          python Platform/dos/run_tests.py --emulator $emu --original --video vga
+          python Platform/dos/run_tests.py --emulator $emu --original --video vga --rgbi
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_VGA_SUMMARY.TXT
           python Platform/dos/verify_video_modes.py build/dos
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python Platform/dos/run_tests.py --emulator $emu --original --video vga --auto-video
+          python Platform/dos/run_tests.py --emulator $emu --original --video vga --auto-video --rgbi
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_VGA_AUTO_SUMMARY.TXT
           python Platform/dos/verify_video_modes.py build/dos
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Verify source-color VGA graphics and gameplay
+        shell: pwsh
+        run: |
+          python Platform/dos/run_tests.py --emulator .dos-tools/dosbox/mingw-build/mingw-sdl2/dosbox-x.exe --original --video vga --auto-video
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_VGA_COLOR_SUMMARY.TXT
+          python Platform/dos/verify_vga_art.py --runs build/dos
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Package runtime files only
         shell: pwsh
@@ -131,7 +143,7 @@ jobs:
           path: runtime
       - name: Create release archive
         working-directory: runtime
-        run: zip -9 ../CADET.zip CADET.EXE TABLE.DAT TABLE.TGA TABLE3D.TGA
+        run: zip -9 ../CADET.zip CADET.EXE TABLE.DAT TABLE.TGA TABLE3D.TGA VGA.DAT
       - name: Publish tested prototype build
         uses: actions/github-script@v7
         with:
@@ -145,7 +157,7 @@ jobs:
               name: `DOS Space Cadet build ${context.runNumber}`,
               prerelease: true,
               draft: true,
-              body: `Tested DOS/Tandy and VGA prototype from ${context.sha}.\n\nDownload CADET.zip and extract all four files together. Run CADET.EXE from that directory. SCORES.DAT is created locally; preserve your existing scores when updating.\n\nOriginal assets with simplified physics/rules; real V20 timing remains unverified. Validation logs: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              body: `Tested DOS/Tandy and VGA prototype from ${context.sha}.\n\nDownload CADET.zip and extract all five files together. Run CADET.EXE from that directory. SCORES.DAT is created locally; preserve your existing scores when updating.\n\nOriginal assets with simplified physics/rules; real V20 timing remains unverified. Validation logs: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             });
             await github.rest.repos.uploadReleaseAsset({
               ...context.repo,

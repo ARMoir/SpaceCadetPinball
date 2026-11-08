@@ -2,7 +2,7 @@
  * ORIGINAL: render.cpp; gdrv.cpp
  * STATUS: ADAPTED
  * MATCHES: transparent source sprite compositing
- * DIVERGES: banked B800h or A000h, 16-color, no Z layers
+ * DIVERGES: banked B800h or A000h, remapped source palette, no Z layers
  * EXCEPTIONS: F-007
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
@@ -34,8 +34,8 @@ static int detect_vga(void)
 }
 
 /* RGBI palette from the original 16-color Tandy converter, 6-bit DAC.
- * Preserve every art and moving-sprite index. VGA's extra 240 colors are
- * intentionally unused until there is a separate original-art import. */
+ * VGA1 reserves these HUD indices and supplies source-derived art colors.
+ * With no VGA1 pack, preserve the original RGBI fallback palette. */
 static void set_vga_palette(void)
 {
     static const unsigned char dac[48]={
@@ -46,7 +46,9 @@ static void set_vga_palette(void)
     };
     int i;
     outp(0x3c8,0);
-    for(i=0;i<48;i++) outp(0x3c9,dac[i]);
+    if(vga_colors) {
+        for(i=0;i<768;i++) outp(0x3c9,background[64000U+(unsigned)i]);
+    } else for(i=0;i<48;i++) outp(0x3c9,dac[i]);
 }
 
 static void pixel(int x,int y,unsigned color)

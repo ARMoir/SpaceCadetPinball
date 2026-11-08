@@ -3,7 +3,7 @@
 from pathlib import Path
 import shutil
 
-RUNTIME_FILES = ("CADET.EXE", "TABLE.DAT", "TABLE.TGA", "TABLE3D.TGA")
+RUNTIME_FILES = ("CADET.EXE", "TABLE.DAT", "TABLE.TGA", "TABLE3D.TGA", "VGA.DAT")
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -18,6 +18,8 @@ def package(source, destination):
     for name in ("TABLE.TGA", "TABLE3D.TGA"):
         if len(payload[name]) != 32768:
             raise ValueError("Wrong banked artwork size: " + name)
+    from verify_vga_art import validate_pack
+    validate_pack(payload["VGA.DAT"], payload["TABLE.DAT"])
     destination.mkdir(parents=True, exist_ok=True)
     if any(p.name not in RUNTIME_FILES for p in destination.iterdir()):
         raise ValueError("Runtime staging directory contains unexpected files")

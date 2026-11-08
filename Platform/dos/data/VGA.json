@@ -1,0 +1,15 @@
+{
+  "source_sha256": "42defd5d2a339a3953fe643716aff4e35b2cea7a3e54505c82d1e78d5325bc04",
+  "source": "Windows PINBALL.DAT",
+  "format": "VGA1",
+  "size": [
+    320,
+    200
+  ],
+  "palette_entries": 252,
+  "adaptations": [
+    "RGBI HUD slots reserved",
+    "Box-filtered source artwork",
+    "Source sprites with existing DOS dimensions; no geometry changes"
+  ]
+}

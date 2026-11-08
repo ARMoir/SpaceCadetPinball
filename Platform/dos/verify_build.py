@@ -18,7 +18,7 @@ def verify(directory):
         image=len(data)-header*16
         base=image+minalloc*16+256
         tandy_required=base+32768
-        vga_required=base+64000
+        vga_required=base+64768
         # Mouse/HUD/high-score additions exceed the original 128KB guard.
         # Keep a bounded 160KB minimum-load budget; this is not peak heap
         # usage or proof of real-hardware performance on the 640KB target.
