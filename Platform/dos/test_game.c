@@ -89,6 +89,33 @@ static void wall_guard_tests(void)
     fflush(stdout);
 }
 
+/* F-004: two adjacent imported upper-left bumper caps overlap in the
+ * flattened table. Resolving the later cap can push the ball back into
+ * the earlier cap. Avoid weakening the 80k-step outside-solids check. */
+static void overlapping_bumper_tests(void)
+{
+    int i;
+    fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+    t.bumper_count=2;
+    memset(&t.bumpers[0],0,sizeof(t.bumpers[0])*2);
+    t.bumpers[0].x=3360; t.bumpers[0].y=5792;
+    t.bumpers[0].radius=384;
+    t.bumpers[1].x=3680; t.bumpers[1].y=6368;
+    t.bumpers[1].radius=384;
+    /* At 57.5,94px the ball is outside bumper 0 but inside bumper 1.
+     * The first pass pushes it INTO bumper 0 unless we recheck. */
+    g.x=3680; g.y=6016; g.vx=0; g.vy=0;
+    game_step(&g,&t,0);
+    for(i=0;i<2;i++) {
+        long dx=(long)g.x-t.bumpers[i].x;
+        long dy=(long)g.y-t.bumpers[i].y;
+        assert(dx*dx+dy*dy>=(long)t.bumpers[i].radius*t.bumpers[i].radius);
+    }
+    assert(g.score==0 && g.balls==3);
+    puts("STAGE: overlapping imported bumpers remain radially separate");
+    fflush(stdout);
+}
+
 /* F-006: fast ball crossings must not be ejected through the
  * underside of either real source-oriented paddle. Verify sweep,
  * held-only toes and negative controls at a legal 160 Q6 speed. */
@@ -160,6 +187,7 @@ int main(int argc,char **argv)
     int i,weak_vy,full_vy;
     FILE *f;
     wall_guard_tests();
+    overlapping_bumper_tests();
     flipper_tunneling_tests();
     fixture();
     /* INT 33h button bits feed the existing flipper controls; gameplay

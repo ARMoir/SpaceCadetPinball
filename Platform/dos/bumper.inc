@@ -14,7 +14,14 @@
  * on an actual nearby bumper candidate, not every physics tick. */
 static void collide_bumpers(Game *g,const Table *t)
 {
-    int i;
+    int i,pass,moved;
+    /* F-004: some real source bumper caps overlap in the flattened
+     * plane (notably upper-left pair 5/6). A later radial separation
+     * can push the ball into an earlier cap. A bounded second pass
+     * resolves the earlier cap; ordinary non-contact ticks still use
+     * only the original single scan. */
+    for(pass=0;pass<2;pass++) {
+    moved=0;
     for(i=0;i<t->bumper_count;i++) {
         const Bumper *b=&t->bumpers[i];
         long dx=(long)g->x-b->x,dy=(long)g->y-b->y;
@@ -27,6 +34,7 @@ static void collide_bumpers(Game *g,const Table *t)
         dist2=(unsigned long)(dx*dx+dy*dy);
         if(dist2>=radius2) continue;
         dist=integer_sqrt(dist2);
+        moved=1;
         if(!dist) {
             unsigned long speed=integer_sqrt((unsigned long)(
                 (long)g->vx*g->vx+(long)g->vy*g->vy));
@@ -52,6 +60,8 @@ static void collide_bumpers(Game *g,const Table *t)
                 g->event_bumper=(unsigned char)(i+1);
             }
         }
+    }
+    if(!moved) break;
     }
 }
 

@@ -428,9 +428,24 @@ contacts, measured against real Tandy responsiveness.
   interaction and is inexpensive (precompute at load, square bounds then
   integer sqrt only for contact candidates). **Hardware fix unverified.**
   Scoring simplification has not been justified by measurements.
+- **2026-11-08 overlapping-cap regression:** The new F-006 paddle guard
+  changed otherwise legitimate long-run trajectories and exposed an
+  independent F-004 issue during the 80k-step randomized containment
+  test (seed 8, step 4757). Imported upper-left radial caps 5 and 6
+  overlap by about 1.7px when flattened to one plane. Resolving cap 6
+  could push the ball a fraction of a pixel back inside cap 5, which
+  had already been checked. A single extra radial recheck now runs
+  **only after an actual bumper overlap**. It keeps the existing
+  impulse/scoring conditions and restores the no-overlap invariant
+  without changing source art or placing a broad artificial wall.
+  This is a bounded projected-layer accommodation, not a claim of
+  original bumper material or geometry accuracy. V20 timing remains
+  **UNVERIFIED**.
 - **Tests:** seven independent scoring contacts; targeted penetration and
-  inbound hits at the upper-left imported cap, with radial separation and
-  outbound reflection. Full gameplay/smoke and speed checks remain mandatory.
+  inbound hits at the upper-left imported cap, plus a deterministic
+  two-cap cascade that previously re-embedded a ball in cap 5.
+  All 80k varied-control physics steps must remain outside solid caps.
+  Full gameplay/smoke and speed checks remain mandatory.
 - **Remedy:** import actual source bumper radius and material parameters when
   collision layers are implemented; keep the radial normal but restore
   per-bumper source scoring state/cooldown. Confirm no remaining trapping on
