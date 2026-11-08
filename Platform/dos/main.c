@@ -407,7 +407,7 @@ int main(int argc,char **argv)
         /* Lamp transitions restore only 5x5 source-art patches. Repaint
          * foreground sprites if one overlapped; the ball stays topmost. */
         if(lights_enabled) {
-            lights_damage=lamps_render(&table,&game,frame,
+            lights_damage=lamps_render(&table,&game,
                 old_x,old_y,next_x,next_y,
                 table.sprites[4].w+2,table.sprites[4].h+2,
                 ball_changed,plunger_x,plunger_y,

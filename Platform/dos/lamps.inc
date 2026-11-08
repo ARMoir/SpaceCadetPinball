@@ -9,13 +9,16 @@
  */
 /* F-007: no bitmap allocations, file I/O or whole-table repaint.
  * Index 0..7 are source-derived bumpers, 8/9 kickback indicators,
- * 10/11 source-derived sling hulls and 12 shooter-ready indicator.
+ * 10/11 source-derived sling hulls. The previous shooter-ready lamp
+ * was an invented dot offset from the source launch point, stranded
+ * next to the shooter in both video modes. Remove it; READY remains
+ * visible in the game HUD, with no new art overlay near the ball.
  * Only a lamp-state transition or old-ball overlap touches VRAM. */
-#define LAMP_COUNT (MAX_BUMPERS+5)
+#define LAMP_COUNT (MAX_BUMPERS+4)
 static unsigned char lamp_ticks[LAMP_COUNT],lamp_drawn[LAMP_COUNT];
 static unsigned short lamp_sling_seen[2],lamp_kick_seen;
 static const unsigned char lamp_colors[LAMP_COUNT]={
-    11,14,13,11,14,13,11,14,10,10,12,12,14
+    11,14,13,11,14,13,11,14,10,10,12,12
 };
 
 static void lamps_invalidate(void)
@@ -69,13 +72,11 @@ static int lamp_position(const Table *t,int i,int *x,int *y)
         if(!h->count) return 0;
         *x=(h->left+h->right)/2;
         *y=h->top+9;
-    } else {
-        *x=t->launch_x+7; *y=t->launch_y-15;
-    }
+    } else return 0;
     return *x>=3 && *x<=236 && *y>=3 && *y<=196;
 }
 
-static unsigned lamp_wanted(const Game *g,int i,unsigned frame)
+static unsigned lamp_wanted(const Game *g,int i)
 {
     if(g->over) return 0;
     if(i<MAX_BUMPERS)
@@ -87,7 +88,7 @@ static unsigned lamp_wanted(const Game *g,int i,unsigned frame)
     }
     if(i<MAX_BUMPERS+4)
         return lamp_ticks[i] && (lamp_ticks[i]&2U);
-    return g->waiting && ((frame&8U)!=0);
+    return 0;
 }
 
 /* 5x5 compact on-state halo. Colors 0..15 are shared by Tandy mode09
@@ -108,7 +109,7 @@ static void lamp_glow(int x,int y,unsigned color)
  * Lit bulbs erased by the OLD ball's dirty rectangle are repainted.
  * A 13-lamp integer loop at 18Hz is intentionally cheaper than copying
  * the table every frame on the 7.16MHz V20. */
-static int lamps_render(const Table *t,const Game *g,unsigned frame,
+static int lamps_render(const Table *t,const Game *g,
                         int old_ball_x,int old_ball_y,
                         int new_ball_x,int new_ball_y,
                         int ball_w,int ball_h,int ball_changed,
@@ -119,7 +120,7 @@ static int lamps_render(const Table *t,const Game *g,unsigned frame,
     unsigned wanted;
     for(i=0;i<LAMP_COUNT;i++) {
         if(!lamp_position(t,i,&x,&y)) continue;
-        wanted=lamp_wanted(g,i,frame);
+        wanted=lamp_wanted(g,i);
         changed=lamp_drawn[i]!=wanted;
         if(changed) {
             restore(x-2,y-2,5,5);

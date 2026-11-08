@@ -944,6 +944,17 @@ int main(int argc,char **argv)
          * right-hand frame. Rest and fully pulled frames have distinct art. */
         assert(t.plunger[0].x==184 && t.plunger[0].y==156);
         assert(t.plunger[7].x==185 && t.plunger[7].y==166);
+        /* F-003: the projected launch anchor (181,141) leaves the
+         * READY ball 15px above the original plunger sprite. Seat the
+         * 4px ball with its bottom ~1px above the retracted rod tip.
+         * Do not modify SCP2 geometry or shift an active ball sprite. */
+        game_reset(&g,&t);
+        assert(t.launch_x==181 && t.launch_y==141);
+        assert(g.x==(t.plunger[0].x+t.plunger[0].w/2)*FP);
+        assert(g.y==(t.plunger[0].y-3)*FP);
+        assert(g.y/FP + t.sprites[4].h/2 + 1 < t.plunger[0].y &&
+               t.plunger[0].y-(g.y/FP + t.sprites[4].h/2 + 1)<=3);
+        assert(g.waiting && g.in_shooter && g.balls==3);
         for(v=0;v<8;v++) {
             assert(t.plunger[v].x>=t.launch_x-3 && t.plunger[v].x<195);
             assert(t.plunger[v].y+t.plunger[v].h<=192);
@@ -964,7 +975,8 @@ int main(int argc,char **argv)
                     assert(g.in_shooter && g.balls==3);
                 }
                 assert(i<1500 && g.waiting && g.balls==3 && !g.over);
-                assert(g.x==t.launch_x*FP && g.y==t.launch_y*FP);
+                assert(g.x==(t.plunger[0].x+t.plunger[0].w/2)*FP &&
+                       g.y==(t.plunger[0].y-3)*FP);
                 assert(g.vx==0 && g.vy==0 && g.charge==0 && g.hits==0);
                 /* Retain the same ball and allow a second deliberate
                  * plunger pullback with a *different* charge strength. */

@@ -44,11 +44,13 @@ class SoundLampTests(unittest.TestCase):
         self.assertIn("prev_nudges=prev_slings[0]=prev_slings[1]=0;", MAIN)
 
     def test_source_anchors_and_no_full_redraw(self):
-        self.assertIn("#define LAMP_COUNT (MAX_BUMPERS+5)", LAMPS)
+        self.assertIn("#define LAMP_COUNT (MAX_BUMPERS+4)", LAMPS)
         self.assertIn("t->bumpers[i].x/FP", LAMPS)
         self.assertIn("t->kickback[side*2]", LAMPS)
         self.assertIn("t->slings[i-MAX_BUMPERS-2]", LAMPS)
-        self.assertIn("*x=t->launch_x+7", LAMPS)
+        self.assertNotIn("*x=t->launch_x+7", LAMPS)
+        self.assertNotIn("return g->waiting &&", LAMPS)
+        self.assertIn("} else return 0;", LAMPS)
         self.assertIn("lamp_ticks[hit_bumper-1]=12", LAMPS)
         self.assertIn("g->kick_armed[side]", LAMPS)
         self.assertIn("g->waiting", LAMPS)
@@ -67,7 +69,7 @@ class SoundLampTests(unittest.TestCase):
         values = re.search(r"lamp_colors\[LAMP_COUNT\]\s*=\s*\{([^}]+)\}", LAMPS)
         self.assertIsNotNone(values)
         entries = [int(x) for x in re.findall(r"\d+", values.group(1))]
-        self.assertEqual(len(entries), 13)
+        self.assertEqual(len(entries), 12)
         self.assertTrue(all(0 <= x < 16 for x in entries))
         self.assertIn("if(lamp_ticks[i]) lamp_ticks[i]--;", LAMPS)
         self.assertIn("if(!active) return;", LAMPS)

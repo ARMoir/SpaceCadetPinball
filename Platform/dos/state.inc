@@ -25,10 +25,33 @@ static void clear_stuck(Game *g)
     g->stuck_stage=g->stuck_progress=0;
 }
 
+/* The Windows source 601 launch anchor projects to (181,141), but the
+ * imported TPlunger REST sprite visibly starts at (184,156). In the
+ * flattened DOS projection this leaves the READY ball floating 15px
+ * above the mechanical plunger. Use the unmodified source sprite to
+ * derive a seated center just above its visible tip. Synthetic/demo
+ * tables without a plausible plunger keep their original launch anchor.
+ * Both feed and re-feed use the same seat. Physics starts from that
+ * visible ball, never silently snaps on release. See F-003. */
+static void shooter_seat(const Table *t,short *x,short *y)
+{
+    const Sprite *rod=&t->plunger[0];
+    *x=t->launch_x; *y=t->launch_y;
+    if(rod->w>=3 && rod->w<=8 && rod->h>=8 &&
+       abs(rod->x-t->launch_x)<=8 &&
+       rod->y>t->launch_y &&
+       rod->y-t->launch_y<=20) {
+        *x=(short)(rod->x+rod->w/2);
+        *y=(short)(rod->y-3);
+    }
+}
+
 static void feed(Game *g,const Table *t)
 {
+    short x,y;
+    shooter_seat(t,&x,&y);
     g->sling_chain_side=g->sling_chain_hits=g->sling_chain_time=0;
-    g->x=t->launch_x*FP; g->y=t->launch_y*FP;
+    g->x=x*FP; g->y=y*FP;
     g->vx=g->vy=g->charge=0; g->waiting=1;
     g->in_shooter=1;
     g->kick_delay=0; g->kick_side=0; g->kick_flight=0;
