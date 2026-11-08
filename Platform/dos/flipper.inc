@@ -11,7 +11,11 @@
         int key=1<<i,hit=0;
         if(g->tilted) {
             g->sweep[i]=0;
-            hit=collide(g,&g->flips[i][0],192,0);
+            /* Tilt disables power, never the paddle's solid surface.
+             * Use the same front-side sweep as an idle resting flipper. */
+            hit=guard_flipper_crossing(g,&g->flips[i][0],
+                                        flight_x,flight_y,192,0);
+            if(!hit) hit=collide(g,&g->flips[i][0],192,0);
         } else {
             /* The original TFlipper rotates continuously and sweeps into
              * the ball. At 72.8 substeps, 7 steps span about 96 ms.
