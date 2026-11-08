@@ -55,7 +55,7 @@ int main(int argc,char **argv)
     int plunger_changed,plunger_redraw,plunger_charge;
     int plunger_frame,old_plunger_frame=-1,old_plunger_w=0,old_plunger_h=0;
     const Sprite *plunger_sprite;
-    int view=0,choice=0,paused=0,exit_requested=0,ui_dirty=0;
+    int view=0,choice=0,paused=0,exit_requested=0,ui_dirty=0,prior_view=0;
     int old_flags=-1;
     unsigned char toggle_sound,toggle_menu,key_up,key_down;
     unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_f5,key_f8,key_new;
@@ -99,6 +99,9 @@ int main(int argc,char **argv)
         puts("Missing or invalid table artwork (32768 bytes).");
         return 1;
     }
+    /* MENU.DAT is generated offline from the owner's title image.
+     * Optional: legacy UI remains available if the pack is missing. */
+    load_menu_background();
     game_reset(&game,&table);
     /* Read once, before installing the keyboard IRQ hook. /smoke avoids
      * all high-score I/O so deterministic emulator tests never write it. */
@@ -298,6 +301,30 @@ int main(int argc,char **argv)
          * redraw. The offset alternates briefly and resets on pause/menu. */
         camera_shift(!view && !paused && !exit_requested &&
                      ((game.shake_frames/4)&1)?1:0);
+        /* A menu is a paused scene, not a background screen refresh.
+         * Show the owner's 240x200 splash only when entering the menu.
+         * Never redraw sprites over it or do any disk I/O per frame. */
+        if(view) {
+            if(!prior_view && menu_background) draw_menu_background();
+            if(ui_dirty || prior_view!=view) draw_panel(view,choice,paused);
+            prior_view=view;
+            old_score=game.score; old_balls=game.balls;
+            old_wait=game.waiting; old_over=game.over;
+            previous_input=0;
+            continue;
+        }
+        if(prior_view) {
+            /* Restore the entire original playfield exactly once and
+             * redraw every moving sprite after the menu disappears. */
+            restore(0,0,320,200);
+            draw_title();
+            old_x=-10; old_y=-10; old_plunger_y=-1;
+            old_plunger_frame=-1;
+            previous_input=3U; /* Force both flipper states to redraw. */
+            old_score=~0UL;
+            old_balls=old_wait=old_over=old_flags=-1;
+            prior_view=0; ui_dirty=1;
+        }
         plunger_charge=game.waiting?game.charge:0;
         plunger_frame=plunger_charge*7/PLUNGER_MAX_CHARGE;
         plunger_sprite=&table.plunger[plunger_frame];
@@ -384,6 +411,7 @@ int main(int argc,char **argv)
     silence();
     if(smoke || record) dump_screen();
     mode(old_mode); _ffree(background);
+    if(menu_background) _ffree(menu_background);
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
