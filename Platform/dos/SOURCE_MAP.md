@@ -134,3 +134,12 @@ programs its DAC, retaining RGBI HUD indices. The thirteen sprite dimensions
 and transparency masks match SCP2. `main.c` adds `/rgbi` for fallback/parity.
 This supersedes the earlier statement that VGA uses only RGBI. See F-007:
 320x200 downsampling and reserved UI colors remain presentation adaptations.
+
+## Static crossing guards (2026-11-08)
+
+`ball_collision.inc::guard_wall_crossing` follows the movement-ray intent of
+`TLine::FindCollisionDistance` and `TEdgeManager::TestGridBox`, using Q6
+signed-plane/segment checks on existing nearby static candidates. It retains
+the approached side and passive reflection; it is not original continuous
+3D/mask collision processing. `control.inc` also rechecks slings/outer rails
+only after a paddle changes ball position. See the F-002 entry and tests.

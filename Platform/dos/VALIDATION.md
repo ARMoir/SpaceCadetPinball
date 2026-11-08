@@ -381,3 +381,15 @@ Tandy allocation and source collision data are unchanged. RGBI VGA remains
 available for pixel parity with Tandy; source-color VGA has its own capture
 and must match all gameplay/input counters from the RGBI run. Physical
 monitor color quality and V20 performance remain unverified.
+
+## Ball-position guard validation (2026-11-08)
+
+A new synthetic test failed before the fix: the ball crossed a static wall
+at an allowed speed and was corrected to the wrong side. Axis-aligned and
+diagonal cases now preserve the approach side, while endpoint passage and
+retreat remain free. The 80,000-step varied-control suite checks both source
+outer rails, seven bumper disks and bounded sling collision regions after
+each active playfield step, in addition to the existing 20,000-step soak.
+The sling assertion includes its finite AABB; extending its acute half-planes
+infinitely would incorrectly flag valid space above the sling. See F-002 for
+scope and performance uncertainty; this is not a hardware certification.

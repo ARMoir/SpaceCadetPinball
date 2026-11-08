@@ -72,6 +72,7 @@ typedef struct {
     unsigned long score,steps,hits;
     unsigned short nudges,kickbacks,tilts,boundary_hits,right_rail_saves,left_rail_saves;
     unsigned short flipper_contacts[2],flipper_power_contacts[2];
+    unsigned short wall_crossings; /* F-002 swept static wall corrections */
     unsigned short sling_rescues[2]; /* F-002: closed left/right sling ejects */
     /* F-008: tiny fixed-point watchdog; no per-frame allocations. */
     short stuck_x,stuck_y,stuck_minx,stuck_maxx,stuck_miny,stuck_maxy;

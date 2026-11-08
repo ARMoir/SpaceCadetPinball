@@ -28,7 +28,9 @@ static void fixture(void)
 static int overlaps_sling(const Game *ball,const Sling *h)
 {
     int k;
-    if(!h->count) return 0;
+    if(!h->count || ball->x<(h->left-3L)*FP ||
+       ball->x>(h->right+3L)*FP || ball->y<(h->top-3L)*FP ||
+       ball->y>(h->bottom+3L)*FP) return 0;
     for(k=0;k<3;k++) {
         long dx=(long)ball->x-(long)h->x[k]*FP;
         long dy=(long)ball->y-(long)h->y[k]*FP;
@@ -38,10 +40,60 @@ static int overlaps_sling(const Game *ball,const Sling *h)
     return 1;
 }
 
+/* F-002: a center can cross a thin wall between sampled positions.
+ * Test both sides and both axis directions at legal playfield speeds. */
+static void wall_guard_tests(void)
+{
+    int axis,side,speed;
+    for(axis=0;axis<2;axis++) for(side=-1;side<=1;side+=2)
+        for(speed=64;speed<=160;speed+=32) {
+            fixture();
+            if(axis) {
+                t.edges[0].x=60; t.edges[0].ex=140;
+                t.edges[0].y=t.edges[0].ey=100;
+                t.edges[0].tx=256; t.edges[0].ty=0;
+                t.edges[0].length=80*FP;
+                assert(table_index(&t));
+            }
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0; g.steps=1;
+            g.x=axis?100*FP:100*FP+side*32;
+            g.y=axis?100*FP+side*32:80*FP;
+            g.vx=axis?0:-side*speed; g.vy=axis?-side*speed:0;
+            game_step(&g,&t,0);
+            assert(side*((axis?g.y:g.x)-100*FP)>=95);
+            assert(side*(axis?g.vy:g.vx)>0);
+            assert(g.balls==3 && g.score==0);
+        }
+    /* Diagonal wall, opposite approaches: no axis-only special case. */
+    for(side=-1;side<=1;side+=2) {
+        fixture(); t.edges[0].x=60; t.edges[0].y=60;
+        t.edges[0].ex=140; t.edges[0].ey=140;
+        t.edges[0].tx=t.edges[0].ty=181;
+        t.edges[0].length=7241;
+        assert(table_index(&t)); game_reset(&g,&t);
+        g.waiting=0; g.in_shooter=0; g.steps=1;
+        g.x=100*FP; g.y=100*FP+side*32;
+        g.vx=side*128; g.vy=-side*128;
+        game_step(&g,&t,0);
+        assert(side*((long)g.y-g.x)>=130);
+        assert(side*(g.vy-g.vx)>0 && g.wall_crossings==1);
+    }
+    /* Passing beyond an endpoint or moving away must not create a wall. */
+    fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+    g.x=99*FP; g.y=130*FP; g.vx=160;
+    game_step(&g,&t,0); assert(g.x>100*FP && g.vx==160);
+    fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+    g.x=98*FP; g.y=80*FP; g.vx=-160;
+    game_step(&g,&t,0); assert(g.x<98*FP && g.vx==-160);
+    puts("STAGE: swept wall guards, endpoint passage and retreat passed");
+    fflush(stdout);
+}
+
 int main(int argc,char **argv)
 {
     int i,weak_vy,full_vy;
     FILE *f;
+    wall_guard_tests();
     fixture();
     /* INT 33h button bits feed the existing flipper controls; gameplay
      * remains exactly the same for keyboard or mouse source. */
@@ -846,8 +898,52 @@ int main(int argc,char **argv)
         assert(g.x>=0 && g.x<240*FP && g.y>=0 && g.y<200*FP);
         assert(abs(g.vx)<1024 && abs(g.vy)<1024);
     }
+    /* Multiple full-charge games and varied controls: invariants after
+     * EVERY step, rather than only a final screenshot or screen bounds. */
+    {
+        int seed,step,side,k;
+        unsigned random;
+        for(seed=1;seed<=8;seed++) {
+            game_reset(&g,&t); g.plunger_rng=(unsigned short)seed;
+            random=(unsigned)seed;
+            for(step=0;step<10000;step++) {
+                unsigned keys;
+                random=(unsigned short)(random*25173U+13849U);
+                keys=(random>>8)&(KEY_LEFT|KEY_RIGHT);
+                if(g.waiting && g.charge<PLUNGER_MAX_CHARGE) keys|=KEY_LAUNCH;
+                if(step%503==0) keys|=KEY_NUDGE;
+                if(g.over) game_reset(&g,&t);
+                game_step(&g,&t,keys);
+                assert(g.x>=2*FP && g.x<=237*FP && g.y>=2*FP && g.y<200*FP);
+                if(g.waiting || g.in_shooter || g.over) continue;
+                for(side=0;side<2;side++) {
+                    int index=side?t.outer_right_rail:t.outer_left_rail;
+                    const Edge *e=&t.edges[index];
+                    int low=e->y<e->ey?e->y:e->ey;
+                    int high=e->y>e->ey?e->y:e->ey;
+                    if(g.y/FP>=low && g.y/FP<=high) {
+                        long limit=(long)e->x*FP+
+                            ((long)g.y-(long)e->y*FP)*(e->ex-e->x)/(e->ey-e->y);
+                        assert(side ? g.x<=limit-2*FP : g.x>=limit+2*FP);
+                    }
+                    if(overlaps_sling(&g,&t.slings[side])) {
+                        printf("INVALID SLING seed=%d step=%d side=%d xy=%d,%d v=%d,%d shooter=%d\n",seed,step,side,g.x,g.y,g.vx,g.vy,g.in_shooter);
+                        fflush(stdout);
+                    }
+                    assert(!overlaps_sling(&g,&t.slings[side]));
+                }
+                for(k=0;k<t.bumper_count;k++) {
+                    const Bumper *b=&t.bumpers[k];
+                    long dx=(long)g.x-b->x,dy=(long)g.y-b->y;
+                    assert(dx*dx+dy*dy>=(long)b->radius*b->radius);
+                }
+            }
+        }
+        puts("STAGE: 80000 varied-control steps stay within rails and outside solids");
+        fflush(stdout);
+    }
     f=fopen("TEST.OK","w"); assert(f);
-    fputs("PASS: plunger, one-way chute, shooter return, three-way nudge, tilt, timed kickbacks, drain, ball reset, 20000-step soak\n",f);
+    fputs("PASS: plunger, one-way chute, shooter return, three-way nudge, tilt, timed kickbacks, drain, ball reset, swept walls, 20000-step soak, 80000-step containment\n",f);
     fclose(f); puts("All DOS core tests passed.");
     return 0;
 }

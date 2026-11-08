@@ -10,6 +10,7 @@
 void game_step(Game *g,const Table *t,unsigned keys)
 {
     int i,b,pressed,px,py,shooter_inner_x,edge_rescue=0;
+    short old_x=g->x,old_y=g->y;
     g->steps++; g->event=0;
     if(g->over) {
         clear_stuck(g);
@@ -84,7 +85,8 @@ void game_step(Game *g,const Table *t,unsigned keys)
            py<box->top || py>box->bottom) continue;
         if(upper_chute_pass(g,&t->edges[index],px,py))
             continue;
-        collide(g,&t->edges[index],96,0);
+        if(!guard_wall_crossing(g,&t->edges[index],old_x,old_y))
+            collide(g,&t->edges[index],96,0);
         /* Contact correction can move the ball; refresh only for actual
          * nearby candidates instead of dividing for every indexed edge. */
         px=g->x/FP; py=g->y/FP;
@@ -100,7 +102,15 @@ void game_step(Game *g,const Table *t,unsigned keys)
      * This catches the actual off-right-table flight seen on hardware. */
     contain_outer_right(g,t);
     contain_outer_left(g,t);
+    /* F-002: a paddle contact can itself correct the ball into a nearby
+     * solid sling or outside a rail. Recheck only when it moves position. */
+    old_x=g->x; old_y=g->y;
 #include "flipper.inc"
+    if(g->x!=old_x || g->y!=old_y) {
+        contain_slingshots(g,t);
+        contain_outer_right(g,t);
+        contain_outer_left(g,t);
+    }
     /* The tube bends left above the feed point. A constant X cutoff marked
      * partial shots as in-play while they were still climbing that bend.
      * Use a conservative sloped inner boundary above the feed, preserving

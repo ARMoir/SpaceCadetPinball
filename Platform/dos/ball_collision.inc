@@ -70,3 +70,36 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
     return powered?2:1;
 }
 
+
+/* F-002: TLine::FindCollisionDistance tests a source movement ray rather
+ * than just its endpoint. Preserve the approached side when a legal DOS
+ * substep crosses an indexed static segment. Existing one-way exclusions
+ * are applied by the caller. This is a bounded Q6 supplement, not the
+ * source layer/mask/time-of-impact engine. Non-crossings avoid division;
+ * no allocation or second scan of the table is required. */
+static int guard_wall_crossing(Game *g,const Edge *e,short old_x,short old_y)
+{
+    int nx=-e->ty,ny=e->tx;
+    long d0,d1,den,x,y,along,dot,impulse;
+    d0=(((long)old_x-(long)e->x*FP)*nx+
+        ((long)old_y-(long)e->y*FP)*ny)/256;
+    d1=(((long)g->x-(long)e->x*FP)*nx+
+        ((long)g->y-(long)e->y*FP)*ny)/256;
+    if(!d0 || (d0>0 && d1>0) || (d0<0 && d1<0)) return 0;
+    den=d0-d1;
+    x=(long)old_x+((long)g->x-old_x)*d0/den;
+    y=(long)old_y+((long)g->y-old_y)*d0/den;
+    along=((x-(long)e->x*FP)*e->tx+(y-(long)e->y*FP)*e->ty)/256;
+    if(along<0 || along>e->length) return 0;
+    if(d0<0) { nx=-nx; ny=-ny; }
+    g->x=(short)(x+97L*nx/256);
+    g->y=(short)(y+97L*ny/256);
+    dot=((long)g->vx*nx+(long)g->vy*ny)/256;
+    if(dot<0) {
+        impulse=-dot*7/4;
+        g->vx+=(short)(impulse*nx/256);
+        g->vy+=(short)(impulse*ny/256);
+    }
+    g->wall_crossings++;
+    return 1;
+}

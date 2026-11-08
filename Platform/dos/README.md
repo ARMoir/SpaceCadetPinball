@@ -509,3 +509,17 @@ To regenerate: `python Platform/dos/convert.py /path/to/PINBALL.DAT --vga
 --output Platform/dos/data` (on one line). VGA1 contains four magic bytes,
 768 six-bit DAC bytes, 64000 pixel indices, and thirteen SCP2-compatible
 sprite records. No extra runtime dependencies or source archive are needed.
+
+## Ball-position guards (2026-11-08)
+
+Static walls now reject center crossings between physics samples, including
+fast diagonal hits, instead of pushing a penetrating ball through to the
+opposite side. Existing endpoint openings and the upper one-way passage
+remain valid. Position-changing paddle contacts recheck sling and outer-rail
+containment. `/record` and `/smoke` report `wall_crossings` separately.
+
+The tests now include eight varied-control games (80,000 additional physics
+steps), checking rail boundaries and solid bumper/sling contacts after each
+step. Normal drains, weak-shot returns and both kickbacks remain tested.
+This improves guards for the current 2D model; omitted source ramps, layers
+and state-dependent gates remain incomplete. Hardware timing is unverified.

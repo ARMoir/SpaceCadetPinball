@@ -277,6 +277,36 @@ silently treat legacy exceptions as precedent for new ones.
   Once accurate source barriers prevent all non-drain exits, evaluate
   whether the temporary source-rail and screen safety rails can be removed.
 
+#### F-002 swept-wall and post-paddle guards (2026-11-08)
+
+Source `TLine::FindCollisionDistance` / `maths::ray_intersect_line` and
+`TEdgeManager::TestGridBox` test the ball's movement ray, not just its final
+position. DOS endpoint capsule checks could push a center crossing a thin
+wall onto the wrong side at legal speeds. A new regression reproduced this
+before the fix. Indexed static contacts now check a signed-plane crossing
+from the previous position, require the intersection to lie on the actual
+segment, restore a 1.5px ball clearance on the approached side and reflect
+only inward velocity with existing passive restitution. The existing
+upper-chute one-way exclusion runs before this check. Endpoints do not gain
+infinite barriers. Bumpers/slings retain their separate solid-contact code.
+
+After a flipper changes position, source-derived sling/outer-rail containment
+is rechecked so a positional paddle correction cannot undo those constraints.
+This is still a 2D adaptation, not original collision groups, full swept
+capsules or nearest-hit time integration. It discards the remainder of a
+crossing substep rather than integrating the source residual travel time.
+There are no extra per-step allocations or full-table scans; extra work is
+restricted to existing nearby candidates and position-changing paddle hits.
+One new 16-bit counter `wall_crossings` is included in smoke/record reports.
+
+Tests cover both approaches at multiple speeds, diagonal contacts, retreat
+and endpoint passage; existing one-way/shooter/drain cases remain mandatory.
+Eight seeded 10,000-step games assert source-rail and solid-object bounds
+after each step. These checks cover the modeled 2D surfaces, not every omitted
+ramp/layer/gate state. Real V20 timing and hardware behavior are UNVERIFIED.
+The restoration path remains source collision groups and nearest-time swept
+contacts, measured against real Tandy responsiveness.
+
 ### F-003 Plunger charge and launch variation
 
 - **Status / priority:** OPEN, P1; no direct performance justification.
