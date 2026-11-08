@@ -80,6 +80,28 @@ its original 24-bit colors. The reference video illustrates the desktop
 game, but DOS remains a simplified 320x200 port; exact desktop visual
 parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 
+## Working event lights and richer sound (F-007)
+
+The native 16-bit game now uses **eight short hardware tone patterns** for
+bumper hits, plunger releases, ball drains, kickback saves, tilt alarms,
+flipper clicks, nudges and slingshot rebounds. The Tandy outputs them
+through its PSG, with simple two-voice accents on launch/kickback, while
+VGA PCs use PIT channel 2 and the PC speaker. Sounds are paced by the
+existing 18.2Hz frame clock, without sample streaming or delays.
+**F5** or **S** mutes/unmutes, and `CADET /nosound` starts silently.
+
+Playfield lights also respond: the seven original imported bumper caps
+flash briefly on scoring hits, both slingshot areas flash on rebounds,
+left/right outlane indicators show unused saves and pulse when consumed,
+and the shooter-ready lamp blinks. They are tiny source-positioned 16-color
+highlights with dirty-rectangle restoration, not the original Windows
+animated light sprites or complete mission logic. The existing artwork,
+ball sprite and physics remain unchanged. Use `CADET /nolights` to
+compare 7MHz V20 responsiveness or disable visual flashing. Both
+Tandy mode 09h and VGA mode 13h share the same lamp positions and
+color indices; no additional disk assets are required. Hardware sound
+quality and real CRT timing remain to be confirmed.
+
 ## High-return outlane saves (F-001)
 
 After either *armed* outlane kickback catches a descending ball, the DOS

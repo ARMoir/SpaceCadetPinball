@@ -563,6 +563,32 @@ contacts, measured against real Tandy responsiveness.
   index parity, normal/missing pack behavior and menu redraw isolation.
   A new actual Open Watcom/DOSBox-X build and physical-hardware
   acceptance remain pending.
+- **F-007 active feedback revision (2026-11-08):** owner requested more
+  sounds and working table lights. The original `Sound.cpp` plays
+  overlapping WAV samples, `TLight.cpp`/`TLightGroup.cpp` control
+  independently timed light sprites, and `control.cpp` links lamps to
+  many target/mission events. The DOS port still lacks those component
+  events and indexed on/off art, so this revision does **not** claim
+  authentic sampled audio or full Space Cadet mission lamps. Instead,
+  `audio.inc` now synthesizes eight distinct prioritized non-blocking
+  note sequences for bumper, plunger, drain, earned kickback, tilt,
+  flipper press, nudge and slingshot; Tandy hardware uses PSG tones
+  (optional two-voice cues) and VGA uses PIT2 PC-speaker notes at the
+  matching approximate pitch. No interrupt takeover, PCM buffer, new
+  file or update slower than the existing 18.2Hz frame timer.
+  `lamps.inc` illuminates source-derived bumper caps, earned left/right
+  kickbacks, left/right slingshot areas and the shooter-ready indicator.
+  Bumper hits and sling contacts flash briefly, unused kickback saves
+  show steady armed light, and the shooter blinks when waiting. Only a
+  5x5 pixel patch is restored from existing source artwork on state
+  changes, and small RGBI highlights are redrawn if the old ball wipes
+  them. The ball and plunger repaint last, avoiding trails. No physics,
+  scoring, geometry, SCP2 data format, palette or startup image changes.
+  New `/nolights` disables overlays for hardware-performance comparison;
+  `/nosound` and F5 mute preserve prior semantics. These are deliberately
+  **approximate** lamps because source switch/mission state is not yet
+  imported. Both physical Tandy PSG tone quality and 7.16 MHz V20 lamp
+  overhead remain **UNVERIFIED**, despite emulator build/parity tests.
 - **Why / evidence:** owner requested more visible depth on their son's
   first impression of the CRT playfield. Original game relies on art,
   highlights and occlusion for a 3D impression. Baking effects offline

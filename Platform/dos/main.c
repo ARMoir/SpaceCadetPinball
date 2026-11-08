@@ -235,6 +235,7 @@ int main(int argc,char **argv)
         if(view!=4 && (key_f2 || key_new)) {
             game_reset(&game,&table);
             lamps_reset(&game);
+            prev_nudges=prev_slings[0]=prev_slings[1]=0;
             game.plunger_rng^=ticks();
             paused=0; view=0; ui_dirty=1;
         }

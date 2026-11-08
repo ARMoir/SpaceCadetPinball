@@ -32,7 +32,8 @@ Tandy 1000 EX/V20.
 | Nudge / tilt | X / A / D impulses and tilt-warning/lockout | Custom thresholds, not exact original accumulation (F-005) |
 | Universal anti-stuck | Q6 position progress watchdog, upward nudge, 2 verified-clear local moves, free same-ball plunger return | Original `UnstuckBall` detection/counter timing not reproduced; V20 behavior not physically verified (F-008) |
 | Inputs and UI | Z and / flippers, optional left/right mouse; **middle mouse plunger** on three-button drivers; Space launch; F5 sound, F8 controls, temporary event messages, initials/top-five panel | DOS INT 33h mouse driver required; keyboard and file/menu flow need physical V20 verification; reduced original TTextBox behavior (F-007/F-009) |
-| Sound | Short Tandy PSG tones in mode 09h, PC-speaker event tones in VGA mode 13h; `/nosound`, S toggle | Original sound samples/music and exact source timing not ported; physical VGA speaker test pending |
+| Sound | Eight distinct short prioritized non-blocking cues on Tandy PSG (some two-tone) or VGA PC speaker: bumper, launch, drain, kickback, tilt, flipper, nudge, sling; `/nosound`, S/F5 toggle | Original mixed WAV samples/music and exact source timing not ported; physical PSG/VGA quality pending (F-007) |
+| Live table lamps | 7 source-derived bumper caps flash on hit, source sling lights flash on contact, kickback lamps show armed/used state, shooter-ready lamp blinks; `/nolights` disables | Original `TLight` sprite overlays, target-based missions and timed lamp-group scripts not implemented; physical V20 cost unverified (F-007) |
 | Diagnostics | `/record`, `INPUT.TXT`, `FLIGHT.TXT` (schema 4), slow-frame and both outer-rail counters; PC-side `analyze_logs.py` | Buffer until exit, not long-term historical telemetry |
 | Build/repro | Open Watcom C89 compilation of `main.c`, `game.c`, `table.c`, `scores.c` with named `.inc` fragments; source-layout, converter, high-score and gameplay tests; DOSBox-X Tandy/VGA parity and `CADET.zip` artifact | [Post-refactor CI run 42422864888](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888) passed; emulator pass does not prove physical V20 or VGA timing |
 
@@ -63,8 +64,8 @@ and frame timing remain unverified.
 | Bumpers | Seven radial caps, basic initial scoring | Variable score state, independent component cooldowns, full original material/layer interaction | F-004 |
 | Kickbacks | Two timed saves, strike centers from source | Hazard Target triplet activation, gate enable/disable, source timer/state/rearm, actual mission coupling | F-001 |
 | Nudge/tilt | Three directions, reversal impulse and warning/lockout | Exact source threshold, accumulation/decay and physically accurate displacement | F-005 |
-| Visual effects | Static initial-state lights, reduced-color artwork, original metallic ball sprite **without** the removed shadow/glint, and optional Tandy CRTC shake | Original state-driven lamp animations, moving ramps/targets and full image-depth/occlusion rendering | F-007 |
-| Audio | Synthetic PSG event beeps | Source samples, original soundtrack/music playback and full event sound mapping | F-007 |
+| Visual effects | Reduced-color artwork, small dynamic event/armed/ready lamp overlays, original metallic ball sprite, optional Tandy CRTC shake | Full source-derived light sprite animations, switch/mission control and depth/occlusion rendering | F-007 |
+| Audio | Eight synthetic PSG/PC speaker multi-note cues with audio priority | Source WAV samples, original soundtrack/music playback, independent source audio channels and all target/mission event mapping | F-007 |
 
 **Universal recovery (2026-11-07):** The DOS port adds a
 source-inspired F-008 anti-stuck watchdog. The original has an

@@ -34,6 +34,7 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | Ball appearance, Tandy/VGA drawing | [`video.inc`](video.inc), [`assets.inc`](assets.inc), [`main.c`](main.c) | `render.cpp`, `gdrv.cpp` (F-007) |
 | Original title/splash image, paused DOS menu | [`build_menu_art.py`](build_menu_art.py), [`data/menu_art.b64`](data/menu_art.b64), [`hud.inc`](hud.inc), [`main.c`](main.c) | `SpaceCadetPinball/splash_bitmap.bmp`, `winmain.cpp` and supplied 600x600 Space Cadet art; RGBI conversion / 240x200 static splash adaptation (F-007) |
 | Menu/help, mouse, sound | [`hud.inc`](hud.inc), [`input.inc`](input.inc), [`audio.inc`](audio.inc) | `winmain.cpp`, `options.cpp`, `TTextBox.cpp`, `Sound.cpp` (F-007) |
+| Gameplay lamps | [`lamps.inc`](lamps.inc), [`bumper.inc`](bumper.inc), [`main.c`](main.c) | `TLight.cpp`, `TLightGroup.cpp`, `control.cpp`; event-driven 16-color sampled lamps, not the original mission-driven lamp state (F-007) |
 | High-score table, initials and file persistence | [`scores.c`](scores.c), [`scores.h`](scores.h), [`hud.inc`](hud.inc) | `high_score.cpp` (F-009) |
 
 ## File and original function map
@@ -63,7 +64,8 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | [`input.inc`](input.inc) | [`options.cpp`](../../SpaceCadetPinball/options.cpp); [`winmain.cpp`](../../SpaceCadetPinball/winmain.cpp) | ADAPTED; original left/right mouse flippers, middle mouse launch, F5 sound and F8 controls; DOS IRQ1 / INT33h, initials scan queue (F-007/F-009) |
 | [`video.inc`](video.inc) | [`render.cpp`](../../SpaceCadetPinball/render.cpp); [`gdrv.cpp`](../../SpaceCadetPinball/gdrv.cpp) | ADAPTED; transparent source sprite compositing; banked B800h or A000h, 16-color, no Z layers (F-007) |
 | [`hud.inc`](hud.inc) | [`TTextBox.cpp`](../../SpaceCadetPinball/TTextBox.cpp); [`high_score.cpp`](../../SpaceCadetPinball/high_score.cpp); [`winmain.cpp`](../../SpaceCadetPinball/winmain.cpp) | ADAPTED; compact timed event messages, top-five/initials screens; not original prioritized text queue or long-name dialog (F-007/F-009) |
-| [`audio.inc`](audio.inc) | [`Sound.cpp`](../../SpaceCadetPinball/Sound.cpp); [`TSound.cpp`](../../SpaceCadetPinball/TSound.cpp) | DOS-ONLY; event feedback; PSG/PC-speaker substitute rather than samples (F-007) |
+| [`audio.inc`](audio.inc) | [`Sound.cpp`](../../SpaceCadetPinball/Sound.cpp); [`TSound.cpp`](../../SpaceCadetPinball/TSound.cpp) | ADAPTED; eight priority-based short PSG/PC-speaker sequences for gameplay actions; original multichannel WAV sources not imported (F-007) |
+| [`lamps.inc`](lamps.inc) | [`TLight.cpp`](../../SpaceCadetPinball/TLight.cpp); [`TLightGroup.cpp`](../../SpaceCadetPinball/TLightGroup.cpp) | ADAPTED; event-timed color lamps at existing source bumpers, sling cores, kickbacks and shooter; no original sprites, switches, mission groups or light scripts (F-007) |
 | [`assets.inc`](assets.inc) | [`loader.cpp`](../../SpaceCadetPinball/loader.cpp); [`gdrv.cpp`](../../SpaceCadetPinball/gdrv.cpp) | DOS-ONLY; source-derived ball/table assets; SCP2 and DOS-specific Tandy/VGA unpacking (F-007) |
 | [`main.c`](main.c) DOS game loop | [`pb.cpp`](../../SpaceCadetPinball/pb.cpp); [`winmain.cpp`](../../SpaceCadetPinball/winmain.cpp) | DOS 18.2 Hz display and 4 substeps, keyboard/game status, diagnostics (F-007) |
 

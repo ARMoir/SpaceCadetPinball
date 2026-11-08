@@ -9,7 +9,7 @@ GAME = ("state.inc", "ball_collision.inc", "bumper.inc", "slingshot.inc",
         "rail_collision.inc", "kickback.inc", "nudge.inc", "unstuck.inc",
         "control.inc")
 PLATFORM = ("video_shake.inc", "input.inc", "video.inc", "hud.inc",
-            "audio.inc", "assets.inc")
+            "audio.inc", "lamps.inc", "assets.inc")
 INLINE = ("plunger.inc", "flipper.inc")
 
 
