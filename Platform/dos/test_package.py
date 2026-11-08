@@ -25,11 +25,12 @@ class PackageTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 package(source, Path(tmp)/"invalid")
             self.assertFalse((Path(tmp)/"invalid").exists())
-            (source/"TABLE3D.TGA").unlink()
+            (source/"TABLE3D.TGA").write_bytes(bytes(32768))
             (source/"MENU.DAT").write_bytes(b"SCM1" + b"invalid")
             with self.assertRaises(ValueError):
                 package(source, Path(tmp)/"invalid_menu")
             self.assertFalse((Path(tmp)/"invalid_menu").exists())
+            (source/"TABLE3D.TGA").unlink()
             with self.assertRaises(FileNotFoundError):
                 package(source, Path(tmp)/"missing")
 
