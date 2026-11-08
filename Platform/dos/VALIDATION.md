@@ -345,3 +345,13 @@ F-008 exceptions remain open.
   for the visible SAVE FAILED indicator. Behavior and V20 cost are
   UNVERIFIED pending those hardware tests. F-007 and new F-009 remain
   open for original UI/score parity.
+
+### Rechecking the three November 7 UI improvements
+
+A fresh automated build should cover the original mouse middle-button
+plunger mapping, F5/F8 shortcut routing, HUD event messages and the new
+five-entry `SCORES.DAT` implementation. The `TEST.EXE` suite checks
+score sorting, roundtrip persistence and malformed-file recovery. The
+18.2 Hz `/smoke` mode deliberately skips score-file I/O, so live
+initials entry, mouse-driver compatibility and physical V20 performance
+must still be tested manually after the DOS build succeeds.
