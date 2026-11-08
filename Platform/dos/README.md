@@ -80,6 +80,19 @@ its original 24-bit colors. The reference video illustrates the desktop
 game, but DOS remains a simplified 320x200 port; exact desktop visual
 parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 
+## High-return outlane saves (F-001)
+
+After either *armed* outlane kickback catches a descending ball, the DOS
+simulation holds the original strike location briefly, then sends it
+upward in two stages. The right side first climbs outside the right
+slingshot before angling inward. Both sides reach the upper quarter of
+the table (y<=48) before ordinary collisions resume. The temporary
+guided flight is a forgiving adaptation for the port's incomplete 3D
+collision layers, not a replacement for original target/gate rules.
+Each side still saves **only once per ball**; unarmed contacts and
+tilted balls are never protected. Real 7.16 MHz V20 behavior remains
+to be tested. See [F-001](FIDELITY.md).
+
 ## Build and play
 
 1. Unpack Open Watcom 2 and set `WATCOM` to its absolute installation directory.

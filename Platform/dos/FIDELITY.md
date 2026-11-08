@@ -165,13 +165,31 @@ silently treat legacy exceptions as precedent for new ones.
 - **Status / priority:** OPEN, P0; no measured performance justification.
 - **Original:** `TKickback.cpp` timer values 0.7 s and 0.1 s; `control.cpp`
   left/right Hazard Target triplets drive gate enable/disable and reset paths.
-- **DOS deviation:** kickbacks start armed, are automatically available once
-  per side per ball, use a ~0.12 s hold and fixed return velocities. Original
-  target progression, conditional gate state and full timing are absent.
+- **DOS deviation:** kickbacks start armed and are automatically available
+  once per side per ball, using a ~0.12 s catch/wind-up. Original target
+  progression, conditional gate state and full timing are absent.
+  **2026-11-08 high-return revision:** the owner requested that left and
+  especially right outlane saves send the ball reliably into the upper
+  table rather than rebound off flattened lower rails/slings and re-drain.
+  Every *earned, already-armed* kickback now follows a two-stage, fixed-point
+  upward corridor from its imported strike center: first outside the
+  lower slingshot, then inward until y<=48 (upper quarter of playfield).
+  Lower collision/scoring is bypassed ONLY during that brief active shot,
+  then completely restored. It lasts roughly 0.6 s at 72.8 substeps/s,
+  preserves score and ball count, and never grants an unarmed/tilted save.
+  The shot can pass over visually rendered 2D walls because the original
+  3D layers are not imported: an **explicit forgiving playability deviation**
+  from source TKickback, not original collision or gate behavior. Source
+  projectile physics/gates and target arming should ultimately replace
+  this approximation. Real 7.16 MHz V20 motion/timing is **UNVERIFIED**.
 - **Why / evidence:** temporary gameplay functionality with reduced component
   model; **not** demonstrated to be needed for 7 MHz performance.
-- **Tests today:** imported strike centers, three offsets per side, collision
-  containment and one-use gating. These test the substitute, not original rules.
+- **Tests today:** imported strike centers, offsets on both sides,
+  one-use gating, controlled right/left y<=48 return trajectories,
+  monotonic upper travel and unchanged score/balls, restoration of normal
+  wall collisions after the assisted shot, and negative cases for unarmed,
+  upward, tilted and shooter-tube approaches. These still test the DOS
+  substitute, not full original rules.
 - **Remedy:** port target triplet state, activation signals and original
   timer phases with integer substep timers. Test disabled/enabled, consume,
   rearm and tilt/game transitions against original source behavior.
