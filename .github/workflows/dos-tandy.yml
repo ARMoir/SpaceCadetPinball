@@ -3,12 +3,6 @@
 name: Native DOS Tandy and VGA prototype
 on:
   workflow_dispatch:
-  # Temporary fallback for GitHub App commits that did not generate push
-  # workflows. GitHub schedules run from the default branch and this job
-  # checks out dos/tandy-native-prototype below. Remove after launch.
-  # Three brief attempts on Nov 8 2026, not a permanent five-minute cron.
-  schedule:
-    - cron: '26,31,36 14 8 11 *'
   push:
     branches: ['master', 'dos/tandy-native-prototype']
     paths: ['Platform/dos/**', '.github/workflows/dos-tandy.yml']
