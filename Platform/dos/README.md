@@ -92,15 +92,28 @@ existing 18.2Hz frame clock, without sample streaming or delays.
 
 Playfield lights also respond: the seven original imported bumper caps
 flash briefly on scoring hits, both slingshot areas flash on rebounds,
-left/right outlane indicators show unused saves and pulse when consumed,
-and the shooter-ready lamp blinks. They are tiny source-positioned 16-color
-highlights with dirty-rectangle restoration, not the original Windows
+left/right outlane indicators show unused saves and pulse when consumed.
+The earlier shooter-ready dot was removed because its estimated position
+floated next to the ball; the HUD already displays READY. These are small
+source-positioned 16-color highlights with dirty-rectangle restoration,
+not the original Windows
 animated light sprites or complete mission logic. The existing artwork,
 ball sprite and physics remain unchanged. Use `CADET /nolights` to
 compare 7MHz V20 responsiveness or disable visual flashing. Both
 Tandy mode 09h and VGA mode 13h share the same lamp positions and
 color indices; no additional disk assets are required. Hardware sound
 quality and real CRT timing remain to be confirmed.
+
+## Shooter resting ball alignment (F-003)
+
+The original imported plunger sprite begins at x=184,y=156, while the
+projected source launch anchor was x=181,y=141. This made the 4-pixel
+ball appear suspended too far above the plunger. The DOS port now seats
+it immediately over the original unmodified rod tip (center x=186,
+y=153). All subsequent launches and free returns begin from that
+visible resting position, with no sudden snap on release. No source
+assets or gameplay impulses were changed. The source 3D-to-2D placement
+is still approximated, and real Tandy CRT inspection remains pending.
 
 ## Preventing endless slingshot ping-pong (F-008)
 

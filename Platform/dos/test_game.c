@@ -952,8 +952,8 @@ int main(int argc,char **argv)
         assert(t.launch_x==181 && t.launch_y==141);
         assert(g.x==(t.plunger[0].x+t.plunger[0].w/2)*FP);
         assert(g.y==(t.plunger[0].y-3)*FP);
-        assert(g.y/FP + t.sprites[4].h/2 + 1 < t.plunger[0].y &&
-               t.plunger[0].y-(g.y/FP + t.sprites[4].h/2 + 1)<=3);
+        assert(g.y/FP + t.sprites[4].h/2 - 1 < t.plunger[0].y &&
+               t.plunger[0].y-(g.y/FP + t.sprites[4].h/2 - 1)<=3);
         assert(g.waiting && g.in_shooter && g.balls==3);
         for(v=0;v<8;v++) {
             assert(t.plunger[v].x>=t.launch_x-3 && t.plunger[v].x<195);

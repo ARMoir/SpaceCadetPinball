@@ -333,10 +333,22 @@ contacts, measured against real Tandy responsiveness.
   Windows maximum boost 100, and random added boost of up to 10%.
 - **DOS deviation:** eight original frames are imported (good), but charge
   saturates in about 1.3 s; launch jitter is only ~1%, tuned for current
-  projected shooter path.
+  projected shooter path. **2026-11-08 READY-ball alignment correction:**
+  the imported collision/launch anchor at (181,141) left the ball visibly
+  hovering 15px above the first original plunger sprite (184,156), and
+  slightly left of its center. The native DOS feed and same-ball weak-shot
+  return now derive a seated resting center (186,153) from the existing
+  plunger sprite width/top instead, with a one-row visual clearance
+  between the 4px ball and the rod. This is an intentional low-resolution
+  2D **position adaptation**, not a change to source `PINBALL.DAT`,
+  source sprites, or original launch power. Synthetic/test tables without
+  plausible plunger art retain the imported anchor. Physics launches
+  from the seated ball to avoid a visible jump at release. Actual 7MHz
+  Tandy observations and source 3D seating parity remain unverified.
 - **Why / evidence:** full-power source-like variation currently destabilizes
   simplified 2D shooter trajectories, not a CPU-budget constraint.
-- **Tests today:** 12 partial-charge returns, full charge reaches a bumper,
+- **Tests today:** original plunger/launch anchor and resting-sprite
+  alignment, 12 partial-charge returns, full charge reaches a bumper,
   original frame positions. Regression also verifies that after a weak shot
   returns to READY, holding Space for a different charge launches that same
   ball again without decreasing the ball count.
@@ -577,9 +589,14 @@ contacts, measured against real Tandy responsiveness.
   matching approximate pitch. No interrupt takeover, PCM buffer, new
   file or update slower than the existing 18.2Hz frame timer.
   `lamps.inc` illuminates source-derived bumper caps, earned left/right
-  kickbacks, left/right slingshot areas and the shooter-ready indicator.
-  Bumper hits and sling contacts flash briefly, unused kickback saves
-  show steady armed light, and the shooter blinks when waiting. Only a
+  kickbacks, and left/right slingshot areas. The added shooter-ready
+  indicator was **removed on 2026-11-08** after the user noticed its
+  erroneous floating dot beside the ball: it was placed at a guessed
+  (launch_x+7,launch_y-15), not a source `TLight` sprite position. The
+  READY state is still visible in the right-hand HUD, so the indicator
+  added no value.
+  Bumper hits and sling contacts flash briefly, and unused kickback
+  saves show a steady armed light. Only a
   5x5 pixel patch is restored from existing source artwork on state
   changes, and small RGBI highlights are redrawn if the old ball wipes
   them. The ball and plunger repaint last, avoiding trails. No physics,
