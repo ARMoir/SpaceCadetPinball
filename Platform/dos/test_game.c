@@ -557,8 +557,6 @@ int main(int argc,char **argv)
      * Short volleys, same-side jitter and expired streaks stay normal. */
     {
         int side,j;
-        static const short tx[3]={0,10,-10};
-        static const short ty[3]={-15,10,10};
         static const short nx[3]={236,0,-236};
         static const short ny[3]={-95,256,-95};
         fixture();
