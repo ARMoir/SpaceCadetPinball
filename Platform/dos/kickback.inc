@@ -32,3 +32,24 @@ static int catch_kickback(Game *g,const Table *t)
     return 0;
 }
 
+/* F-001: in this flattened 2D DOS port, a successful kickback needs to
+ * clear the slingshot and outer rail before normal collisions can resume.
+ * Climb outside the lower sling, then angle inward after y<=110.
+ * Normal collision/scoring returns at y<=48 (top quarter). This is ONLY
+ * for an already-earned, once-per-side kickback, never a free save.
+ * Actual source TKickback gate/target physics remains a fidelity debt. */
+static void advance_kickback_flight(Game *g)
+{
+    /* Original SCP2 strike centers: left (48,155), right (172,155).
+     * The almost-vertical right first stage clears the x141..156 sling.
+     * 2.5 px/substep remains inside the existing playfield speed cap. */
+    if(g->y>110*FP)
+        g->vx=(short)(g->kick_side==1?55:-16);
+    else
+        g->vx=(short)(g->kick_side==1?64:-72);
+    g->vy=-160;
+    g->x=(short)(g->x+g->vx);
+    g->y=(short)(g->y+g->vy);
+    if(g->y<=48*FP) g->kick_flight=0;
+}
+

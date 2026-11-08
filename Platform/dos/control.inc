@@ -48,11 +48,22 @@ void game_step(Game *g,const Table *t,unsigned keys)
         if(!--g->kick_delay) {
             /* Source strike centers are inside the outlane. Keep the walls
              * solid throughout a mainly upward, slightly inward return. */
-            g->vx=(short)(g->kick_side==1?16:-16);
-            g->vy=-126;
+            /* F-001: clear lower projected collisions using a bounded,
+             * two-stage return, especially on the right outlane. */
+            g->kick_flight=1;
+            g->vx=(short)(g->kick_side==1?55:-16);
+            g->vy=-160;
             g->shake_frames=16;
             g->event=4;
         }
+        g->previous=(short)keys;
+        return;
+    }
+    if(g->kick_flight) {
+        /* Only a fired, earned kickback bypasses the flattened lower
+         * geometry. Give normal collision/scoring back at the top. */
+        clear_stuck(g);
+        advance_kickback_flight(g);
         g->previous=(short)keys;
         return;
     }

@@ -30,6 +30,7 @@ static void feed(Game *g,const Table *t)
     g->x=t->launch_x*FP; g->y=t->launch_y*FP;
     g->vx=g->vy=g->charge=0; g->waiting=1;
     g->in_shooter=1;
+    g->kick_delay=0; g->kick_side=0; g->kick_flight=0;
     clear_stuck(g);
     g->sweep[0]=g->sweep[1]=0;
 }

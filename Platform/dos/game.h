@@ -64,7 +64,7 @@ typedef struct {
     /* Set on ball feed, cleared once the ball enters the main playfield.
      * Needed to distinguish an unsuccessful shooter return from a drain. */
     unsigned char in_shooter;
-    unsigned char kick_armed[2],kick_side,kick_delay;
+    unsigned char kick_armed[2],kick_side,kick_delay,kick_flight;
     unsigned char shake_frames,tilted,tilt_warning;
     unsigned char nudge_return_ticks,nudge_decay_ticks;
     short nudge_return_x,nudge_return_y,nudge_heat;

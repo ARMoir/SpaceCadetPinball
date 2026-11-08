@@ -454,18 +454,59 @@ int main(int argc,char **argv)
     for(i=0;i<9;i++) game_step(&g,&t,0);
     assert(g.kick_delay==0 && g.vx<0 && g.vy<0);
     puts("STAGE: both kickbacks passed"); fflush(stdout);
-    /* A kickback must not disable unrelated walls during its first steps. */
-    fixture();
-    t.edges[0].x=40; t.edges[0].ex=70;
-    t.edges[0].y=t.edges[0].ey=160;
-    t.edges[0].tx=256; t.edges[0].ty=0; t.edges[0].length=30*FP;
-    assert(table_index(&t));
-    g.waiting=0; g.in_shooter=0;
-    g.x=t.kickback[0]*FP; g.y=t.kickback[1]*FP; g.vy=32;
-    game_step(&g,&t,0);
-    assert(g.kick_delay==9);
-    for(i=0;i<13;i++) game_step(&g,&t,0);
-    assert(g.vy>0 && g.y>160*FP);
+    /* F-001: real SCP2 strike centers, including the right x=172.
+     * A valid save MUST get to the upper quarter on an inward path,
+     * then hand control back to standard collision and scoring. */
+    for(i=0;i<2;i++) {
+        int j;
+        short last_y;
+        fixture();
+        t.kickback[0]=48; t.kickback[1]=155;
+        t.kickback[2]=172; t.kickback[3]=155;
+        g.waiting=0; g.in_shooter=0;
+        g.x=t.kickback[i*2]*FP;
+        g.y=t.kickback[i*2+1]*FP; g.vy=80;
+        game_step(&g,&t,0);
+        assert(g.kick_delay==9 && g.kick_side==i+1 &&
+               !g.kick_flight && !g.kick_armed[i] && g.kickbacks==1);
+        for(j=0;j<9;j++) game_step(&g,&t,0);
+        assert(g.kick_flight && g.kick_delay==0 && g.event==4);
+        last_y=g.y;
+        for(j=0;j<64 && g.kick_flight;j++) {
+            game_step(&g,&t,0);
+            assert(g.y<last_y && g.vy==-160);
+            assert(!g.waiting && !g.over && g.balls==3 &&
+                   g.kickbacks==1 && g.score==0);
+            last_y=g.y;
+        }
+        assert(!g.kick_flight && j>=35 && j<=60);
+        assert(g.y<=48*FP && g.y>=45*FP);
+        if(i==0) assert(g.x>80*FP && g.x<115*FP && g.vx>0);
+        else assert(g.x>120*FP && g.x<155*FP && g.vx<0);
+        /* Real walls are active immediately after the return. */
+        g.x=97*FP; g.y=60*FP; g.vx=128; g.vy=0;
+        game_step(&g,&t,0);
+        assert(g.vx<0 && !g.kick_flight && g.balls==3);
+        /* An already-consumed save never repeats on this ball. */
+        g.x=t.kickback[i*2]*FP;
+        g.y=t.kickback[i*2+1]*FP; g.vy=32;
+        game_step(&g,&t,0);
+        assert(!g.kick_delay && !g.kick_flight && g.kickbacks==1);
+    }
+    /* No invented protection for unarmed, climbing, tilted or shooter
+     * contacts. Genuine outlane losses remain possible. */
+    for(i=0;i<4;i++) {
+        fixture(); g.waiting=0; g.in_shooter=0;
+        g.x=t.kickback[2]*FP; g.y=t.kickback[3]*FP; g.vy=50;
+        if(i==0) g.kick_armed[1]=0;
+        if(i==1) g.vy=-50;
+        if(i==2) g.tilted=1;
+        if(i==3) g.in_shooter=1;
+        game_step(&g,&t,0);
+        assert(!g.kick_delay && !g.kick_flight && g.kickbacks==0);
+    }
+    puts("STAGE: both guided kickbacks reach upper table, no false saves");
+    fflush(stdout);
     /* The original upper-left skill-shot passage is one-way. The
      * projected interior wall must let a descending ball through, but
      * still prevent it coming back upward through the same throat. */
