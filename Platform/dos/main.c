@@ -148,9 +148,10 @@ int main(int argc,char **argv)
         _enable();
         /* OR mouse with existing Z and / controls; either device can
          * hold or trigger either flipper without altering physics. */
-        mouse_input=mouse_available?
-            MOUSE_GAME_KEYS(mouse_buttons()):0;
-        input|=mouse_input;
+        /* Read INT 33h once. Passing mouse_buttons() directly into the
+         * macro would repeat the driver call and consume press counters. */
+        mouse_input=mouse_available?mouse_buttons():0;
+        input|=MOUSE_GAME_KEYS(mouse_input);
         ui_dirty=0;
         if(smoke) {
             /* Hold until fully charged, then release; fixed short pulses

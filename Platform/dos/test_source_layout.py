@@ -57,6 +57,8 @@ class SourceLayoutTests(unittest.TestCase):
         self.assertIn('score_capture=1;', main)
         self.assertIn('score_capture=0;', main)
         self.assertIn('scores_rank(unsigned long score)', scores)
+        self.assertNotIn('MOUSE_GAME_KEYS(mouse_buttons())', main)
+        self.assertIn('mouse_input=mouse_available?mouse_buttons():0;', main)
         self.assertIn('scores_insert(unsigned long score', scores)
         self.assertNotIn('scores_save(', control)
         self.assertNotIn('fopen(', control)

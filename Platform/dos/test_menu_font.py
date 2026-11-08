@@ -41,7 +41,8 @@ class HelpTextTests(unittest.TestCase):
         # Detect an installed driver, and poll held and quick clicks only
         # when present; leave smoke tests independent of host mouse state.
         self.assertIn("if(!smoke && !no_mouse) mouse_available=mouse_detect();", MAIN)
-        self.assertIn("MOUSE_FLIPPER_KEYS(mouse_buttons())", MAIN)
+        self.assertIn("mouse_input=mouse_available?mouse_buttons():0;", MAIN)
+        self.assertIn("MOUSE_GAME_KEYS(mouse_input)", MAIN)
         self.assertIn("r.x.ax=3;", INPUT)
         self.assertIn("r.x.ax=5; r.x.bx=0;", INPUT)
         self.assertIn("r.x.ax=5; r.x.bx=1;", INPUT)
