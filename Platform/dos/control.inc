@@ -11,7 +11,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
 {
     int i,b,pressed,px,py,shooter_inner_x,edge_rescue=0;
     short old_x=g->x,old_y=g->y;
-    g->steps++; g->event=0;
+    g->steps++; g->event=0; g->event_bumper=0;
     if(g->over) {
         clear_stuck(g);
         g->shake_frames=0; /* Never leave display offset during game over. */

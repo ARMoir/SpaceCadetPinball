@@ -49,6 +49,7 @@ static void collide_bumpers(Game *g,const Table *t)
             if(!g->hit_delay && !g->tilted) {
                 g->score+=b->score; g->hits++;
                 g->hit_delay=8; g->event=1;
+                g->event_bumper=(unsigned char)(i+1);
             }
         }
     }
