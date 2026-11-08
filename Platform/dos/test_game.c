@@ -89,11 +89,70 @@ static void wall_guard_tests(void)
     fflush(stdout);
 }
 
+/* F-006: fast ball crossings must not be ejected through the
+ * underside of either real source-oriented paddle. Verify sweep,
+ * held-only toes and negative controls at a legal 160 Q6 speed. */
+static void flipper_tunneling_tests(void)
+{
+    int side,held;
+    for(side=0;side<2;side++) for(held=0;held<2;held++) {
+        unsigned key=side?KEY_RIGHT:KEY_LEFT;
+        fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+        g.x=(short)((side?137:93)*FP);
+        g.y=(short)((held?153:165)*FP);
+        g.vx=0; g.vy=160;
+        g.previous=held?(short)key:0;
+        game_step(&g,&t,held?key:0);
+        assert(g.flipper_contacts[side]>0 && g.vy<0);
+        assert(!g.flipper_contacts[1-side] &&
+               g.score==0 && g.balls==3);
+        assert(g.y<(held?155:166)*FP);
+    }
+    /* A ball crossing the intermediate sweep should receive the
+     * existing active stroke, not a passive underside ejection. */
+    fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+    g.x=93*FP; g.y=159*FP; g.vy=160;
+    game_step(&g,&t,KEY_LEFT);
+    assert(g.flipper_power_contacts[0]>0 && g.vy<0 &&
+           g.balls==3);
+    for(side=0;side<2;side++) {
+        unsigned key=side?KEY_RIGHT:KEY_LEFT;
+        /* Center-side held toe: it starts above and ends BELOW y=150. */
+        fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+        g.x=(short)((side?121:109)*FP); g.y=149*FP;
+        g.vy=160; g.previous=(short)key;
+        game_step(&g,&t,key);
+        assert(g.flipper_power_contacts[side]>0 &&
+               g.vy<0 && g.balls==3);
+        /* An upward ball from underneath may collide passively, but
+         * cannot acquire another powered held-tip rescue. */
+        fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+        g.x=(short)((side?121:109)*FP); g.y=152*FP;
+        g.vy=-160; g.previous=(short)key;
+        game_step(&g,&t,key);
+        assert(!g.flipper_power_contacts[side]);
+    }
+    fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+    g.x=115*FP; g.y=149*FP; g.vy=160;
+    g.previous=KEY_LEFT|KEY_RIGHT;
+    game_step(&g,&t,KEY_LEFT|KEY_RIGHT);
+    assert(g.vy>0 && !g.flipper_contacts[0] &&
+           !g.flipper_contacts[1]);
+    fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+    g.x=93*FP; g.y=153*FP; g.vy=160; g.tilted=1;
+    g.previous=KEY_LEFT;
+    game_step(&g,&t,KEY_LEFT);
+    assert(g.vy>0 && !g.flipper_contacts[0]);
+    puts("STAGE: swept flipper crossings, center gap, underside and tilt");
+    fflush(stdout);
+}
+
 int main(int argc,char **argv)
 {
     int i,weak_vy,full_vy;
     FILE *f;
     wall_guard_tests();
+    flipper_tunneling_tests();
     fixture();
     /* INT 33h button bits feed the existing flipper controls; gameplay
      * remains exactly the same for keyboard or mouse source. */

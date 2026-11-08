@@ -2,7 +2,7 @@
  * ORIGINAL: TBall.cpp; TEdgeSegment.cpp; maths.cpp
  * STATUS: ADAPTED
  * MATCHES: contact normal, response impulse and correction
- * DIVERGES: Q6/Q8 2D capsules and sampled impulses
+ * DIVERGES: Q6/Q8 capsules, top-face swept flipper guard and sampled impulses
  * EXCEPTIONS: F-002 F-006
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
@@ -68,6 +68,52 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
         g->score+=e->score; g->hits++; g->hit_delay=8; g->event=1;
     }
     return powered?2:1;
+}
+
+
+/* F-006: A fast ball can cross a thin paddle between physics samples;
+ * a normal capsule test then sees its UNDERSIDE and pushes it down.
+ * TFlipper::FlipperCollision similarly considers a swept approach ray.
+ * Preserve a genuine incoming top-face contact and reuse the existing
+ * collide() restitution/kick. Never turn the finite paddle into a wall
+ * for balls coming from underneath, missing the tip, or moving away.
+ * Almost all ticks bail out before any costly 32-bit division. */
+static int guard_flipper_crossing(Game *g,const Edge *e,
+                                  short old_x,short old_y,
+                                  int radius,int kick)
+{
+    long d0,d1,along,x,y,span,dot;
+    int nx=-e->ty,ny=e->tx,hit;
+    short saved_x=g->x,saved_y=g->y;
+    if(g->x<(minimum(e->x,e->ex)-4)*FP ||
+       g->x>(maximum(e->x,e->ex)+4)*FP ||
+       g->y<(minimum(e->y,e->ey)-4)*FP ||
+       g->y>(maximum(e->y,e->ey)+4)*FP) return 0;
+    if(ny>0) { nx=-nx; ny=-ny; }
+    d0=(((long)old_x-(long)e->x*FP)*nx+
+        ((long)old_y-(long)e->y*FP)*ny)/256;
+    d1=(((long)saved_x-(long)e->x*FP)*nx+
+        ((long)saved_y-(long)e->y*FP)*ny)/256;
+    if(d0<=0 || d1>=radius || d1>=d0) return 0;
+    dot=((long)g->vx*nx+(long)g->vy*ny)/256;
+    if(dot>=0) return 0;
+    /* Aim for a shallow front-side overlap, NEVER the centerline.
+     * The standard capsule response resolves the final ~0.25px. */
+    if(d0>radius-16) {
+        span=d0-d1;
+        x=(long)old_x+((long)saved_x-old_x)*(d0-(radius-16))/span;
+        y=(long)old_y+((long)saved_y-old_y)*(d0-(radius-16))/span;
+    } else {
+        x=(long)old_x+((long)(radius-16)-d0)*nx/256;
+        y=(long)old_y+((long)(radius-16)-d0)*ny/256;
+    }
+    along=((x-(long)e->x*FP)*e->tx+
+           (y-(long)e->y*FP)*e->ty)/256;
+    if(along<0 || along>e->length) return 0;
+    g->x=(short)x; g->y=(short)y;
+    hit=collide(g,e,radius,kick);
+    if(!hit) { g->x=saved_x; g->y=saved_y; }
+    return hit;
 }
 
 

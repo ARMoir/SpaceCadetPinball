@@ -2,7 +2,7 @@
  * ORIGINAL: TFlipper.cpp; TFlipperEdge.cpp
  * STATUS: ADAPTED
  * MATCHES: source endpoints, left/right flipper response
- * DIVERGES: three sampled sweep edges and 5px tip forgiveness
+ * DIVERGES: sampled sweep, Q6 front-face ball path and held 5px tip
  * EXCEPTIONS: F-006
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
@@ -20,15 +20,25 @@
             if((keys^g->previous)&key) g->sweep[i]=7;
             if(g->sweep[i]) {
                 int extending=(keys&key)!=0;
-                hit=collide(g,&g->flips[i][extending?0:1],
-                            192,extending);
+                /* The incoming ball path must be tested BEFORE any
+                 * sampled edge pushes a crossing onto the underside.
+                 * Keep full moving boost through the raised position. */
+                hit=guard_flipper_crossing(g,&g->flips[i][extending?0:1],
+                                             flight_x,flight_y,192,extending);
+                if(!hit) hit=guard_flipper_crossing(g,&g->flips[i][2],
+                                                     flight_x,flight_y,192,extending);
+                if(!hit) hit=guard_flipper_crossing(g,&g->flips[i][extending?1:0],
+                                                     flight_x,flight_y,192,extending);
+                if(!hit) hit=collide(g,&g->flips[i][extending?0:1],
+                                     192,extending);
                 if(!hit) hit=collide(g,&g->flips[i][2],192,extending);
-                /* The raised position is ALSO part of the rotating stroke:
-                 * do not accidentally use a passive kick=0 here. */
                 if(!hit) hit=collide(g,&g->flips[i][extending?1:0],
-                                    192,extending);
+                                     192,extending);
                 g->sweep[i]--;
             }
+            if(!hit) hit=guard_flipper_crossing(g,&g->flips[i][(keys&key)!=0],
+                                                 flight_x,flight_y,192,
+                                                 (keys&key)!=0?2:0);
             if(!hit)
                 hit=collide(g,&g->flips[i][(keys&key)!=0],192,
                             (keys&key)!=0?2:0);
@@ -39,6 +49,12 @@
              * retain the original drain and ordinary passive contacts.
              * Cheap comparisons avoid extra 32-bit collision math for
              * the overwhelming majority of physics ticks. */
+            /* Held-only inner toe catches fast crossings too, without
+             * inventing a permanent center-gap barrier. */
+            if(!hit && (keys&key) && !g->in_shooter && g->vy>0 &&
+               flight_y<=g->tip_assist[i].y*FP)
+                hit=guard_flipper_crossing(g,&g->tip_assist[i],
+                                            flight_x,flight_y,192,2);
             if(!hit && (keys&key) && !g->in_shooter && g->vy>0 &&
                g->y<=g->tip_assist[i].y*FP &&
                g->y>=(g->tip_assist[i].y-4)*FP &&

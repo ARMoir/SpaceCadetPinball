@@ -11,6 +11,8 @@ void game_step(Game *g,const Table *t,unsigned keys)
 {
     int i,b,pressed,px,py,shooter_inner_x,edge_rescue=0;
     short old_x=g->x,old_y=g->y;
+    /* F-006: old_x/old_y are reused after walls; retain the flight ray. */
+    short flight_x=g->x,flight_y=g->y;
     g->steps++; g->event=0; g->event_bumper=0;
     /* F-008: no time-based cost outside three byte checks. A clean
      * departure from the sling lane, a capture or expiry ends the streak.

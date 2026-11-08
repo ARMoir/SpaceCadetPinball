@@ -491,6 +491,26 @@ contacts, measured against real Tandy responsiveness.
   `FLIPPER_TIP_ASSIST_PX` in `game.h`, so real-hardware comparison can
   tune or remove it without altering source data. Its speed and feel
   are still **UNVERIFIED** on physical Tandy/VGA DOS machines.
+- **2026-11-08 user-observed paddle tunneling:** a ball crossing a thin
+  projected flipper between physics samples could be resolved against the
+  *underside* by the old two-sided capsule, letting it pass through
+  despite correct paddle timing. Inspired by the source
+  `TFlipper::FlipperCollision` swept-ray approach and
+  `TFlipperEdge::EdgeCollision` response, DOS now retains the
+  pre-integration Q6 flight segment and checks for genuine incoming
+  **top-face crossings** of the stationary/swept flipper or held-only
+  tip. It moves an actual crossing back to a shallow 3px top-face
+  overlap and reuses existing restitution and lever-power response.
+  No extra kick, random rescue, artwork, table data, score or center
+  wall is introduced. It does not protect balls that begin underneath,
+  miss the finite paddle, move away, are tilted, or fall through
+  the untouched center gap. Nearby broad-phase rejection avoids
+  division on normal flight ticks. This is a *ball-path* sweep, not
+  a faithful rotating 3D flipper/capsule endpoint TOI simulation.
+  Synthetic tests cover both sides and rest/held stroke, active
+  midpoint, rapid held toe, underside, missed center and tilt.
+  Actual ball-pass-through reduction and 7.16 MHz V20 timings
+  remain **UNVERIFIED** pending owner hardware playback.
 - **Why / evidence:** the owner reported on **real Tandy hardware** that
   flippers felt underpowered and repeated trajectories were too predictable.
   The old forced `vy=-88..-128` and universal `-132` limit made mechanically
@@ -506,8 +526,9 @@ contacts, measured against real Tandy responsiveness.
   negative checks. Imported-table launch, real flipper traces and
   long-running soak remain mandatory.
 - **Remedy:** calibrate angular boost using original source parameters
-  (attributes 803-805), preserve ramp/layer states, and add swept segment
-  collision only where measured hardware tests show missed contacts.
+  (attributes 803-805), preserve ramp/layer states, and expand the new
+  ball-path guard toward original angular sweep/endpoint TOI only if
+  hardware recordings show further missed contacts.
   Avoid random path perturbations that hide collision problems.
 
 ### F-007 Rendering, audio and frame rate
