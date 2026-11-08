@@ -680,10 +680,37 @@ this upgrade does not resolve missing 3D collision/occlusion or mission rules.
   a few integer fields; candidate edge testing occurs only on rare
   recovery attempts. Conventional-memory headroom and real V20 timing
   must be checked; no physical measurement yet.
+- **2026-11-08 slingshot oscillation safeguard (owner-reported):** a ball
+  that repeatedly crosses from the **left** slingshot to the **right**
+  and back travels much farther than the existing 3px no-progress
+  envelope. Its old watchdog can reset on every crossing, so there
+  is no upper bound on a repeated two-sling cycle. DOS now records only
+  actual incoming/reflecting contacts with the two source-derived
+  solid sling hulls (F-002), rather than overlapping their collision
+  boxes. Six alternating contacts, with no gap longer than 144 Q6
+  substeps (~2 seconds), trigger one bounded upward-and-inward escape
+  impulse. The immediate return is ordinary physics: the ball is **not**
+  teleported or moved through walls, has no score or ball count changes,
+  and remains vulnerable to normal drains. The sequence expires after
+  a quiet interval, leaving the x=105..165 pixel sling zone, entering
+  a shooter/kickback/tilt state, or on a ball feed; contact on the same
+  sling does not advance it. Local true-jitter rescue remains separate.
+  This is a **DOS playability adaptation** caused by 2D projected
+  geometry and reduced source targets/layers; original
+  `control::UnstuckBall` lacks this verified behavior. No new table
+  assets or expensive collision tests are introduced, only three bytes
+  and a small integer counter in `Game`, plus a few integer checks.
+  Real 7.16 MHz V20 effectiveness and natural replay frequency are
+  **UNVERIFIED**.
 - **Diagnostics:** `/record` writes cumulative
-  `unstick_nudges`, `unstick_moves`, `unstick_relaunches` into
+  `sling_loop_breaks` plus existing `unstick_nudges`,
+  `unstick_moves`, `unstick_relaunches` into
   `INPUT.TXT`; `/smoke` writes the same counters to `SMOKE.TXT`.
-- **Tests:** synthetic stuck/jitter loops with zero or nonzero velocity;
+- **Tests:** synthetic alternating genuine approach-side reflections
+  (six sides, correct inward/upward vector), five-hit ordinary
+  volleys, same-side recontacts, expired progress, upper-table
+  departure, tilt exclusion; plus prior
+  synthetic stuck/jitter loops with zero or nonzero velocity;
   110-step detection, 73-step safe moves, eventual free relaunch with
   unchanged balls/score; healthy escape cancels stages; exclusions for
   shooter, waiting plunger, kickback, flipper captures and drain.

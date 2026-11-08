@@ -11,7 +11,8 @@
  * detect a ball that repeatedly travels from left to right slingshot and
  * back. Count actual incoming contacts with ALTERNATING hulls, not mere
  * near-sling positions or repeated overlap corrections. Six distinct,
- * alternating rebounds within a two-second rolling window get one
+ * alternating rebounds, each no more than ~2 seconds after the last,
+ * get one
  * deterministic upward/inward impulse. A real volley can still happen:
  * three or four alternating hits are left completely alone.
  * No free balls, teleport, scoring, mission change or timer overhead.

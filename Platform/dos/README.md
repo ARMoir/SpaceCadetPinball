@@ -102,6 +102,23 @@ Tandy mode 09h and VGA mode 13h share the same lamp positions and
 color indices; no additional disk assets are required. Hardware sound
 quality and real CRT timing remain to be confirmed.
 
+## Preventing endless slingshot ping-pong (F-008)
+
+A ball that keeps bouncing left/right between the two triangular
+slingshots moves too far for the original 3-pixel anti-stuck watchdog.
+The native DOS simulation now detects genuine incoming alternating
+sling collisions. **Five or fewer consecutive left/right contacts are
+normal pinball gameplay.** On the sixth sustained alternating hit
+(with no gap over roughly 2 seconds), the ball receives a modest
+upward-and-inward escape impulse. Physics continues normally: no
+teleport, no free ball, no invented points and no altered kickback
+availability. Contacting the same sling repeatedly or leaving the
+area resets/does not advance the sequence. The fix adds three bytes
+of state and a cumulative `sling_loop_breaks` counter to `/record`
+and `/smoke` reports. It targets the simplified DOS collision-layer
+model; whether it prevents every hardware-reported loop on the actual
+7 MHz Tandy is **UNVERIFIED**. See [F-008](FIDELITY.md).
+
 ## High-return outlane saves (F-001)
 
 After either *armed* outlane kickback catches a descending ball, the DOS
