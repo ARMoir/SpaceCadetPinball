@@ -11,7 +11,7 @@ jobs:
   dispatch_current_dos:
     # Only the explicitly retried November 7 failed workflow may dispatch.
     # Other historic/current runs are ignored; no recursive build loop.
-    if: ${{ github.event.workflow_run.id == 42422798202 && github.event.workflow_run.run_attempt > 1 }}
+    if: ${{ github.event.workflow_run.id == 42422798202 }}
     runs-on: ubuntu-latest
     steps:
       - name: Dispatch latest DOS branch (not the old run's SHA)
