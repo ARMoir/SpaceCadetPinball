@@ -16,6 +16,9 @@
  * Only a lamp-state transition or old-ball overlap touches VRAM. */
 #define LAMP_COUNT (MAX_BUMPERS+4)
 static unsigned char lamp_ticks[LAMP_COUNT],lamp_drawn[LAMP_COUNT];
+/* Unlike glow lamps, kicker gates are gameplay collision state. Their
+ * narrow source-derived outlines must be visible even with /nolights. */
+static unsigned char gate_drawn[2]={255,255};
 static unsigned short lamp_sling_seen[2],lamp_kick_seen;
 static const unsigned char lamp_colors[LAMP_COUNT]={
     11,14,13,11,14,13,11,14,10,10,12,12
@@ -25,6 +28,7 @@ static void lamps_invalidate(void)
 {
     int i;
     for(i=0;i<LAMP_COUNT;i++) lamp_drawn[i]=255;
+    gate_drawn[0]=gate_drawn[1]=255;
 }
 static void lamps_reset(const Game *g)
 {
@@ -137,6 +141,47 @@ static int lamps_render(const Table *t,const Game *g,
              rect_overlaps(x-2,y-2,5,5,old_ball_x,old_ball_y,
                            ball_w,ball_h));
         if(wanted && repaint) lamp_glow(x,y,lamp_colors[i]);
+    }
+    return damage;
+}
+
+/* F-001: draw the original-source narrow gate's CLOSED metal leaf after
+ * TKickback finishes. The immutable table background contains no live
+ * TGate sprite; only a 3px-wide vertical overlay is needed. Open gate
+ * erases the overlay back to original art. Track old ball rectangles so
+ * moving balls cannot wipe the closed gate and ball stays foreground.
+ * This draw is independent of /nolights and uses no extra asset RAM. */
+static int kicker_gates_render(const Table *t,const Game *g,
+                               int old_ball_x,int old_ball_y,
+                               int new_ball_x,int new_ball_y,
+                               int ball_w,int ball_h,int ball_changed)
+{
+    int side,y,x,top,height,repaint,damage=0;
+    unsigned closed;
+    for(side=0;side<2;side++) {
+        if(t->gate_first[side]<0) continue;
+        x=(t->gate_left[side]+t->gate_right[side])/2;
+        top=t->gate_top[side];
+        height=t->gate_bottom[side]-top+1;
+        closed=g->kick_gate_closed[side]!=0;
+        repaint=gate_drawn[side]!=closed;
+        if(repaint) {
+            restore(x-1,top,3,height);
+            if(rect_overlaps(x-1,top,3,height,
+                             new_ball_x,new_ball_y,ball_w,ball_h))
+                damage=1;
+            gate_drawn[side]=(unsigned char)closed;
+        }
+        if(closed && (repaint ||
+                      (ball_changed &&
+                       rect_overlaps(x-1,top,3,height,
+                                     old_ball_x,old_ball_y,ball_w,ball_h)))) {
+            for(y=top;y<top+height;y++) {
+                pixel(x-1,y,8); pixel(x,y,7); pixel(x+1,y,15);
+            }
+            pixel(x,top,15);
+            pixel(x,top+height-1,7);
+        }
     }
     return damage;
 }

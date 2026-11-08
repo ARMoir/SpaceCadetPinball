@@ -416,6 +416,13 @@ int main(int argc,char **argv)
             if(lights_damage&1) ball_redraw=1;
             if(lights_damage&2) plunger_redraw=1;
         }
+        /* The TGate collision/closed metal leaf is independent from
+         * the decorative lamp toggle. Paint before the moving ball. */
+        if(kicker_gates_render(&table,&game,
+                              old_x,old_y,next_x,next_y,
+                              table.sprites[4].w+2,table.sprites[4].h+2,
+                              ball_changed))
+            ball_redraw=1;
         if(plunger_redraw) sprite(plunger_sprite,plunger_x,plunger_y);
         old_plunger_x=plunger_x; old_plunger_y=plunger_y;
         old_plunger_frame=plunger_frame;
