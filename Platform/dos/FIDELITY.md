@@ -183,6 +183,27 @@ silently treat legacy exceptions as precedent for new ones.
   from source TKickback, not original collision or gate behavior. Source
   projectile physics/gates and target arming should ultimately replace
   this approximation. Real 7.16 MHz V20 motion/timing is **UNVERIFIED**.
+- **2026-11-08 kicker gate restoration (owner observation):** the right
+  outlane door was not closing after the kickback fired. Original
+  `control::RightKickerControl` sends `TGateEnable` to `gate2` when
+  `TKickback::TimerExpired` completes; `TGate::Message` makes the
+  source gate's collision edges active and displays sprite 0. The
+  previous DOS model only cleared `kick_armed[1]`, leaving its imported
+  gate edges *permanently collidable* and showing no closing door.
+  DOS now identifies the actual four-edge source gate polygons next
+  to both outlanes during `table_index` (left about x57..61/y119..132,
+  right x162..167/y119..138). Their indexed edges are ignored while
+  the gate is open, then activate when the simplified timed kickback
+  finishes. A small source-positioned gray door leaf is drawn on close
+  with 3px-wide dirty rectangles in both Tandy/VGA modes, even with
+  `/nolights`. Once used, the gate stays closed and the kicker remains
+  unavailable until the NEXT ball begins. This matches original
+  **gate closure intent**, but source Hazard Target activation and
+  exact 0.7+0.1-second TKickback sequence are still MISSING; DOS still
+  starts each ball with free open/armed gates and a ~0.12s wind-up.
+  Fixture tables lacking imported gate groups do not invent geometry.
+  On real Tandy hardware the position, look and closing timing are
+  **UNVERIFIED**.
 - **Why / evidence:** temporary gameplay functionality with reduced component
   model; **not** demonstrated to be needed for 7 MHz performance.
 - **Tests today:** imported strike centers, offsets on both sides,
@@ -263,6 +284,26 @@ silently treat legacy exceptions as precedent for new ones.
   flattened 2D physics, not yet a faithful port of original collision
   groups. Real 7.16 MHz V20 timing and the owner's physical
   right-sling trajectory remain **UNVERIFIED**.
+- **2026-11-08 slingshot back-face and duplicate geometry fix:** the
+  owner observed artificial bounces from the backs of the slingshots
+  along the launcher/kicker tube. Original `TEdgeManager` filters active
+  collision groups; the DOS solid-hull adaptation treated EVERY face as
+  active, including the outside/back facing the outlane. We now retain
+  the hull's 3px positional exclusion but remove ONLY incoming normal
+  velocity on those back faces (slide, no second powered bounce),
+  and omit the anti-loop hit and tip upward kick there. The inward
+  front faces keep their normal restitution and genuine bounce counts.
+  The source table ALSO contains redundant interior artwork outlines
+  (e.g. right near edges 450..453) that were not excluded by the
+  old 14-edge loop filter. Fully contained, non-scoring detail segments
+  are now excluded from the static wall bands once the convex hull
+  is indexed. Source TGate1/TGate2 narrow collision shapes remain
+  separate and are enabled only by their actual gate state (F-001).
+  This is a source-inspired simplified collision-layer adjustment, not
+  a proof that every 3D surface is correctly modeled. Tests check
+  face direction, closed-hull containment, true forward hits, source
+  gate index discovery and one-way/dynamic collision. Physical V20
+  tube-wall trajectories and timing remain **UNVERIFIED**.
 - **Why / evidence:** the owner also observed a ball disappear into an
   upper-left highlighted area after a bounce. Whether this was an off-screen
   exit, collision mask/occlusion, or a gameplay drain is **unverified**.

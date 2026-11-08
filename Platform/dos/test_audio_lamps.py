@@ -65,6 +65,19 @@ class SoundLampTests(unittest.TestCase):
         self.assertIn('"/nolights"', MAIN)
         self.assertIn("if(lights_enabled)", MAIN)
 
+    def test_kicker_gate_is_real_collision_state_not_lamp(self):
+        self.assertIn("static int kicker_gates_render(", LAMPS)
+        self.assertIn("g->kick_gate_closed[side]!=0", LAMPS)
+        self.assertIn("t->gate_first[side]<0", LAMPS)
+        self.assertIn("restore(x-1,top,3,height)", LAMPS)
+        self.assertIn("kicker_gates_render(&table,&game,", MAIN)
+        self.assertLess(MAIN.index("kicker_gates_render(&table"),
+                        MAIN.index("if(plunger_redraw) sprite("))
+        self.assertIn("pixel(x+1,y,15)", LAMPS)
+        # /nolights cannot hide gameplay collision-door state.
+        self.assertGreater(MAIN.index("kicker_gates_render(&table"),
+                           MAIN.index("if(lights_enabled)"))
+
     def test_rgb_palette_and_static_budget(self):
         values = re.search(r"lamp_colors\[LAMP_COUNT\]\s*=\s*\{([^}]+)\}", LAMPS)
         self.assertIsNotNone(values)

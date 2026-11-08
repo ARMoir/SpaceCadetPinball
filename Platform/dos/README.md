@@ -144,6 +144,20 @@ visible resting position, with no sudden snap on release. No source
 assets or gameplay impulses were changed. The source 3D-to-2D placement
 is still approximated, and real Tandy CRT inspection remains pending.
 
+## Passive slingshot backs (F-002)
+
+The inward rubber faces of the two slingshots still produce normal
+bounces. Their outer backs, facing the kicker/outlane tubes, instead
+act as unpowered guides: they keep the ball outside the triangle,
+but slide off incoming normal motion instead of kicking it back
+toward the launcher. These rear contacts also do not count toward
+the four-hit left/right anti-loop rule or create a false sling
+flash. Duplicate internal collision outlines in the source pack
+are filtered at table loading. The source-positioned kicker gate
+on the right is separate and only becomes solid after the kicker
+fires. This corrects a reported physical-Tandy bounce artifact;
+actual hardware trajectories remain to be confirmed.
+
 ## Preventing endless slingshot ping-pong (F-008)
 
 A ball that keeps bouncing left/right between the two triangular
@@ -171,8 +185,14 @@ the table (y<=48) before ordinary collisions resume. The temporary
 guided flight is a forgiving adaptation for the port's incomplete 3D
 collision layers, not a replacement for original target/gate rules.
 Each side still saves **only once per ball**; unarmed contacts and
-tilted balls are never protected. Real 7.16 MHz V20 behavior remains
-to be tested. See [F-001](FIDELITY.md).
+tilted balls are never protected. The source-derived narrow gates
+now open while the kicker is armed and *close visually and physically*
+after their kickback timers fire, just as `RightKickerControl` calls
+`TGateEnable` in the original. The door is drawn using a tiny metal
+leaf over the imported x/y gate location, independently of `/nolights`,
+and reopens when a new ball is served. The full original Hazard Target
+arming sequence and timing remain unported. Real 7.16 MHz V20
+behavior remains to be tested. See [F-001](FIDELITY.md).
 
 ## Build and play
 
