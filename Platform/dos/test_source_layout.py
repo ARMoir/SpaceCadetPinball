@@ -47,6 +47,20 @@ class SourceLayoutTests(unittest.TestCase):
         self.assertIn("for(i=0;i<2;i++)", (DOS/"flipper.inc").read_text())
         self.assertIn("g->charge<PLUNGER_MAX_CHARGE", (DOS/"plunger.inc").read_text())
 
+    def test_high_scores_are_io_isolated(self):
+        main = (DOS/"main.c").read_text()
+        scores = (DOS/"scores.c").read_text()
+        control = (DOS/"control.inc").read_text()
+        self.assertIn('scores_load("SCORES.DAT")', main)
+        self.assertIn('scores_save("SCORES.DAT")', main)
+        self.assertIn('if(!smoke && old_over==0 && game.over', main)
+        self.assertIn('score_capture=1;', main)
+        self.assertIn('score_capture=0;', main)
+        self.assertIn('scores_rank(unsigned long score)', scores)
+        self.assertIn('scores_insert(unsigned long score', scores)
+        self.assertNotIn('scores_save(', control)
+        self.assertNotIn('fopen(', control)
+
 
 if __name__ == "__main__":
     unittest.main()
