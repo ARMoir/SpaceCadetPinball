@@ -53,7 +53,7 @@ class SoundLampTests(unittest.TestCase):
         self.assertIn("} else return 0;", LAMPS)
         self.assertIn("lamp_ticks[hit_bumper-1]=12", LAMPS)
         self.assertIn("g->kick_armed[side]", LAMPS)
-        self.assertIn("g->waiting", LAMPS)
+        self.assertNotIn("g->waiting", LAMPS)
         self.assertIn("restore(x-2,y-2,5,5)", LAMPS)
         self.assertNotIn("restore(0,0,320,200)", LAMPS)
         self.assertNotIn("fopen(", LAMPS)
