@@ -3,6 +3,10 @@
 name: Native DOS Tandy and VGA prototype
 on:
   workflow_dispatch:
+  # Temporary one-shot build request via the GitHub issue event; the job
+  # runs only for the exact issue title below. Remove after verification.
+  issues:
+    types: [opened]
   # Temporary fallback for GitHub App commits that did not generate push
   # workflows. GitHub schedules run from the default branch and this job
   # checks out dos/tandy-native-prototype below. Remove after launch.
@@ -19,6 +23,7 @@ permissions:
   contents: read
 jobs:
   dos:
+    if: ${{ github.event_name != 'issues' || github.event.issue.title == 'CI REQUEST: Build current DOS Space Cadet' }}
     runs-on: windows-2022
     timeout-minutes: 15
     steps:
