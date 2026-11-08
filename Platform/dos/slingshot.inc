@@ -7,6 +7,40 @@
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
  */
+/* F-008: the original UnstuckBall-inspired 3px position watchdog cannot
+ * detect a ball that repeatedly travels from left to right slingshot and
+ * back. Count actual incoming contacts with ALTERNATING hulls, not mere
+ * near-sling positions or repeated overlap corrections. Six distinct,
+ * alternating rebounds within a two-second rolling window get one
+ * deterministic upward/inward impulse. A real volley can still happen:
+ * three or four alternating hits are left completely alone.
+ * No free balls, teleport, scoring, mission change or timer overhead.
+ * See F-002 / F-008: this is a DOS flattened-layer playability guard,
+ * not a source TLight or TEdgeSegment rule. */
+#define SLING_LOOP_HITS 6
+#define SLING_LOOP_WINDOW 144
+static void sling_contact(Game *g,int side)
+{
+    unsigned char current=(unsigned char)(side+1);
+    if(g->tilted || g->in_shooter || g->waiting) return;
+    if(g->y<105*FP || g->y>165*FP) return;
+    if(g->sling_chain_side==current) return; /* Same hull, no alternation. */
+    if(g->sling_chain_hits && g->sling_chain_time)
+        g->sling_chain_hits++;
+    else
+        g->sling_chain_hits=1;
+    g->sling_chain_side=current;
+    g->sling_chain_time=SLING_LOOP_WINDOW;
+    if(g->sling_chain_hits<SLING_LOOP_HITS) return;
+    /* Lift the ball toward the upper center while leaving its exact
+     * source collision-resolved position intact. It is an impulse, NOT
+     * a scripted/safe-corridor kickback, and ordinary walls stay active. */
+    g->vx=(short)(side?-48:48);
+    if(g->vy>-144) g->vy=-144;
+    g->sling_loop_breaks++;
+    g->sling_chain_side=g->sling_chain_hits=g->sling_chain_time=0;
+}
+
 /* F-002: solid slingshot interior rejection, including the right
  * wedge where real Tandy gameplay repeatedly buried the ball. We use
  * the three Q8 outward half-plane normals of each original-derived
@@ -56,6 +90,7 @@ static void contain_slingshots(Game *g,const Table *t)
             impulse=-(dot*7)/4;
             g->vx+=(short)(impulse*best_nx/256);
             g->vy+=(short)(impulse*best_ny/256);
+            sling_contact(g,i);
         }
         if(best_ny<0 && g->vy>-24)
             g->vy=-24; /* tip/upper side: avoid sitting on the ridge */

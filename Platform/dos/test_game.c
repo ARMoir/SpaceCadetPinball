@@ -549,6 +549,86 @@ int main(int argc,char **argv)
     assert(g.x==237*FP && g.vx<0 && g.balls==3 &&
            !g.waiting && g.boundary_hits==1);
     puts("STAGE: top/side safety rails preserve balls"); fflush(stdout);
+    /* F-008: a traversing left/right slingshot loop is not stationary,
+     * so the original 3px watchdog cannot detect it. Construct two
+     * source-like convex Q8 triangles with mirror inward faces. Teleport
+     * only between *test contacts*, never in game mechanics: this
+     * deterministically drives genuine approach-side reflections.
+     * Short volleys, same-side jitter and expired streaks stay normal. */
+    {
+        int side,j;
+        static const short tx[3]={0,10,-10};
+        static const short ty[3]={-15,10,10};
+        static const short nx[3]={236,0,-236};
+        static const short ny[3]={-95,256,-95};
+        fixture();
+        for(side=0;side<2;side++) {
+            Sling *h=&t.slings[side];
+            int center=side?150:70;
+            memset(h,0,sizeof(*h));
+            h->first=0; h->count=3;
+            h->left=(short)(center-10);
+            h->right=(short)(center+10);
+            h->top=120; h->bottom=145;
+            h->x[0]=(short)center;
+            h->y[0]=120;
+            h->x[1]=(short)(center+10);
+            h->y[1]=145;
+            h->x[2]=(short)(center-10);
+            h->y[2]=145;
+            for(j=0;j<3;j++) {
+                h->nx[j]=nx[j];
+                h->ny[j]=ny[j];
+            }
+        }
+        t.sling_count=2;
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        /* The first five alternating impacts are legitimate pinball. */
+        for(j=0;j<5;j++) {
+            side=j&1;
+            g.x=(short)((side?144:76)*FP);
+            g.y=135*FP;
+            g.vx=(short)(side?96:-96); g.vy=0;
+            game_step(&g,&t,0);
+            assert(g.sling_rescues[side]>0 &&
+                   g.sling_chain_hits==j+1 &&
+                   g.sling_loop_breaks==0 &&
+                   g.balls==3 && !g.waiting);
+        }
+        /* The sixth true reversal escapes upward, not down the drain. */
+        g.x=144*FP; g.y=135*FP; g.vx=96; g.vy=0;
+        game_step(&g,&t,0);
+        assert(g.sling_loop_breaks==1 &&
+               !g.sling_chain_hits && !g.sling_chain_time &&
+               g.vx==-48 && g.vy<=-144 &&
+               g.balls==3 && g.score==0 && !g.waiting);
+        /* Repeatedly touching only one slingshot cannot trigger it. */
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        for(j=0;j<12;j++) {
+            g.x=76*FP; g.y=135*FP; g.vx=-96; g.vy=0;
+            game_step(&g,&t,0);
+        }
+        assert(g.sling_loop_breaks==0 && g.sling_chain_hits==1);
+        /* A missed two-second window discards the old streak. */
+        g.sling_chain_time=1;
+        g.x=110*FP; g.y=110*FP; g.vx=0; g.vy=0;
+        game_step(&g,&t,0);
+        assert(!g.sling_chain_hits && !g.sling_chain_side);
+        /* Crossing above the slings also resets a partial volley. */
+        g.sling_chain_hits=3; g.sling_chain_time=100;
+        g.sling_chain_side=1;
+        g.x=110*FP; g.y=90*FP; g.vx=0; g.vy=0;
+        game_step(&g,&t,0);
+        assert(!g.sling_chain_hits && !g.sling_chain_time);
+        /* No rescue is granted to an active shooter or tilted ball. */
+        g.sling_chain_hits=5; g.sling_chain_time=100;
+        g.sling_chain_side=1; g.tilted=1;
+        g.x=144*FP; g.y=135*FP; g.vx=96; g.vy=0;
+        game_step(&g,&t,0);
+        assert(!g.sling_loop_breaks && !g.sling_chain_hits);
+        puts("STAGE: F-008 alternating-sling anti-loop guard, normal volleys and exclusions");
+        fflush(stdout);
+    }
     /* A failed launch may roll back past the shared drain height.
      * It must return to the plunger without consuming a ball. */
     fixture(); g.waiting=0; g.x=(t.launch_x+2)*FP;

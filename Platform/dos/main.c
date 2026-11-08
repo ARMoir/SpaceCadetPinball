@@ -452,7 +452,7 @@ int main(int argc,char **argv)
     if(smoke || record) {
         report=fopen(smoke?"SMOKE.TXT":"INPUT.TXT","w");
         if(!report) return 1;
-        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u mouse_driver=%u video_vga=%u sling_left_rescues=%u sling_right_rescues=%u unstick_nudges=%u unstick_moves=%u unstick_relaunches=%u\n",
+        fprintf(report,"PASS frames=%u steps=%lu score=%lu hits=%lu balls=%d slow_frames=%lu input=%u launches=%u nudges=%u kickbacks=%u tilts=%u full_launches=%u boundary_hits=%u right_rail_saves=%u left_rail_saves=%u left_hits=%u right_hits=%u left_power=%u right_power=%u mouse_driver=%u video_vga=%u sling_left_rescues=%u sling_right_rescues=%u sling_loop_breaks=%u unstick_nudges=%u unstick_moves=%u unstick_relaunches=%u\n",
                 frame,game.steps,game.score,game.hits,game.balls,slow_frames,
                 observed,launches,game.nudges,game.kickbacks,game.tilts,
                 full_launches,game.boundary_hits,game.right_rail_saves,
@@ -460,7 +460,7 @@ int main(int argc,char **argv)
                 game.flipper_power_contacts[0],game.flipper_power_contacts[1],
                 mouse_available,vga_mode,
                 game.sling_rescues[0],game.sling_rescues[1],
-                game.unstick_nudges,game.unstick_moves,game.unstick_relaunches);
+                game.sling_loop_breaks,game.unstick_nudges,game.unstick_moves,game.unstick_relaunches);
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=0\n",
                 enhanced?"3d":"classic");
         fprintf(report,"# vga_colors=%d wall_crossings=%u\n",vga_colors,game.wall_crossings);

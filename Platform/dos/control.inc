@@ -12,6 +12,16 @@ void game_step(Game *g,const Table *t,unsigned keys)
     int i,b,pressed,px,py,shooter_inner_x,edge_rescue=0;
     short old_x=g->x,old_y=g->y;
     g->steps++; g->event=0; g->event_bumper=0;
+    /* F-008: no time-based cost outside three byte checks. A clean
+     * departure from the sling lane, a capture or expiry ends the streak.
+     * Tick at physics rate, not the 18Hz video refresh rate. */
+    if(g->sling_chain_time && !--g->sling_chain_time)
+        g->sling_chain_side=g->sling_chain_hits=0;
+    if(g->y<105*FP || g->y>165*FP ||
+       g->waiting || g->over || g->in_shooter ||
+       g->kick_delay || g->kick_flight || g->tilted) {
+        g->sling_chain_side=g->sling_chain_hits=g->sling_chain_time=0;
+    }
     if(g->over) {
         clear_stuck(g);
         g->shake_frames=0; /* Never leave display offset during game over. */

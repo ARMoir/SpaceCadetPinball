@@ -27,6 +27,7 @@ static void clear_stuck(Game *g)
 
 static void feed(Game *g,const Table *t)
 {
+    g->sling_chain_side=g->sling_chain_hits=g->sling_chain_time=0;
     g->x=t->launch_x*FP; g->y=t->launch_y*FP;
     g->vx=g->vy=g->charge=0; g->waiting=1;
     g->in_shooter=1;

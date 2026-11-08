@@ -75,6 +75,10 @@ typedef struct {
     unsigned short flipper_contacts[2],flipper_power_contacts[2];
     unsigned short wall_crossings; /* F-002 swept static wall corrections */
     unsigned short sling_rescues[2]; /* F-002: closed left/right sling ejects */
+    /* F-008: detect cyclic L/R slingshot hits, not only local jitter.
+     * Updated only on genuine approach-side hull reflections. */
+    unsigned char sling_chain_side,sling_chain_hits,sling_chain_time;
+    unsigned short sling_loop_breaks; /* Count deliberate loop escapes. */
     /* F-008: tiny fixed-point watchdog; no per-frame allocations. */
     short stuck_x,stuck_y,stuck_minx,stuck_maxx,stuck_miny,stuck_maxy;
     unsigned short stuck_ticks,stuck_stage_ticks;
