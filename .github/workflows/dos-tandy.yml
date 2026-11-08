@@ -1,0 +1,133 @@
+# Default-branch registration enables GitHub Actions workflow_dispatch.
+# A dispatch from master deliberately builds the latest DOS branch, not master.
+name: Native DOS Tandy and VGA prototype
+on:
+  workflow_dispatch:
+  push:
+    branches: ['master', 'dos/tandy-native-prototype']
+    paths: ['Platform/dos/**', '.github/workflows/dos-tandy.yml']
+  pull_request:
+    branches: ['dos/tandy-native-prototype']
+    paths: ['Platform/dos/**', '.github/workflows/dos-tandy.yml']
+permissions:
+  contents: read
+jobs:
+  dos:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A master dispatch/push builds the DOS code, without modifying it.
+          ref: ${{ github.ref == 'refs/heads/master' && 'dos/tandy-native-prototype' || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cache pinned portable tools
+        id: tools
+        uses: actions/cache@v4
+        with:
+          path: .dos-tools
+          key: dos-tools-watcom-2026-11-01-dosbox-x-2026-10-01-v1
+      - name: Fetch and verify tools
+        if: steps.tools.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .dos-tools | Out-Null
+          Invoke-WebRequest 'https://github.com/open-watcom/open-watcom-v2/releases/download/2026-11-01-Build/open-watcom-2_0-c-win-x64.exe' -OutFile .dos-tools/watcom.exe
+          if ((Get-FileHash .dos-tools/watcom.exe).Hash -ne 'D4E496C593EF2ACBC54D1EAEB31B31D9C62F86E39A09E61ADA411EF34FEAA01A') { throw 'Watcom hash mismatch' }
+          python -c "import zipfile; zipfile.ZipFile('.dos-tools/watcom.exe').extractall('.dos-tools/watcom')"
+          Invoke-WebRequest 'https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/dosbox-x-mingw64-2026.10.01-portable.zip' -OutFile .dos-tools/dosbox.zip
+          if ((Get-FileHash .dos-tools/dosbox.zip).Hash -ne 'DEF2D84D4415FC26C77252839B4DAFB6B476E3A4204B896292E6B05505CA8C59') { throw 'DOSBox-X hash mismatch' }
+          Expand-Archive .dos-tools/dosbox.zip .dos-tools/dosbox
+      - name: Test converter and build 8086 binaries
+        shell: pwsh
+        run: |
+          $env:WATCOM=(Resolve-Path .dos-tools/watcom).Path
+          python Platform/dos/test_convert.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_run_tests.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_source_layout.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_analyze_logs.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_menu_font.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_video_modes.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_enhance_table.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/build.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/verify_build.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item Platform/dos/data/TABLE.DAT,Platform/dos/data/TABLE.TGA,Platform/dos/data/IMPORT.json,Platform/dos/data/PREVIEW.png build/dos/
+          python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-Item build/dos/TABLE3D.TGA).Length -ne 32768) { throw 'Wrong enhanced artwork size' }
+      - name: Run Tandy09 and VGA13 DOS gameplay, video and parity tests
+        shell: pwsh
+        run: |
+          $emu='.dos-tools/dosbox/mingw-build/mingw-sdl2/dosbox-x.exe'
+          # Old 7 MHz target remains the baseline, with BIOS auto-select.
+          python Platform/dos/run_tests.py --emulator $emu --original --video tandy --auto-video
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_AUTO_SUMMARY.TXT
+          # Verify the explicit /tandy override on a Tandy BIOS as well.
+          python Platform/dos/run_tests.py --emulator $emu --original --video tandy
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_SUMMARY.TXT
+          # Standard VGA machines must support both explicit and auto mode.
+          python Platform/dos/run_tests.py --emulator $emu --original --video vga
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_VGA_SUMMARY.TXT
+          python Platform/dos/verify_video_modes.py build/dos
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/run_tests.py --emulator $emu --original --video vga --auto-video
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_VGA_AUTO_SUMMARY.TXT
+          python Platform/dos/verify_video_modes.py build/dos
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Upload playable Space Cadet build and validation logs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CADET
+          path: |
+            build/dos/CADET.EXE
+            build/dos/TEST.EXE
+            build/dos/*.MAP
+            build/dos/TABLE.DAT
+            build/dos/TABLE.TGA
+            build/dos/TABLE3D.TGA
+            build/dos/IMPORT.json
+            build/dos/README.TXT
+            build/dos/*.LOG
+            build/dos/TEST.OK
+            build/dos/SMOKE.TXT
+            build/dos/RUN_SUMMARY.TXT
+            build/dos/RUN_TANDY_SUMMARY.TXT
+            build/dos/RUN_TANDY_AUTO_SUMMARY.TXT
+            build/dos/RUN_VGA_SUMMARY.TXT
+            build/dos/RUN_VGA_AUTO_SUMMARY.TXT
+            build/dos/SCREEN-TANDY.BIN
+            build/dos/SCREEN-VGA.BIN
+            Platform/dos/verify_video_modes.py
+            Platform/dos/analyze_logs.py
+            Platform/dos/FEATURE_STATUS.md
+            Platform/dos/FIDELITY.md
+            Platform/dos/VALIDATION.md
+            build/dos/*.png
+      - name: Upload failed-build diagnostic logs (not a playable CADET.zip)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CADET-DIAGNOSTICS
+          if-no-files-found: warn
+          path: |
+            build/dos/*.LOG
+            build/dos/*.MAP
+            build/dos/RUN_SUMMARY.TXT
+            build/dos/TEST.OK
+            build/dos/SMOKE.TXT
