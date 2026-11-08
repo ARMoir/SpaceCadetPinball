@@ -386,13 +386,18 @@ Colored lamps and target art remain unchanged, and no perspective warp
 or new collision geometry is introduced. `TABLE.DAT`, original ball/flipper/plunger sprite data,
 gameplay state and scoring are identical between looks.
 
-The original 4x4 metallic ball sprite is drawn **unchanged in both styles**.
-The former 3-pixel floor shadow and 1-pixel glint were removed after physical
-Tandy feedback showed they made the low-resolution ball look less round.
-This preserves the original sprite's silhouette, uses the same existing 6x6
-dirty rectangle, and removes those extra per-frame pixel writes. Static
-artwork introduces **no extra work during gameplay**. The corrected ball's
-appearance on the real CRT still needs a follow-up check.
+The default moving ball is now a **6x5 symmetrical circle** instead
+of the original 4x4 shaded metallic sprite. At 320x200 on a 4:3 CRT,
+pixels are about 20% taller than wide, so the 6x5 mask should appear
+round. A uniform white center and dark gray rim give clear edges with
+no fake 3D, corner glint or floor shadow. This is a runtime visual
+override applied once after loading the unchanged original asset
+packs, and it reuses the existing efficient sprite/dirty-rectangle
+renderer. Run `CADET /sourceball` to restore the original 4x4 sprite
+for an on-CRT comparison. This works with both video modes and both
+`/classic` and `/3d`. Physics, collision radius and launch position
+are completely unchanged. Visual results on a physical Tandy CRT
+remain to be confirmed.
 
 Compare the same shot in `CADET /classic` versus `CADET /3d`. Use
 `CADET /record /classic` or `CADET /record /3d` to capture timing and

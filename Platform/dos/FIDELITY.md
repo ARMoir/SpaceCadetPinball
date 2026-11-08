@@ -546,9 +546,10 @@ contacts, measured against real Tandy responsiveness.
   shading/cast shadows, without changing colorful lamps, sprite assets,
   geometry, collision, projection, table dimensions, or fixed RGBI palette.
   The untouched original background remains accessible via `CADET /classic`;
-  `CADET /3d` selects the enhanced look. The original 4x4 ball sprite is
-  rendered unchanged in both modes following the silhouette correction
-  described below; sprite and gameplay data are unchanged.
+  `CADET /3d` selects the enhanced look. The source 4x4 ball sprite
+  remains in the original packs but is selected only with `/sourceball`
+  since the owner's 2026-11-08 roundness-first visual revision below.
+  No gameplay data or collision behavior changes.
 - **F-007 offline art revision (2026-11-07):** strengthen the existing
   `enhance_table.py` effect for the **default** `TABLE3D.TGA` only:
   brighter upper-left edge rims on painted metallic rails, darker
@@ -601,7 +602,29 @@ contacts, measured against real Tandy responsiveness.
   color or gameplay-frame differences on the emulator.
   **Hardware VGA speed, CRT/monitor output and PC-speaker sound
   are still UNVERIFIED**; DOSBox timing is not a benchmark.
-- **F-007 ball silhouette correction (2026-11-07):** physical Tandy CRT
+- **F-007 round silhouette revision (2026-11-08):** The owner explicitly
+  prioritized a truly round ball over metallic 3D styling. Inspection of
+  `TABLE.DAT` showed the original 4x4 source sprite has an irregular
+  transparency mask and a bright bottom-right pixel, contributing to
+  a lopsided appearance on a physical Tandy CRT. The DOS default now
+  replaces the displayed ball sprite *after* successful original
+  TABLE.DAT and VGA.DAT validation with a perfectly symmetric 6x5
+  pixel disk. The 4:3 aspect of 320x200 graphics means a pixel is
+  approximately 1.2x taller than wide, giving a physical circular
+  appearance to a 6x5 mask. The fill is uniform RGBI white (15), rim
+  is neutral dark gray (8), transparency is 255; there are no highlights,
+  fake perspective, cast shadows or per-frame effects. `/sourceball`
+  preserves the original 4x4 art for direct comparison, in Tandy 09h
+  or VGA 13h, regardless of `/classic` or `/3d`. The replacement uses
+  the existing sprite buffer (30 bytes written once), existing source
+  coordinates and dirty rectangle calculations, with **no** gameplay
+  geometry, fixed-point physics, scoring, launch or collision-radius
+  modifications. The original converted table and VGA art files remain
+  byte-for-byte unchanged. CI checks 6x5 vertical/horizontal symmetry,
+  footprint, palette and default/optional switch, and emulator parity
+  confirms identical video output in RGBI Tandy/VGA. Physical V20
+  responsiveness and CRT silhouette are still **UNVERIFIED**.
+- **F-007 earlier ball silhouette correction (2026-11-07):** physical Tandy CRT
   feedback found the optional three dark floor-shadow pixels and one
   forced white glint made the original tiny ball look less round. Remove
   both runtime overlays from `main.c`, but preserve the source-derived

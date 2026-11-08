@@ -24,7 +24,7 @@ Tandy 1000 EX/V20.
 | Native executable | Real-mode 16-bit Open Watcom C89 `CADET.EXE`; no Windows, FPU, XMS/EMS, SDL or extender | MZ/header and DGROUP checks in `verify_build.py` |
 | Tandy/VGA display | Tandy/PCjr BIOS mode 09h in banked B800h 16-color VRAM, or VGA BIOS mode 13h with linear A000h 8bpp VRAM; both 320x200 and same 16-color source art | Explicit /tandy and /vga overrides and BIOS VGA auto-selection; CI tests both video backends and full 64000-pixel final-frame parity; physical VGA performance unverified |
 | Appearance | Classic `TABLE.TGA`; optional default `TABLE3D.TGA` with **offline-only static** fake-depth shading; `/classic` comparison | Both styles share the same `TABLE.DAT`; original colored artwork remains intact |
-| Ball and paddles | Imported ball and two rest/raised flipper sprites, fixed-point movement and collisions | Playable but simplified physics, not continuous original sweep |
+| Ball and paddles | Default symmetric 6x5 round ball, original 4x4 via `/sourceball`; original rest/raised flipper art, fixed-point movement and collisions | Display-only CRT aspect adaptation; simplified physics and sweep remain |
 | Plunger | Eight original animation frames, hold/release, full/weak launch; ball seats immediately above visible original rod tip, and weak shooter returns can be launched again | DOS charge curve and 2D resting position are adapted from source; physical shooter testing pending (F-003) |
 | Game lifecycle | Three balls, score, drain, game over, restart, basic ball reset and persistent local top-five high scores with initials | No complete scoring rules/bonus/multiplayer (F-009 is the simplified high-score file/entry) |
 | Bumpers | Seven source-derived visible caps have radial contact, static initial 500/1500 scoring | No original per-bumper rule progression or vertical layers (F-004) |
@@ -64,7 +64,7 @@ and frame timing remain unverified.
 | Bumpers | Seven radial caps, basic initial scoring | Variable score state, independent component cooldowns, full original material/layer interaction | F-004 |
 | Kickbacks | Two timed saves, strike centers from source | Hazard Target triplet activation, gate enable/disable, source timer/state/rearm, actual mission coupling | F-001 |
 | Nudge/tilt | Three directions, reversal impulse and warning/lockout | Exact source threshold, accumulation/decay and physically accurate displacement | F-005 |
-| Visual effects | Reduced-color artwork, small dynamic event/armed lamp overlays, original metallic ball sprite, optional Tandy CRTC shake | Full source-derived light sprite animations, switch/mission control and depth/occlusion rendering | F-007 |
+| Visual effects | Reduced-color artwork, small dynamic event/armed lamp overlays, default unshaded round ball (source 4x4 optional), Tandy CRTC shake | Full source-derived light sprite animations, switch/mission control and depth/occlusion rendering | F-007 |
 | Audio | Eight synthetic PSG/PC speaker multi-note cues with audio priority | Source WAV samples, original soundtrack/music playback, independent source audio channels and all target/mission event mapping | F-007 |
 
 **Universal recovery (2026-11-07):** The DOS port adds a
