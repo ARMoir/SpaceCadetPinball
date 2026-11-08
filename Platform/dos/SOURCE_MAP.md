@@ -32,6 +32,7 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | Nudge and tilt | [`nudge.inc`](nudge.inc), [`control.inc`](control.inc) | `nudge.cpp`, `pb.cpp` (F-005) |
 | Stuck-ball rescue | [`unstuck.inc`](unstuck.inc) | `control.cpp::UnstuckBall` (F-008) |
 | Ball appearance, Tandy/VGA drawing | [`video.inc`](video.inc), [`assets.inc`](assets.inc), [`main.c`](main.c) | `render.cpp`, `gdrv.cpp` (F-007) |
+| Original title/splash image, paused DOS menu | [`build_menu_art.py`](build_menu_art.py), [`data/menu_art.b64`](data/menu_art.b64), [`hud.inc`](hud.inc), [`main.c`](main.c) | `SpaceCadetPinball/splash_bitmap.bmp`, `winmain.cpp` and supplied 600x600 Space Cadet art; RGBI conversion / 240x200 static splash adaptation (F-007) |
 | Menu/help, mouse, sound | [`hud.inc`](hud.inc), [`input.inc`](input.inc), [`audio.inc`](audio.inc) | `winmain.cpp`, `options.cpp`, `TTextBox.cpp`, `Sound.cpp` (F-007) |
 | High-score table, initials and file persistence | [`scores.c`](scores.c), [`scores.h`](scores.h), [`hud.inc`](hud.inc) | `high_score.cpp` (F-009) |
 
