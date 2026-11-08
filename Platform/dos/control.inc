@@ -64,6 +64,18 @@ void game_step(Game *g,const Table *t,unsigned keys)
          * geometry. Give normal collision/scoring back at the top. */
         clear_stuck(g);
         advance_kickback_flight(g);
+        /* Preserve source-like scoring and solid radial bumper caps while
+         * avoiding only lower flattened rail/sling trapping. A bumper
+         * deflection is corrected by the next powered shot substep. */
+        collide_bumpers(g,t);
+        if(g->y<=48*FP) {
+            g->kick_flight=0;
+            /* Exit with a purposeful upward, inward return, even if
+             * the last upper bumper contact reversed the velocity. */
+            if(g->vy>-128) g->vy=-128;
+            if(g->kick_side==1 && g->vx<32) g->vx=32;
+            if(g->kick_side==2 && g->vx>-32) g->vx=-32;
+        }
         g->previous=(short)keys;
         return;
     }

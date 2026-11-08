@@ -174,8 +174,9 @@ silently treat legacy exceptions as precedent for new ones.
   Every *earned, already-armed* kickback now follows a two-stage, fixed-point
   upward corridor from its imported strike center: first outside the
   lower slingshot, then inward until y<=48 (upper quarter of playfield).
-  Lower collision/scoring is bypassed ONLY during that brief active shot,
-  then completely restored. It lasts roughly 0.6 s at 72.8 substeps/s,
+  Only the troublesome flattened lower rails/slings are bypassed during
+  the active return. Radial bumper collisions and normal scoring remain
+  enabled, and full static collision resumes near the top. It lasts roughly 0.6 s at 72.8 substeps/s,
   preserves score and ball count, and never grants an unarmed/tilted save.
   The shot can pass over visually rendered 2D walls because the original
   3D layers are not imported: an **explicit forgiving playability deviation**

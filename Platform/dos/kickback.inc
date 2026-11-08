@@ -52,6 +52,6 @@ static void advance_kickback_flight(Game *g)
     g->vy=-160;
     g->x=(short)(g->x+g->vx);
     g->y=(short)(g->y+g->vy);
-    if(g->y<=48*FP) g->kick_flight=0;
+    /* Final clearance check happens AFTER legitimate bumper contacts. */
 }
 
