@@ -107,12 +107,59 @@ static void index_slings(Table *t)
     }
 }
 
+/* F-001: map original v_gate1 / v_gate2 outlines, not guessed positions.
+ * The real SCP2 contains narrow CLOSED four-line groups immediately
+ * inward of the two outlane strike centers. On the reference table the
+ * left gate sits at x57..61/y119..132, and right at x162..167/y119..138.
+ * The nearest qualifying narrow group wins; demo fixtures without the
+ * original geometry simply have no dynamic kicker gates. */
+static void index_kick_gates(Table *t)
+{
+    int side,i,j,minx,maxx,miny,maxy,delta,best;
+    const Edge *first,*e;
+    for(side=0;side<2;side++) {
+        best=32767;
+        t->gate_first[side]=-1;
+        for(i=0;i+3<t->count;i++) {
+            first=&t->edges[i];
+            if(first->score) continue;
+            minx=maxx=first->x;
+            miny=maxy=first->y;
+            for(j=0;j<4;j++) {
+                e=&t->edges[i+j];
+                if(e->score || (j && (t->edges[i+j-1].ex!=e->x ||
+                                     t->edges[i+j-1].ey!=e->y))) break;
+                minx=minimum(minx,minimum(e->x,e->ex));
+                maxx=maximum(maxx,maximum(e->x,e->ex));
+                miny=minimum(miny,minimum(e->y,e->ey));
+                maxy=maximum(maxy,maximum(e->y,e->ey));
+            }
+            if(j!=4 || e->ex!=first->x || e->ey!=first->y)
+                continue;
+            if(maxx-minx<2 || maxx-minx>7 ||
+               maxy-miny<10 || maxy-miny>24 ||
+               miny<110 || miny>135 || maxy>=150)
+                continue;
+            delta=side==0?minx-t->kickback[0]:
+                           t->kickback[2]-maxx;
+            if(delta<3 || delta>22 || delta>=best) continue;
+            best=delta;
+            t->gate_first[side]=(short)i;
+            t->gate_left[side]=(short)minx;
+            t->gate_right[side]=(short)maxx;
+            t->gate_top[side]=(short)miny;
+            t->gate_bottom[side]=(short)maxy;
+        }
+    }
+}
+
 int table_index(Table *t)
 {
     int i,b,lo,hi,k,minx,maxx,miny,maxy,diameter;
     memset(t->band_count,0,sizeof(t->band_count));
     t->bumper_count=0;
     index_slings(t);
+    index_kick_gates(t);
     t->outer_right_rail=-1;
     t->outer_left_rail=-1;
     /* F-004: Source TBumper uses a radial normal. Reassemble closed eight-

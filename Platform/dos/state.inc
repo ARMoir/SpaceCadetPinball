@@ -57,6 +57,7 @@ static void feed(Game *g,const Table *t)
     g->in_shooter=1;
     g->shooter_seat_guide=0;
     g->kick_delay=0; g->kick_side=0; g->kick_flight=0;
+    /* A weak shooter return does NOT rearm an already used kicker. */
     clear_stuck(g);
     g->sweep[0]=g->sweep[1]=0;
 }

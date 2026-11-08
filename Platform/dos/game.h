@@ -55,6 +55,11 @@ typedef struct {
     Bumper bumpers[MAX_BUMPERS];
     Sling slings[MAX_SLINGS];
     short sling_count;
+    /* F-001/F-002: source four-edge narrow v_gate1 / v_gate2
+     * barriers between the sling backs and kicker outlanes. Indexed
+     * normally but active only after a kickback has been consumed. */
+    short gate_first[2],gate_left[2],gate_right[2];
+    short gate_top[2],gate_bottom[2];
     short bumper_count,outer_right_rail,outer_left_rail; /* exterior source rails */
     Sprite sprites[5];
     Sprite plunger[8];
@@ -68,6 +73,7 @@ typedef struct {
     unsigned char in_shooter;
     unsigned char shooter_seat_guide; /* F-003 lower tube clearance */
     unsigned char kick_armed[2],kick_side,kick_delay,kick_flight;
+    unsigned char kick_gate_closed[2]; /* Source TGateEnable after firing */
     unsigned char event_bumper; /* 1-based cap index for audiovisual cues */
     unsigned char shake_frames,tilted,tilt_warning;
     unsigned char nudge_return_ticks,nudge_decay_ticks;

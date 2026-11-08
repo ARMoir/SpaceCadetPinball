@@ -73,6 +73,12 @@ void game_step(Game *g,const Table *t,unsigned keys)
             /* F-001: clear lower projected collisions using a bounded,
              * two-stage return, especially on the right outlane. */
             g->kick_flight=1;
+            /* Source control::Left/RightKickerControl reenables its
+             * TGate when the kickback timer expires. The one-use DOS
+             * kicker is now disarmed and the gate remains CLOSED until
+             * a new ball resets the simplified hazard progression. */
+            if(g->kick_side>=1 && g->kick_side<=2)
+                g->kick_gate_closed[g->kick_side-1]=1;
             g->vx=(short)(g->kick_side==1?55:-16);
             g->vy=-160;
             g->shake_frames=16;
@@ -128,6 +134,18 @@ void game_step(Game *g,const Table *t,unsigned keys)
         const EdgeBounds *box=&t->bounds[index];
         if(px<box->left || px>box->right ||
            py<box->top || py>box->bottom) continue;
+        /* Source TGateDisable opens the kicker entry. The original
+         * four-edge narrow gate is present in SCP2, but the old DOS
+         * importer made it permanently solid! Ignore those edges
+         * until the corresponding TKickback fires and recloses gate.
+         * This also stops false rebounds along the right sling back. */
+        if((t->gate_first[0]>=0 && !g->kick_gate_closed[0] &&
+            index>=t->gate_first[0] &&
+            index<t->gate_first[0]+4) ||
+           (t->gate_first[1]>=0 && !g->kick_gate_closed[1] &&
+            index>=t->gate_first[1] &&
+            index<t->gate_first[1]+4))
+            continue;
         if(upper_chute_pass(g,&t->edges[index],px,py))
             continue;
         if(!guard_wall_crossing(g,&t->edges[index],old_x,old_y))
@@ -202,6 +220,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
             feed(g,t);
             /* New ball, fresh kicker activations and tilt reset. */
             g->kick_armed[0]=g->kick_armed[1]=1;
+            g->kick_gate_closed[0]=g->kick_gate_closed[1]=0;
             g->tilted=0; g->tilt_warning=0;
             g->nudge_heat=0; g->nudge_return_ticks=0;
             g->nudge_return_x=g->nudge_return_y=0;
