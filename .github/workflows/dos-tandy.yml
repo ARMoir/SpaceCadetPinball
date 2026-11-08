@@ -51,6 +51,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_enhance_table.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_package.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/build.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/verify_build.py
@@ -82,35 +84,26 @@ jobs:
           Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_VGA_AUTO_SUMMARY.TXT
           python Platform/dos/verify_video_modes.py build/dos
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: Upload playable Space Cadet build and validation logs
-        if: success()
+      - name: Package runtime files only
+        shell: pwsh
+        run: python Platform/dos/package.py
+      - name: Upload playable CADET.zip
         uses: actions/upload-artifact@v4
         with:
           name: CADET
+          path: build/package/runtime/*
+          if-no-files-found: error
+      - name: Upload validation evidence separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: CADET-VALIDATION
           path: |
-            build/dos/CADET.EXE
-            build/dos/TEST.EXE
-            build/dos/*.MAP
-            build/dos/TABLE.DAT
-            build/dos/TABLE.TGA
-            build/dos/TABLE3D.TGA
-            build/dos/IMPORT.json
-            build/dos/README.TXT
             build/dos/*.LOG
+            build/dos/*.MAP
+            build/dos/*SUMMARY.TXT
             build/dos/TEST.OK
             build/dos/SMOKE.TXT
-            build/dos/RUN_SUMMARY.TXT
-            build/dos/RUN_TANDY_SUMMARY.TXT
-            build/dos/RUN_TANDY_AUTO_SUMMARY.TXT
-            build/dos/RUN_VGA_SUMMARY.TXT
-            build/dos/RUN_VGA_AUTO_SUMMARY.TXT
-            build/dos/SCREEN-TANDY.BIN
-            build/dos/SCREEN-VGA.BIN
-            Platform/dos/verify_video_modes.py
-            Platform/dos/analyze_logs.py
-            Platform/dos/FEATURE_STATUS.md
-            Platform/dos/FIDELITY.md
-            Platform/dos/VALIDATION.md
+            build/dos/SCREEN-*.BIN
             build/dos/*.png
       - name: Upload failed-build diagnostic logs (not a playable CADET.zip)
         if: failure()
@@ -124,3 +117,44 @@ jobs:
             build/dos/RUN_SUMMARY.TXT
             build/dos/TEST.OK
             build/dos/SMOKE.TXT
+
+  publish:
+    needs: dos
+    if: github.ref == 'refs/heads/dos/tandy-native-prototype' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: CADET
+          path: runtime
+      - name: Create release archive
+        working-directory: runtime
+        run: zip -9 ../CADET.zip CADET.EXE TABLE.DAT TABLE.TGA TABLE3D.TGA
+      - name: Publish tested prototype build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const tag = `dos-build-${context.runNumber}-${process.env.GITHUB_RUN_ATTEMPT}`;
+            const {data: release} = await github.rest.repos.createRelease({
+              ...context.repo,
+              tag_name: tag,
+              target_commitish: context.sha,
+              name: `DOS Space Cadet build ${context.runNumber}`,
+              prerelease: true,
+              draft: true,
+              body: `Tested DOS/Tandy and VGA prototype from ${context.sha}.\n\nDownload CADET.zip and extract all four files together. Run CADET.EXE from that directory. SCORES.DAT is created locally; preserve your existing scores when updating.\n\nOriginal assets with simplified physics/rules; real V20 timing remains unverified. Validation logs: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            });
+            await github.rest.repos.uploadReleaseAsset({
+              ...context.repo,
+              release_id: release.id,
+              name: 'CADET.zip',
+              data: fs.readFileSync('CADET.zip'),
+              headers: {'content-type': 'application/zip'}
+            });
+            await github.rest.repos.updateRelease({
+              ...context.repo, release_id: release.id, draft: false
+            });
+            await core.summary.addLink('Download published build', release.html_url).write();

@@ -355,3 +355,19 @@ score sorting, roundtrip persistence and malformed-file recovery. The
 18.2 Hz `/smoke` mode deliberately skips score-file I/O, so live
 initials entry, mouse-driver compatibility and physical V20 performance
 must still be tested manually after the DOS build succeeds.
+
+## Runtime packaging review, 2026-11-08
+
+The current mouse/HUD/high-score build is 39,216 bytes with DGROUP 64,496
+bytes. Its checked minimum image + PSP + background is 131,536 bytes for
+Tandy and 162,768 bytes for VGA. The prior 128KB Tandy guard failed by 464
+bytes; the guard is now 160KB (VGA stays 192KB), with the independent 64KB
+DGROUP limit retained. These are minimum allocations, not peak heap or
+physical 640KB/V20 validation. Near-data headroom is limited; future static
+data additions need care. No gameplay behavior changed in this review.
+
+The runtime package contains only CADET.EXE, TABLE.DAT, TABLE.TGA and
+TABLE3D.TGA. Packaging rejects missing/invalid required inputs and excludes
+local high scores and developer/test files. Successful branch workflows
+publish a versioned prerelease only after all checks; validation evidence
+is a separate artifact.

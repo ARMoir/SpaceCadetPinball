@@ -477,3 +477,19 @@ Tandy layout reference: Tandy 1000 Technical Reference Manual, video section
 (four 8KB banks, mode 09h). Standard VGA reference: BIOS INT 10h modes 13h
 and AX=1A00h detection; A000h linear 64000-byte video, VGA DAC 3C8/3C9h.
 Compiler: https://github.com/open-watcom/open-watcom-v2
+
+## Runtime-only downloads and published builds (2026-11-08)
+
+The Actions **CADET** artifact downloads as **CADET.zip** with exactly four
+files at its root: `CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`.
+The enhanced image preserves the default appearance; `/classic` selects the
+original background. Extract all four together and run CADET from that
+folder. Keep an existing `SCORES.DAT`: scores are created locally and never
+bundled. No emulator, test program, Python, maps or logs are needed to play.
+
+Successful pushes/manual runs on `dos/tandy-native-prototype` also publish
+a uniquely tagged GitHub prerelease containing `CADET.zip`. Publishing waits
+for the native core, Tandy/VGA auto/forced smoke and video-parity checks.
+Pull requests and other branches do not publish releases. Test evidence is
+available separately as **CADET-VALIDATION**; failed runs expose diagnostics
+without publishing a playable package. Physical V20 timing remains unverified.
