@@ -34,10 +34,64 @@ static const unsigned short font[]={
     23407,23402,23421,23213,23186,29351
 };
 
+/* A user-supplied Space Cadet title image, converted offline to the
+ * original 16-color Tandy RGBI palette. MENU.DAT is optional so older
+ * installations still work without another file. SCM1 + 240x200 packed
+ * left-side menu background + 76x53 packed score-panel logo. Loading happens
+ * before gameplay; drawing happens only on a view transition (F-007). */
+#define MENU_BACKGROUND_BYTES 24000U
+#define MENU_LOGO_BYTES 2014U
+#define MENU_ASSET_BYTES (MENU_BACKGROUND_BYTES+MENU_LOGO_BYTES)
+static unsigned char __far *menu_background=0;
+
+static int load_menu_background(void)
+{
+    FILE *f=fopen("MENU.DAT","rb");
+    unsigned char buf[512];
+    unsigned offset,n;
+    int good=1;
+    if(!f) return 0;
+    if(fread(buf,1,4,f)!=4 || memcmp(buf,"SCM1",4)) good=0;
+    if(good) {
+        menu_background=_fmalloc((unsigned long)MENU_ASSET_BYTES);
+        if(!menu_background) good=0;
+    }
+    for(offset=0;good && offset<MENU_ASSET_BYTES;offset+=512U) {
+        n=MENU_ASSET_BYTES-offset;
+        if(n>512U) n=512U;
+        if(fread(buf,1,n,f)!=n) { good=0; break; }
+        _fmemcpy(menu_background+offset,buf,n);
+    }
+    if(good && fgetc(f)!=EOF) good=0;
+    fclose(f);
+    if(!good && menu_background) {
+        _ffree(menu_background); menu_background=0;
+    }
+    return good;
+}
+
+static void draw_menu_background(void)
+{
+    int y,x;
+    if(!menu_background) return;
+    for(y=0;y<200;y++) {
+        const unsigned char __far *src=menu_background+(unsigned)y*120U;
+        if(vga_mode) {
+            unsigned a=(unsigned)y*320U;
+            for(x=0;x<120;x++) {
+                unsigned char pair=src[x];
+                video[a+2*x]=(unsigned char)(pair>>4);
+                video[a+2*x+1]=(unsigned char)(pair&15);
+            }
+        } else {
+            _fmemcpy(video+address(0,y),src,120U);
+        }
+    }
+}
+
 /* The original Windows layout has a decorated title box, then separate
- * ball/score and message boxes. At 320x200 there are only 80 right-hand
- * pixels; all panel graphics are dirty-rectangle redraws, not a screen
- * refresh. The title is source-derived from splash_bitmap.bmp. */
+ * ball/score and message boxes. Both DOS modes show the new sampled
+ * title in the 76x53 right-hand box while gameplay stays unchanged. */
 static void draw_title(void)
 {
     int y,x;
@@ -45,14 +99,20 @@ static void draw_title(void)
         if(vga_mode) {
             unsigned a=(unsigned)(y+4)*320U+242U;
             for(x=0;x<MENU_ART_W/2;x++) {
-                unsigned char pair=menu_art[y*(MENU_ART_W/2)+x];
+                unsigned char pair=menu_background?
+                    menu_background[MENU_BACKGROUND_BYTES+
+                                    (unsigned)y*(MENU_ART_W/2)+x]:
+                    menu_art[y*(MENU_ART_W/2)+x];
                 video[a+2*x]=(unsigned char)(pair>>4);
                 video[a+2*x+1]=(unsigned char)(pair&15);
             }
         } else {
             unsigned a=address(242,4+y);
             for(x=0;x<MENU_ART_W/2;x++)
-                video[a+x]=menu_art[y*(MENU_ART_W/2)+x];
+                video[a+x]=menu_background?
+                    menu_background[MENU_BACKGROUND_BYTES+
+                                    (unsigned)y*(MENU_ART_W/2)+x]:
+                    menu_art[y*(MENU_ART_W/2)+x];
         }
     }
     for(x=241;x<=318;x++) {
