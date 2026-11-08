@@ -519,6 +519,31 @@ contacts, measured against real Tandy responsiveness.
   or source physics modifications. The memory/time cost on actual
   7.16 MHz V20 hardware is UNVERIFIED. Tests exercise the display
   contract, and DOSBox-X Tandy/VGA parity remains required.
+- **F-007 owner-supplied title/menu art (2026-11-08):** the 600x600
+  Space Cadet splash supplied by the owner is pre-scaled with a small
+  ordered-violet-dither adaptation to the fixed 16-color Tandy RGBI
+  palette. A compressed, checksum-verified text asset becomes `MENU.DAT`
+  (4-byte SCM1 signature, 24,000 packed bytes for a 240x200 left menu
+  background, plus 2,014 packed bytes for the 76x53 HUD logo).
+  Both standard VGA 13h and Tandy 09h show the same source pixels. Tandy
+  uses a 120-byte bank-aware scanline copy, VGA expands high/low nibbles
+  once when a menu is entered. Unlike the desktop's window/menu bar,
+  the DOS menu is a **paused full-height splash beside the existing
+  80-pixel text menu**; compact dialog controls are unchanged. It
+  replaces the previous tiny source-derived logo when the pack exists;
+  missing/malformed MENU.DAT retains the old title and original menu.
+  Physics, sprites, collision geometry and background packs are untouched.
+  The splash loads into a 26,014-byte far allocation before gameplay,
+  requires one full-screen playfield restoration on menu exit, and does
+  not access disk, decompress, redraw menu art or allocate memory
+  during game physics. The upload is user-provided; the original source
+  title is `SpaceCadetPinball/splash_bitmap.bmp` and the desktop menu
+  flow is in `winmain.cpp`. The exact desktop artwork framing, title
+  readability on Tandy RGB CRT, memory pressure and V20 menu-transition
+  latency are **UNVERIFIED**. Unit checks cover pack integrity, VGA/Tandy
+  index parity, normal/missing pack behavior and menu redraw isolation.
+  A new actual Open Watcom/DOSBox-X build and physical-hardware
+  acceptance remain pending.
 - **Why / evidence:** owner requested more visible depth on their son's
   first impression of the CRT playfield. Original game relies on art,
   highlights and occlusion for a 3D impression. Baking effects offline
