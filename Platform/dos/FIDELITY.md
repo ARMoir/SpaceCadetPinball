@@ -503,8 +503,10 @@ contacts, measured against real Tandy responsiveness.
   overlap and reuses existing restitution and lever-power response.
   No extra kick, random rescue, artwork, table data, score or center
   wall is introduced. It does not protect balls that begin underneath,
-  miss the finite paddle, move away, are tilted, or fall through
-  the untouched center gap. Nearby broad-phase rejection avoids
+  miss the finite paddle, move away, or fall through the untouched
+  center gap. Tilt still leaves the **resting** paddle physically
+  solid with its power and moving sweep disabled. Nearby broad-phase
+  rejection avoids
   division on normal flight ticks. This is a *ball-path* sweep, not
   a faithful rotating 3D flipper/capsule endpoint TOI simulation.
   Synthetic tests cover both sides and rest/held stroke, active

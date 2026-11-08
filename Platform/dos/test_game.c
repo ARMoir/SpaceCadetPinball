@@ -143,6 +143,14 @@ static void flipper_tunneling_tests(void)
     g.previous=KEY_LEFT;
     game_step(&g,&t,KEY_LEFT);
     assert(g.vy>0 && !g.flipper_contacts[0]);
+    /* Tilt makes the paddle idle, not intangible: the same incoming
+     * ball must reflect from the resting geometry without any power. */
+    fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+    g.x=93*FP; g.y=165*FP; g.vy=160; g.tilted=1;
+    g.previous=KEY_LEFT;
+    game_step(&g,&t,KEY_LEFT);
+    assert(g.vy<0 && g.flipper_contacts[0]>0 &&
+           !g.flipper_power_contacts[0] && g.balls==3);
     puts("STAGE: swept flipper crossings, center gap, underside and tilt");
     fflush(stdout);
 }
