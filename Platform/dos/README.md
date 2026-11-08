@@ -94,8 +94,9 @@ exits from normal play. There are three balls.
 entry screen automatically. Type up to three A-Z initials (unfilled
 positions default to A); **Backspace** edits, **Enter** saves, and
 **Esc** skips the entry. The five highest scores are visible from the
-menu, including after saving. `SCORES.DAT` is a small local file kept
-beside `CADET.EXE`. The file is optional: a missing or malformed file
+menu, including after saving. `SCORES.DAT` is a small local file in the **current DOS working
+directory**. Start CADET from its installed directory to keep scores
+beside the executable. The file is optional: a missing or malformed file
 starts an empty table, and an unwritable directory displays
 `SAVE FAILED`. The game **never writes score files while a ball is in
 play**, and `CADET /smoke` reads/writes no score file. To retain
