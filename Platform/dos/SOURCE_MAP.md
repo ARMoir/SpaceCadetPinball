@@ -5,6 +5,8 @@
 original `main.c` blob `564dbacbe79c5e4001bee44f650a3509b5b664e5` (2026-11-07).
 **Authority:** [FIDELITY.md](FIDELITY.md) is the exception register;
 [FEATURE_STATUS.md](FEATURE_STATUS.md) tracks unimplemented gameplay.
+This organization was validated by the
+[November 7, 2026 refactor CI run](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888).
 
 ## Classification and limits
 
@@ -16,6 +18,21 @@ original `main.c` blob `564dbacbe79c5e4001bee44f650a3509b5b664e5` (2026-11-07).
 
 All gameplay modules below are **ADAPTED**, not fully matching upstream;
 specific aspects in the MATCHES column are more limited than whole functions.
+
+## Find the right DOS file
+
+| Change or investigation | Start here | Original behavior / exception |
+| --- | --- | --- |
+| Ball bounce and wall collision | [`ball_collision.inc`](ball_collision.inc), [`game.c`](game.c) | `TBall.cpp`, `maths.cpp` (F-006) |
+| Flipper travel, contact or strength | [`flipper.inc`](flipper.inc), [`state.inc`](state.inc) | `TFlipper.cpp`, `TFlipperEdge.cpp` (F-006) |
+| Plunger charging or weak return | [`plunger.inc`](plunger.inc), [`state.inc`](state.inc) | `TPlunger.cpp` (F-003) |
+| Bumper hitboxes and scoring | [`bumper.inc`](bumper.inc), [`table.c`](table.c) | `TBumper.cpp`, `control.cpp` (F-004) |
+| Slingshot or outer-rail trapping | [`slingshot.inc`](slingshot.inc), [`rail_collision.inc`](rail_collision.inc), [`table.c`](table.c) | `TEdgeManager.cpp`, `TOneway.cpp` (F-002) |
+| Kickback catch and triggering | [`kickback.inc`](kickback.inc), [`control.inc`](control.inc) | `TKickback.cpp`, `control.cpp` (F-001) |
+| Nudge and tilt | [`nudge.inc`](nudge.inc), [`control.inc`](control.inc) | `nudge.cpp`, `pb.cpp` (F-005) |
+| Stuck-ball rescue | [`unstuck.inc`](unstuck.inc) | `control.cpp::UnstuckBall` (F-008) |
+| Ball appearance, Tandy/VGA drawing | [`video.inc`](video.inc), [`assets.inc`](assets.inc), [`main.c`](main.c) | `render.cpp`, `gdrv.cpp` (F-007) |
+| Menu/help, mouse, sound | [`hud.inc`](hud.inc), [`input.inc`](input.inc), [`audio.inc`](audio.inc) | `winmain.cpp`, `options.cpp`, `Sound.cpp` (F-007) |
 
 ## File and original function map
 
@@ -72,7 +89,12 @@ kickback capture, indexed walls, bumpers, slingshot containment, outer
 rails, flippers, shooter/drain transitions, then the anti-stuck watchdog.
 The renderer still draws restorations, flippers, plunger and ball in
 their prior order. The `test_source_layout.py` CI test guards this
-assembly; existing Open Watcom and DOSBox-X checks test behavior.
+assembly; `test_menu_font.py` reads the relocated `hud.inc`
+and `input.inc` instead of searching only `main.c`. The
+[passing refactor workflow](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888)
+also verifies native Watcom compilation, MZ/DGROUP limits, gameplay
+smoke and Tandy/VGA final-frame parity. These tests do not verify
+real 7.16 MHz V20 performance or full original-rule parity.
 
 ## Important missing original functions
 

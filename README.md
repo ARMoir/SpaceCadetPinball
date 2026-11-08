@@ -23,6 +23,18 @@ of the original Space Cadet. See the
 and [hardware/CI validation notes](Platform/dos/VALIDATION.md).
 The CI artifact includes the matching game and table data.
 
+**Source-aligned DOS architecture:** Open Watcom compiles `table.c`
+separately for resource loading and indexing. Gameplay in `game.c`
+and DOS platform/rendering code in `main.c` use ordered, named `.inc`
+implementation fragments for collisions, flippers, plunger, kickbacks,
+nudges, recovery, input, video, HUD and audio. They remain in their
+original translation units to avoid extra calls in the V20 hot path.
+These `.inc` files are **not standalone objects**. Read the
+[DOS architecture/build guide](Platform/dos/README.md#source-aligned-architecture),
+[original-to-DOS source map](Platform/dos/SOURCE_MAP.md), and
+[fidelity exception register](Platform/dos/FIDELITY.md).
+A source mapping is not a claim of complete gameplay equivalence.
+
 The owner has tested earlier revisions on a real Tandy 1000 EX/V20 and
 reported several physics/collision issues; automated regressions were added
 for the subsequent fixes, but **the latest build's real-hardware
@@ -80,7 +92,10 @@ Platforms covered by this project: desktop Windows, Linux and macOS.
 
 ## Compiling
 
-Project uses `C++11` and depends on `SDL2` libs.
+The **desktop** version uses `C++11` and depends on `SDL2` libraries.
+The **native DOS** version is an independent 16-bit C89/Open Watcom 2
+target. Build it with `python Platform/dos/build.py` and follow the
+[DOS build and asset instructions](Platform/dos/README.md#build-and-play).
 
 ### On Windows
 

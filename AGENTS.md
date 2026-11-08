@@ -34,6 +34,14 @@ Windows `PINBALL.DAT` data, not memory, when judging original behavior.
 
 ## Rules for changes
 
+- **Keep original-to-DOS provenance current.** Read
+  [`Platform/dos/SOURCE_MAP.md`](Platform/dos/SOURCE_MAP.md) before
+  modifying any mapped component. Update its matches, differences and
+  file ownership as implementations evolve, while preserving
+  `FIDELITY.md` as the authoritative exception register.
+  The `.inc` files are implementation fragments included by
+  `game.c` or `main.c`, never independently compiled; preserve their
+  include order and run `test_source_layout.py`.
 - **Preserve original logic and rules.** Port original state, component
   triggers, timings, scoring, collision direction, physics semantics and
   visual resources wherever feasible. Simplify *how the code runs*, not
@@ -58,8 +66,9 @@ Windows `PINBALL.DAT` data, not memory, when judging original behavior.
   (kickback rules and one-way/layer behavior) before lower-value features.
   See the full audit for details and current status.
 - **Test against the source, not just current DOS behavior.** Run
-  `test_convert.py`, `test_run_tests.py`, `build.py`,
-  `verify_build.py`, and DOSBox-X gameplay/smoke tests where applicable.
+  `test_source_layout.py`, `test_menu_font.py`, `test_convert.py`,
+  `test_run_tests.py`, `build.py`, `verify_build.py`, and
+  DOSBox-X gameplay/smoke tests where applicable.
   Record real Tandy performance separately; successful emulation does not
   prove a 7.16 MHz V20 budget.
 - **Use matching data.** When the format or imports change, ship

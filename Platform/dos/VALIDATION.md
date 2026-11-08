@@ -32,8 +32,9 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
   kickback returns cannot bypass walls. The later F-002/F-004
   regression suite adds radial upper-left bumper penetration/rebound,
   top/side screen boundary retention, and true lower-drain differentiation.
-* Five smoke-report parser tests verify that incomplete runs, missing full
-  launches and zero-score original-table runs fail the runner.
+* Smoke-report parser regressions verify that incomplete runs, missing
+  full launches, zero-score original-table runs and re-enabled dynamic
+  ball shadowing fail the runner.
 * **VGA mode 13h integration, 2026-11-07:** a single `CADET.EXE`
   supports `/tandy`, `/vga`, and default BIOS auto-detection.
   The mode-13 VGA renderer expands the existing 32768-byte four-bank
@@ -93,6 +94,7 @@ source-inspired adjustment. Original flipper impulse parity is not claimed.
 ```
 python Platform/dos/test_convert.py
 python Platform/dos/test_run_tests.py
+python Platform/dos/test_source_layout.py
 python Platform/dos/test_analyze_logs.py
 python Platform/dos/test_menu_font.py
 python Platform/dos/test_video_modes.py
@@ -291,13 +293,27 @@ hardware verification**.
 
 ## Source-aligned module refactor (2026-11-07)
 
-[SOURCE_MAP.md](SOURCE_MAP.md) maps each new fragment to the original C++
-source, its matches/divergences and the existing F-### exceptions.
-The refactor preserves the exact C statement stream in `main.c` and
-`game.c` after expanding the implementation fragments; the SCP2
-table parser/indexer is separately compiled as `table.c`. The plunger
-and flipper portions remain *inline at their old positions*, with no
-additional hot-path call. `test_source_layout.py` checks this contract.
-Open Watcom MZ/DGROUP checks, DOSBox-X both video modes and Tandy/VGA
-frame parity are required before calling the refactor validated.
-Actual 7.16 MHz V20 performance remains **UNVERIFIED** until tested.
+[SOURCE_MAP.md](SOURCE_MAP.md) maps the
+[current architecture](README.md#source-aligned-architecture) to original
+C++ routines, documenting limited matches, divergent code and open F-###
+exceptions. The refactor moved SCP2 table parsing/indexing into
+[`table.c`](table.c), independently compiled only at load time.
+`game.c` and `main.c` include ordered `.inc` implementation fragments.
+Both `flipper.inc` and `plunger.inc` remain **inside** `game_step`,
+without introducing additional physics calls. Expanded C statements
+were compared to the pre-refactor code to confirm the intended
+behavior-neutral extraction.
+
+**Verified:** [GitHub Actions run 42422864888](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888)
+passed the `test_source_layout.py` regression tests, converter and
+host tests, Open Watcom 16-bit build, MZ/DGROUP/memory checks, DOSBox-X
+Tandy auto/forced and VGA forced/auto gameplay, and final 64,000-pixel
+video parity. The workflow published the `CADET` artifact.
+The first refactor run failed because `test_menu_font.py` still searched
+for help text and glyphs in the former monolithic `main.c`. Moving those
+test checks to `hud.inc` and `input.inc` corrected the issue.
+
+**Not verified:** physical 7.16 MHz V20 responsiveness, physical VGA
+performance, or exact source-level game-rule fidelity. These remain
+distinct from the passing emulator/build tests, and all F-001 through
+F-008 exceptions remain open.

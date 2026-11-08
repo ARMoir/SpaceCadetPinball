@@ -93,13 +93,13 @@ Original code locations (read alongside any proposed DOS implementation):
 
 | Concern | Original reference | Current DOS reference |
 | --- | --- | --- |
-| Ball movement / collisions | [`TBall.cpp`](../../SpaceCadetPinball/TBall.cpp), [`maths.cpp`](../../SpaceCadetPinball/maths.cpp), [`TEdgeSegment.cpp`](../../SpaceCadetPinball/TEdgeSegment.cpp) | [`game.c`](game.c), [`convert.py`](convert.py) |
-| Flipper sweep | [`TFlipper.cpp`](../../SpaceCadetPinball/TFlipper.cpp), [`TFlipperEdge.cpp`](../../SpaceCadetPinball/TFlipperEdge.cpp) | [`game.c`](game.c) |
-| Plunger / feeder | [`TPlunger.cpp`](../../SpaceCadetPinball/TPlunger.cpp) | [`game.c`](game.c), [`main.c`](main.c) |
-| Kickbacks, targets and gates | [`TKickback.cpp`](../../SpaceCadetPinball/TKickback.cpp), [`control.cpp`](../../SpaceCadetPinball/control.cpp), [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp) | [`game.c`](game.c), [`convert.py`](convert.py) |
-| Bumpers / scoring | [`TBumper.cpp`](../../SpaceCadetPinball/TBumper.cpp), [`control.cpp`](../../SpaceCadetPinball/control.cpp) | [`game.c`](game.c), [`convert.py`](convert.py) |
-| Nudge / tilt | [`nudge.cpp`](../../SpaceCadetPinball/nudge.cpp), [`pb.cpp`](../../SpaceCadetPinball/pb.cpp) | [`game.c`](game.c), [`main.c`](main.c) |
-| Stuck ball recovery | [`control.cpp`](../../SpaceCadetPinball/control.cpp), `control::UnstuckBall`; [`TBall.h`](../../SpaceCadetPinball/TBall.h) `StuckCounter` | [`game.c`](game.c), `watch_stuck` / `stuck_clear_at` |
+| Ball movement / collisions | [`TBall.cpp`](../../SpaceCadetPinball/TBall.cpp), [`maths.cpp`](../../SpaceCadetPinball/maths.cpp), [`TEdgeSegment.cpp`](../../SpaceCadetPinball/TEdgeSegment.cpp) | [`ball_collision.inc`](ball_collision.inc) included by [`game.c`](game.c), [`convert.py`](convert.py) |
+| Flipper sweep | [`TFlipper.cpp`](../../SpaceCadetPinball/TFlipper.cpp), [`TFlipperEdge.cpp`](../../SpaceCadetPinball/TFlipperEdge.cpp) | [`flipper.inc`](flipper.inc) in [`control.inc`](control.inc), [`state.inc`](state.inc) |
+| Plunger / feeder | [`TPlunger.cpp`](../../SpaceCadetPinball/TPlunger.cpp) | [`plunger.inc`](plunger.inc), [`state.inc`](state.inc), [`main.c`](main.c) |
+| Kickbacks, targets and gates | [`TKickback.cpp`](../../SpaceCadetPinball/TKickback.cpp), [`control.cpp`](../../SpaceCadetPinball/control.cpp), [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp) | [`kickback.inc`](kickback.inc), [`rail_collision.inc`](rail_collision.inc), [`control.inc`](control.inc), [`convert.py`](convert.py) |
+| Bumpers / scoring | [`TBumper.cpp`](../../SpaceCadetPinball/TBumper.cpp), [`control.cpp`](../../SpaceCadetPinball/control.cpp) | [`bumper.inc`](bumper.inc), [`table.c`](table.c), [`convert.py`](convert.py) |
+| Nudge / tilt | [`nudge.cpp`](../../SpaceCadetPinball/nudge.cpp), [`pb.cpp`](../../SpaceCadetPinball/pb.cpp) | [`nudge.inc`](nudge.inc), [`control.inc`](control.inc), [`video_shake.inc`](video_shake.inc) |
+| Stuck ball recovery | [`control.cpp`](../../SpaceCadetPinball/control.cpp), `control::UnstuckBall`; [`TBall.h`](../../SpaceCadetPinball/TBall.h) `StuckCounter` | [`unstuck.inc`](unstuck.inc) included by [`game.c`](game.c), `watch_stuck` / `stuck_clear_at` |
 | Resource import / projection | [`loader.cpp`](../../SpaceCadetPinball/loader.cpp), [`proj.cpp`](../../SpaceCadetPinball/proj.cpp) | [`convert.py`](convert.py), [`data/IMPORT.json`](data/IMPORT.json) |
 
 The original game also uses resource-driven component rules. Source constants
@@ -116,6 +116,13 @@ expanding those fragments, including the inline flipper/plunger branches.
 No gameplay rule, format, Q6 constant, sprite, or per-tick function call
 was intentionally altered. F-001 through F-008 remain open. This is
 **source organization**, not a proof of upstream parity or real V20 timing.
+The [source map](SOURCE_MAP.md) is the central navigation index for future
+function-level work; update it and the module's provenance comment when
+ownership, input/state behavior or fidelity changes. Preserve
+`test_source_layout.py` and the source include order. The
+[successful post-refactor GitHub Actions run](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888)
+passed Open Watcom, source-layout, DOSBox-X Tandy/VGA and final-frame parity,
+without certifying physical hardware performance or original-rule parity.
 
 ## Audit of the current prototype
 
@@ -134,8 +141,10 @@ was intentionally altered. F-001 through F-008 remain open. This is
 **Verified progress, not full parity:** original-source table artwork, eight
 plunger frames and kickback strike centers are imported; seven bumper outlines
 score; synthetic tests include weak-shot return, kickbacks and 20,000-step
-soak. The latest [GitHub Actions run](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42383212680)
-passed. This verifies those tested trajectories, **not** original game logic
+soak. The [post-refactor GitHub Actions run on November 7, 2026](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888)
+passed the 16-bit build/memory checks, source-layout regressions, Tandy/VGA
+gameplay tests and final-frame parity. This verifies tested trajectories,
+**not** original game logic
 or real V20 timing. See [`VALIDATION.md`](VALIDATION.md).
 
 ## Exception register (append/update whenever rules are broken)

@@ -9,8 +9,9 @@ acceptance testing**.
 
 **Project priorities:** (1) playable, responsive, fun on the actual Tandy,
 (2) authentic original-game behavior and artwork, a very close second.
-See [`FIDELITY.md`](FIDELITY.md) for original source references, engineering
-rules, exceptions F-001 through F-008, and why deviations currently exist.
+Read [`SOURCE_MAP.md`](SOURCE_MAP.md) for the refactored implementation
+and original C++ counterparts. [`FIDELITY.md`](FIDELITY.md) remains the
+authoritative audit of F-001 through F-008 differences and their rationale.
 
 ## What works in the current prototype
 
@@ -33,7 +34,7 @@ Tandy 1000 EX/V20.
 | Inputs and UI | Z and / flippers **plus optional DOS mouse left/right buttons**, Space plunger, keyboard menu, pause, new game, help/controls, sound toggle, exit | Standard INT 33h DOS mouse driver required, mouse click behavior unverified on real V20; menu is a compact substitute |
 | Sound | Short Tandy PSG tones in mode 09h, PC-speaker event tones in VGA mode 13h; `/nosound`, S toggle | Original sound samples/music and exact source timing not ported; physical VGA speaker test pending |
 | Diagnostics | `/record`, `INPUT.TXT`, `FLIGHT.TXT` (schema 4), slow-frame and both outer-rail counters; PC-side `analyze_logs.py` | Buffer until exit, not long-term historical telemetry |
-| Build/repro | Converter, test suites, Open Watcom build, DOSBox-X Tandy09/VGA13 smoke, pixel parity, `CADET.zip` artifact | Emulator pass does not prove physical V20 or VGA machine timing |
+| Build/repro | Open Watcom C89 compilation of `main.c`, `game.c`, `table.c` with named `.inc` fragments; source-layout, converter and gameplay tests; DOSBox-X Tandy/VGA parity and `CADET.zip` artifact | [Post-refactor CI run 42422864888](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888) passed; emulator pass does not prove physical V20 or VGA timing |
 
 **Video compatibility addition (2026-11-07):** both standard BIOS
 Tandy/PCjr mode 09h and VGA mode 13h are implemented in the **same**
@@ -62,7 +63,7 @@ and frame timing remain unverified.
 | Bumpers | Seven radial caps, basic initial scoring | Variable score state, independent component cooldowns, full original material/layer interaction | F-004 |
 | Kickbacks | Two timed saves, strike centers from source | Hazard Target triplet activation, gate enable/disable, source timer/state/rearm, actual mission coupling | F-001 |
 | Nudge/tilt | Three directions, reversal impulse and warning/lockout | Exact source threshold, accumulation/decay and physically accurate displacement | F-005 |
-| Visual effects | Static initial-state lights, color-reduced artwork, small ball shadow/glint and optional CRTC shake | Original state-driven lamp animations, ramps/targets changing visually, full image-depth/occlusion rendering | F-007 |
+| Visual effects | Static initial-state lights, reduced-color artwork, original metallic ball sprite **without** the removed shadow/glint, and optional Tandy CRTC shake | Original state-driven lamp animations, moving ramps/targets and full image-depth/occlusion rendering | F-007 |
 | Audio | Synthetic PSG event beeps | Source samples, original soundtrack/music playback and full event sound mapping | F-007 |
 
 **Universal recovery (2026-11-07):** The DOS port adds a
@@ -168,6 +169,20 @@ failure, then collect `INPUT.TXT` and `FLIGHT.TXT`. `analyze_logs.py` on a
 PC can summarize them. `FLIGHT.TXT` stores only the last 256 rendered
 frames (~14 seconds), so it is not a permanent replay.
 
+## Source-aligned implementation
+
+The [source map](SOURCE_MAP.md) identifies each gameplay and DOS platform
+fragment and its original C++ counterpart. `table.c` is compiled
+independently for SCP2 loading and indexing; the other functions are
+grouped into `.inc` implementation fragments included by `game.c` or
+`main.c` in their original order. `flipper.inc` and `plunger.inc`
+remain inside `game_step`; they are not separately compiled or called
+as new per-frame functions. `test_source_layout.py` guards this layout.
+Source organization does not implement absent rules or close any
+[F-001 through F-008](FIDELITY.md) fidelity exceptions. See
+[successful CI run 42422864888](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888);
+physical V20 responsiveness is still unverified.
+
 ## Repeatable build / final handoff
 
 Use the latest **successful** GitHub Actions run on
@@ -185,21 +200,19 @@ CADET /classic
 CADET /record
 ```
 
-Both image styles use identical gameplay rules. The offline-baked static
-shading adds no processing to the DOS game; the enhanced style retains its
-previously implemented tiny ball glint/shadow (a few pixel writes), so the
-whole enhanced renderer is not literally identical in cost to `/classic`.
-Tests use `test_convert.py`, `test_analyze_logs.py`,
-`test_enhance_table.py`, `test_run_tests.py`, the 16-bit `TEST.EXE`
-`/original` scenarios, `verify_build.py`, and 360-frame DOSBox-X smoke
-runs. See [`VALIDATION.md`](VALIDATION.md) for evidence and caveats.
+Both artwork modes use the same gameplay logic and original imported ball
+sprite without the removed glint/shadow. The `TABLE3D.TGA` effect is
+precomputed offline and adds no per-frame shading work.
+Tests include `test_source_layout.py`, `test_menu_font.py`,
+`test_convert.py`, `test_analyze_logs.py`, `test_enhance_table.py`,
+`test_run_tests.py`, the 16-bit `TEST.EXE /original` scenarios,
+`verify_build.py`, and 360-frame DOSBox-X smoke runs. See [`VALIDATION.md`](VALIDATION.md) for evidence and caveats.
 
 ## Project disposition
 
-**Feature work is paused by owner preference after this stabilization pass.**
-The port is a useful demonstration of Space Cadet running in native 16-bit
-Tandy graphics, **not a feature-complete original game**. Remaining gaps
-are recorded here and in [`FIDELITY.md`](FIDELITY.md), not silently waived.
-Do not imply that absent systems were eliminated for measured V20 speed
-without actual evidence. Further development should focus on an observed
-hardware playability problem, not more decorative shading or feature creep.
+The port demonstrates Space Cadet running in native 16-bit Tandy
+graphics but remains **incomplete**. Future work can use
+[SOURCE_MAP.md](SOURCE_MAP.md) to restore original behavior systematically,
+prioritizing real Tandy playability and documenting deviations in
+[FIDELITY.md](FIDELITY.md). Missing systems are not optimizations,
+and an emulated pass is not measured V20 performance.

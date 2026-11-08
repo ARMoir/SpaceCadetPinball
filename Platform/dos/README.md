@@ -6,11 +6,12 @@ Windows, a DOS extender, an FPU, XMS or EMS.
 The desktop version is unchanged. This is a playable experimental prototype,
 **not** a feature-complete port or a final hardware-certified release.
 
-**Final project handoff:** [FEATURE_STATUS.md](FEATURE_STATUS.md) lists
-exactly what works, what is simplified, what is **not implemented**, and
-what still needs physical V20 testing. [VALIDATION.md](VALIDATION.md) records
-automated checks and hardware observations. Further work is limited to owner-requested hardware compatibility and
-demonstrated playability problems.
+**Documentation guide:** [SOURCE_MAP.md](SOURCE_MAP.md) maps the refactored
+DOS implementation to original C++ code; [FEATURE_STATUS.md](FEATURE_STATUS.md)
+lists implemented and missing features; [FIDELITY.md](FIDELITY.md) owns
+the open F-001 through F-008 exceptions; and
+[VALIDATION.md](VALIDATION.md) records CI evidence and physical
+hardware checks. Consult [AGENTS.md](../../AGENTS.md) before edits.
 
 ## Project priorities: playability first, authenticity a very close second
 
@@ -52,6 +53,10 @@ from H and checked by an automated font regression test.
 
 1. Unpack Open Watcom 2 and set `WATCOM` to its absolute installation directory.
 2. From the repository root, run `python Platform/dos/build.py` (Python 3.9+).
+   This builds `CADET.EXE` from `main.c`, `game.c`, and `table.c`,
+   and `TEST.EXE` from `test_game.c`, `game.c`, and `table.c`.
+   Named `.inc` fragments are included by those files, never compiled
+   as independent objects.
 3. Copy `TABLE.DAT`, `TABLE.TGA` and `IMPORT.json` from
    `Platform/dos/data` into `build/dos`, or regenerate these from a Windows
    `PINBALL.DAT` using
@@ -153,18 +158,42 @@ physical PC are **not yet verified**. The BIOS chooses the initial
 video mode, and both styles restore the previous text/graphics mode
 when exiting normally.
 
-## Source-aligned implementation
+## Source-aligned architecture
 
-See [SOURCE_MAP.md](SOURCE_MAP.md) for original C++ counterparts, where each
-DOS routine matches or diverges, and which F-### fidelity exceptions remain.
-`table.c` compiles independently; the physics modules (`ball_collision.inc`,
-`flipper.inc`, `plunger.inc`, `bumper.inc`, `kickback.inc`, `nudge.inc`,
-`unstuck.inc` and others) are C89 implementation fragments included once
-through `game.c`. Input/video/audio/HUD modules similarly belong to
-`main.c`. These are deliberate **single-translation-unit** groups to
-preserve V20 hot-path call overhead, state layout, statement order and
-behavior. Do not compile `.inc` files separately. `FIDELITY.md`
-remains the authoritative behavioral exception register.
+The refactor groups the DOS port by its original C++ responsibilities.
+The [source map](SOURCE_MAP.md) identifies source functions, **limited
+matches**, explicit divergences, missing features, and the corresponding
+F-### exceptions. File names do not imply exact source-rule equivalence.
+
+| DOS implementation | Responsibility | Original C++ references |
+| --- | --- | --- |
+| [`table.c`](table.c) | SCP2 file loading, geometry indexing, bumper/slingshot detection | `loader.cpp`, `proj.cpp`, `TEdgeManager.cpp` |
+| [`game.c`](game.c) + [`state.inc`](state.inc), [`control.inc`](control.inc) | Fixed-point state, feed/reset, frame-step collision and rules dispatch | `TBall.cpp`, `TPinballTable.cpp`, `control.cpp` |
+| [`ball_collision.inc`](ball_collision.inc), [`bumper.inc`](bumper.inc), [`slingshot.inc`](slingshot.inc), [`rail_collision.inc`](rail_collision.inc) | Static/dynamic contact and simplified source-projected geometry | `TBall.cpp`, `TBumper.cpp`, `TEdgeManager.cpp` |
+| [`flipper.inc`](flipper.inc), [`plunger.inc`](plunger.inc) | Inlined branches inside `game_step` | `TFlipper.cpp`, `TFlipperEdge.cpp`, `TPlunger.cpp` |
+| [`kickback.inc`](kickback.inc), [`nudge.inc`](nudge.inc), [`unstuck.inc`](unstuck.inc) | Outlane saves, tilt and recovery | `TKickback.cpp`, `nudge.cpp`, `control.cpp` |
+| [`main.c`](main.c) + [`input.inc`](input.inc), [`video.inc`](video.inc), [`video_shake.inc`](video_shake.inc) | DOS main loop, IRQ/mouse input and Tandy/VGA output | `winmain.cpp`, `options.cpp`, `render.cpp` |
+| [`hud.inc`](hud.inc), [`audio.inc`](audio.inc), [`assets.inc`](assets.inc) | HUD/help, sound hardware and background loading | `TTextBox.cpp`, `Sound.cpp`, `gdrv.cpp` |
+| [`game.h`](game.h), [`convert.py`](convert.py) | Shared 16-bit state and offline asset conversion | `maths.cpp`, `loader.cpp` and original resource data |
+
+**Compilation rule:** `table.c` is a separate C89 object because it
+loads and indexes assets outside active gameplay. `game.c` includes
+the physics/control fragments in their existing order, preserving
+static-helper visibility with no additional V20 per-collision calls.
+`flipper.inc` and `plunger.inc` are inserted *inside* `game_step`,
+not called as new functions. `main.c` similarly contains its DOS
+platform fragments in one translation unit. The refactor preserves
+`Game`/`Table` structures, constants, SCP2 format and assets.
+
+**Contributor workflow:** Start with the matching original
+`SpaceCadetPinball/*.cpp` behavior; update [SOURCE_MAP.md](SOURCE_MAP.md)
+for code ownership and matches/divergences; update
+[FIDELITY.md](FIDELITY.md) for behavioral changes and
+[FEATURE_STATUS.md](FEATURE_STATUS.md) for feature changes.
+Keep include order and run `test_source_layout.py`, the native
+Open Watcom build and DOSBox-X tests. The refactor passed
+[CI run 42422864888](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888),
+but physical 7.16 MHz V20 performance is not yet verified.
 
 ## Optional static faux-3D enhancement (F-007)
 
@@ -198,7 +227,7 @@ appearance on the real CRT still needs a follow-up check.
 Compare the same shot in `CADET /classic` versus `CADET /3d`. Use
 `CADET /record /classic` or `CADET /record /3d` to capture timing and
 confirm the enhanced appearance does not produce an unacceptable slowdown.
-The two builds use the **same** collision and gameplay logic.
+The two artwork modes use the **same** collision and gameplay logic.
 
 ## What comes from the original
 
@@ -384,6 +413,12 @@ are drawn scanline-by-scanline without per-pixel video address division;
 stationary flippers are not repainted unnecessarily. No per-frame allocation,
 floating point, full-screen blit, or full-table collision scan is used.
 Build maps and executable headers are checked by `verify_build.py`.
+`test_source_layout.py` verifies the ordered implementation-fragment
+layout and `table.c` build contract; `test_menu_font.py` checks the
+relocated `hud.inc` and `input.inc` routines. The
+[successful post-refactor CI run](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42422864888)
+passed the source-layout checks, real-mode build, Tandy/VGA smoke and
+final-frame parity, **not** physical V20 timing.
 
 See [`VALIDATION.md`](VALIDATION.md) for measured emulator results and
 remaining hardware checks, and [`FEATURE_STATUS.md`](FEATURE_STATUS.md)
