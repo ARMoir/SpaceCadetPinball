@@ -13,7 +13,7 @@
  * near-sling positions or repeated overlap corrections. Four distinct,
  * alternating rebounds, each no more than ~2 seconds after the last,
  * get one
- * deterministic upward/inward impulse. A real volley can still happen:
+ * gentle upward/inward correction (not a power kick). A real volley can still happen:
  * up to three alternating hits are left completely alone.
  * No free balls, teleport, scoring, mission change or timer overhead.
  * See F-002 / F-008: this is a DOS flattened-layer playability guard,
@@ -36,8 +36,10 @@ static void sling_contact(Game *g,int side)
     /* Lift the ball toward the upper center while leaving its exact
      * source collision-resolved position intact. It is an impulse, NOT
      * a scripted/safe-corridor kickback, and ordinary walls stay active. */
-    g->vx=(short)(side?-48:48);
-    if(g->vy>-144) g->vy=-144;
+    /* F-008: prior -144/-48 was far too powerful on real Tandy.
+     * Keep the fourth-hit detection; give a soft upward nudge only. */
+    g->vx=(short)(side?-24:24);
+    g->vy=-64;
     g->sling_loop_breaks++;
     g->sling_chain_side=g->sling_chain_hits=g->sling_chain_time=0;
 }

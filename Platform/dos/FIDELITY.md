@@ -345,6 +345,18 @@ contacts, measured against real Tandy responsiveness.
   plausible plunger art retain the imported anchor. Physics launches
   from the seated ball to avoid a visible jump at release. Actual 7MHz
   Tandy observations and source 3D seating parity remain unverified.
+- **2026-11-08 reported shooter regression and remedy:** After moving
+  the resting ball from source collision/launch anchor (181,141) to the
+  visible source plunger tip (186,153), the owner observed full-charge
+  launches bouncing inside the tube instead of escaping. This exposes
+  omitted lower-tube 3D collision layers, not insufficient plunger
+  power. The F-003 correction interpolates the first 12px of release
+  through six source-shooter-only physics substeps (~83ms), then resumes
+  ordinary collision and the *same* -128..-129 Q6 full-charge impulse
+  at (181,141). The ball visibly travels instead of teleporting; weak
+  returns still feed to the seated ball. Four-seed charged-release
+  trajectory tests now require upper-lane exit; real-hardware
+  confirmation is **UNVERIFIED**.
 - **Why / evidence:** full-power source-like variation currently destabilizes
   simplified 2D shooter trajectories, not a CPU-budget constraint.
 - **Tests today:** original plunger/launch anchor and resting-sprite
@@ -728,7 +740,11 @@ this upgrade does not resolve missing 3D collision/occlusion or mission rules.
   solid sling hulls (F-002), rather than overlapping their collision
   boxes. Four alternating contacts, with no gap longer than 144 Q6
   substeps (~2 seconds), trigger one bounded upward-and-inward escape
-  impulse. The immediate return is ordinary physics: the ball is **not**
+  impulse. **2026-11-08 owner feedback:** the initial -144 vertical and
+  +/-48 horizontal Q6 correction was far too energetic. Reduce to
+  -64 vertical and +/-24 inward Q6, approximately one-fifth the
+  previous kinetic energy, while preserving four-hit gating. Physical
+  effectiveness remains **UNVERIFIED**. The immediate return is ordinary physics: the ball is **not**
   teleported or moved through walls, has no score or ball count changes,
   and remains vulnerable to normal drains. The sequence expires after
   a quiet interval, leaving the y=105..165 pixel sling zone, entering

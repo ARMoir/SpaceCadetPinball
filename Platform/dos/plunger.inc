@@ -24,5 +24,12 @@
             g->waiting=0;
             g->vx=0;
             g->vy=(short)-(base+variation);
+            /* The visually seated ball lies below the original
+             * collision-tested shooter anchor. Do not let the flattened
+             * lower rails deflect the shot before it reaches that anchor.
+             * This does not alter the chosen plunger impulse. F-003. */
+            g->shooter_seat_guide=(unsigned char)
+                (g->in_shooter && g->y>t->launch_y*FP?
+                 SHOOTER_SEAT_GUIDE_TICKS:0);
             g->event=2;
         }

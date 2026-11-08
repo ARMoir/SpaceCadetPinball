@@ -31,8 +31,9 @@ static void clear_stuck(Game *g)
  * above the mechanical plunger. Use the unmodified source sprite to
  * derive a seated center just above its visible tip. Synthetic/demo
  * tables without a plausible plunger keep their original launch anchor.
- * Both feed and re-feed use the same seat. Physics starts from that
- * visible ball, never silently snaps on release. See F-003. */
+ * Both feed and re-feed use the same seat. Release now guides the ball
+ * through just the lower tube to the collision-tested launch anchor,
+ * with no instantaneous visible position snap. See F-003. */
 static void shooter_seat(const Table *t,short *x,short *y)
 {
     const Sprite *rod=&t->plunger[0];
@@ -54,6 +55,7 @@ static void feed(Game *g,const Table *t)
     g->x=x*FP; g->y=y*FP;
     g->vx=g->vy=g->charge=0; g->waiting=1;
     g->in_shooter=1;
+    g->shooter_seat_guide=0;
     g->kick_delay=0; g->kick_side=0; g->kick_flight=0;
     clear_stuck(g);
     g->sweep[0]=g->sweep[1]=0;

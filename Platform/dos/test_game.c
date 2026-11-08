@@ -598,7 +598,7 @@ int main(int argc,char **argv)
         game_step(&g,&t,0);
         assert(g.sling_loop_breaks==1 &&
                !g.sling_chain_hits && !g.sling_chain_time &&
-               g.vx==-48 && g.vy<=-144 &&
+               g.vx==-24 && g.vy==-64 &&
                g.balls==3 && g.score==0 && !g.waiting);
         /* Repeatedly touching only one slingshot cannot trigger it. */
         game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
@@ -955,6 +955,39 @@ int main(int argc,char **argv)
         assert(g.y/FP + t.sprites[4].h/2 - 1 < t.plunger[0].y &&
                t.plunger[0].y-(g.y/FP + t.sprites[4].h/2 - 1)<=3);
         assert(g.waiting && g.in_shooter && g.balls==3);
+        /* Regression from physical Tandy: charging from the visually
+         * seated ball must clear the lower tube AND enter the upper
+         * playfield, not just register a score after many retries. */
+        for(v=0;v<4;v++) {
+            int j,upper=0;
+            short last_x,last_y;
+            game_reset(&g,&t); g.plunger_rng=(unsigned short)v;
+            for(j=0;j<PLUNGER_MAX_CHARGE;j++)
+                game_step(&g,&t,KEY_LAUNCH);
+            game_step(&g,&t,0);
+            assert(!g.waiting && g.in_shooter &&
+                   g.shooter_seat_guide==SHOOTER_SEAT_GUIDE_TICKS &&
+                   g.vy<=-128);
+            last_x=g.x; last_y=g.y;
+            for(j=0;j<SHOOTER_SEAT_GUIDE_TICKS;j++) {
+                game_step(&g,&t,0);
+                assert(g.x<=last_x && g.y<last_y &&
+                       g.in_shooter && !g.waiting);
+                last_x=g.x; last_y=g.y;
+            }
+            assert(!g.shooter_seat_guide &&
+                   g.x==t.launch_x*FP && g.y==t.launch_y*FP);
+            for(j=0;j<500 && g.in_shooter && !g.waiting;j++) {
+                game_step(&g,&t,0);
+                if(g.y<90*FP) upper=1;
+            }
+            printf("F003 FULL: seed=%d upper=%d exited=%d steps=%d xy=%d,%d\n",
+                   v,upper,!g.in_shooter,j,g.x/FP,g.y/FP);
+            fflush(stdout);
+            assert(upper && !g.in_shooter && !g.waiting &&
+                   !g.over && g.balls==3);
+        }
+        game_reset(&g,&t);
         for(v=0;v<8;v++) {
             assert(t.plunger[v].x>=t.launch_x-3 && t.plunger[v].x<195);
             assert(t.plunger[v].y+t.plunger[v].h<=192);
@@ -994,7 +1027,7 @@ int main(int argc,char **argv)
         for(v=128;v<=129;v++) {
             game_reset(&g,&t);
             g.waiting=0; g.vx=0; g.vy=(short)-v;
-            g.steps=97;
+            g.steps=97; g.shooter_seat_guide=SHOOTER_SEAT_GUIDE_TICKS;
             for(i=0;i<2500;i++) {
                 unsigned keys=(i+97)%80<40?KEY_LEFT:KEY_RIGHT;
                 game_step(&g,&t,keys);

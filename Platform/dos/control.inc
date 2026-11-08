@@ -47,6 +47,18 @@ void game_step(Game *g,const Table *t,unsigned keys)
         g->previous=(short)keys;
         return;
     }
+    /* F-003: only the 12px rod-tip to source launch-anchor segment is
+     * assisted. Move continuously across six 72.8Hz substeps so a
+     * full-power shot does not reflect off unported lower tube rails.
+     * Normal rail/bumper collisions immediately resume at the anchor. */
+    if(g->shooter_seat_guide) {
+        int left=g->shooter_seat_guide;
+        g->x=(short)(g->x+(t->launch_x*FP-g->x)/left);
+        g->y=(short)(g->y+(t->launch_y*FP-g->y)/left);
+        --g->shooter_seat_guide;
+        g->previous=(short)keys;
+        return;
+    }
     if((pressed&(KEY_NUDGE|KEY_NUDGE_LEFT|KEY_NUDGE_RIGHT)) &&
        !g->nudge_delay && !g->tilted && !g->in_shooter) {
         if(pressed&KEY_NUDGE_LEFT) apply_nudge(g,KEY_NUDGE_LEFT);

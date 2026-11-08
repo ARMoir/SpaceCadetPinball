@@ -19,6 +19,8 @@
 #define UNSTICK_ESCAPE_PX 10
 /* About 1.3 seconds at 72.8 physics substeps/second. */
 #define PLUNGER_MAX_CHARGE 96
+/* F-003: smooth 12px lower shooter clearance over six physics ticks. */
+#define SHOOTER_SEAT_GUIDE_TICKS 6
 #define KEY_LEFT 1
 #define KEY_RIGHT 2
 #define KEY_LAUNCH 4
@@ -64,6 +66,7 @@ typedef struct {
     /* Set on ball feed, cleared once the ball enters the main playfield.
      * Needed to distinguish an unsuccessful shooter return from a drain. */
     unsigned char in_shooter;
+    unsigned char shooter_seat_guide; /* F-003 lower tube clearance */
     unsigned char kick_armed[2],kick_side,kick_delay,kick_flight;
     unsigned char event_bumper; /* 1-based cap index for audiovisual cues */
     unsigned char shake_frames,tilted,tilt_warning;
