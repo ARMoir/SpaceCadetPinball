@@ -16,6 +16,9 @@ def main():
     env = dict(os.environ, WATCOM=str(watcom), INCLUDE=str(watcom/'h'),
                PATH=str(watcom/host)+os.pathsep+os.environ['PATH'])
     OUT.mkdir(parents=True, exist_ok=True)
+    # Generate the two-mode title asset once on the build host, not on DOS.
+    subprocess.run([sys.executable, str(ROOT/'Platform/dos/build_menu_art.py'),
+                    str(OUT)], check=True)
     compiler = watcom/host/('wcl.exe' if os.name=='nt' else 'wcl')
     common = [str(compiler),'-q','-bt=dos','-0','-ms','-os','-s','-w4','-we',
               '-k4096', '-i='+str(ROOT/'Platform/dos')]
