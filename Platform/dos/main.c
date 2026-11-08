@@ -32,6 +32,7 @@ static volatile unsigned char keys[128];
 static volatile unsigned char pressed_keys[128];
 static void (__interrupt __far *old_keyboard)(void);
 static int sound_enabled=1, sound_ticks;
+static int lights_enabled=1;
 static int shake_enabled=1,video_shift=0;
 static int mouse_available=0; /* Only poll INT 33h when a driver exists. */
 static int vga_colors=0,rgbi_mode=0;
@@ -44,6 +45,7 @@ static int vga_mode=0; /* Selected once before display setup. */
 #include "video.inc"
 #include "hud.inc"
 #include "audio.inc"
+#include "lamps.inc"
 #include "assets.inc"
 int main(int argc,char **argv)
 {
@@ -51,6 +53,8 @@ int main(int argc,char **argv)
     unsigned long old_score=~0UL,slow_frames=0;
     int i,smoke=0,record=0,enhanced=1,old_x=-10,old_y=-10,old_balls=-1,old_wait=-1,old_over=-1;
     int old_new=0,event,next_x,next_y,ball_changed,ball_redraw;
+    int event_bumper=0,sound_event,lights_damage;
+    unsigned short prev_nudges=0,prev_slings[2]={0,0};
     int plunger_x,plunger_y,old_plunger_x=-1,old_plunger_y=-1;
     int plunger_changed,plunger_redraw,plunger_charge;
     int plunger_frame,old_plunger_frame=-1,old_plunger_w=0,old_plunger_h=0;
@@ -70,6 +74,7 @@ int main(int argc,char **argv)
         if(!strcmp(argv[i],"/smoke")) smoke=1;
         else if(!strcmp(argv[i],"/record")) record=1;
         else if(!strcmp(argv[i],"/nosound")) sound_enabled=0;
+        else if(!strcmp(argv[i],"/nolights")) lights_enabled=0;
         else if(!strcmp(argv[i],"/noshake")) shake_enabled=0;
         else if(!strcmp(argv[i],"/nomouse")) no_mouse=1;
         else if(!strcmp(argv[i],"/tandy")) video_choice=0;
@@ -77,7 +82,7 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"/rgbi")) rgbi_mode=1;
         else if(!strcmp(argv[i],"/classic")) enhanced=0;
         else if(!strcmp(argv[i],"/3d")) enhanced=1;
-        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d] [/rgbi]"); return 1; }
+        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/nolights] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d] [/rgbi]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
     if(video_choice==1 && !detect_vga()) {
@@ -103,6 +108,7 @@ int main(int argc,char **argv)
      * Optional: legacy UI remains available if the pack is missing. */
     load_menu_background();
     game_reset(&game,&table);
+    lamps_reset(&game);
     /* Read once, before installing the keyboard IRQ hook. /smoke avoids
      * all high-score I/O so deterministic emulator tests never write it. */
     scores_reset();
@@ -228,11 +234,12 @@ int main(int argc,char **argv)
         }
         if(view!=4 && (key_f2 || key_new)) {
             game_reset(&game,&table);
+            lamps_reset(&game);
             game.plunger_rng^=ticks();
             paused=0; view=0; ui_dirty=1;
         }
         old_new=keys[49];
-        event=0;
+        event=0; event_bumper=0;
         /* Keeping physics frozen is important for a faithful Game menu
          * and for testing on a slow V20. No catch-up on resume. */
         if(!view && !paused && !exit_requested) {
@@ -240,6 +247,7 @@ int main(int argc,char **argv)
                 game_step(&game,&table,input);
                 if(game.event) {
                     event=game.event;
+                    if(event==1) event_bumper=game.event_bumper;
                     if(event==2) {
                         launches++;
                         if(game.charge==PLUNGER_MAX_CHARGE) full_launches++;
@@ -249,7 +257,23 @@ int main(int argc,char **argv)
         } else input=0;
         /* Match the unpowered resting collision surface during tilt. */
         if(game.tilted) input&=~(KEY_LEFT|KEY_RIGHT);
-        play_event(event);
+        /* Physical actions not represented by the five original compact
+         * DOS event codes still have short audible feedback. Never allow
+         * a flipper tap to obscure a higher-priority scoring/tilt cue. */
+        sound_event=event;
+        if(!sound_event && !view && !paused && !game.over) {
+            if(game.sling_rescues[0]!=prev_slings[0] ||
+               game.sling_rescues[1]!=prev_slings[1])
+                sound_event=8;
+            else if(game.nudges!=prev_nudges) sound_event=7;
+            else if((input&~previous_input)&(KEY_LEFT|KEY_RIGHT))
+                sound_event=6;
+        }
+        prev_nudges=game.nudges;
+        prev_slings[0]=game.sling_rescues[0];
+        prev_slings[1]=game.sling_rescues[1];
+        lamps_advance(&game,event==1?event_bumper:0,!view&&!paused);
+        play_event(sound_event,(unsigned)event_bumper);
         /* TTextBox-inspired single transient message. Only UI changes,
          * with no source physics or rendering asset modifications. */
         if(event) {
@@ -318,6 +342,7 @@ int main(int argc,char **argv)
              * redraw every moving sprite after the menu disappears. */
             restore(0,0,320,200);
             draw_title();
+            lamps_invalidate();
             old_x=-10; old_y=-10; old_plunger_y=-1;
             old_plunger_frame=-1;
             previous_input=input^3U; /* Force both flipper states to redraw. */
@@ -378,6 +403,17 @@ int main(int argc,char **argv)
             rect_overlaps(old_x,old_y,
                           table.sprites[4].w+2,table.sprites[4].h+2,
                           plunger_x,plunger_y,plunger_sprite->w,plunger_sprite->h));
+        /* Lamp transitions restore only 5x5 source-art patches. Repaint
+         * foreground sprites if one overlapped; the ball stays topmost. */
+        if(lights_enabled) {
+            lights_damage=lamps_render(&table,&game,frame,
+                old_x,old_y,next_x,next_y,
+                table.sprites[4].w+2,table.sprites[4].h+2,
+                ball_changed,plunger_x,plunger_y,
+                plunger_sprite->w,plunger_sprite->h);
+            if(lights_damage&1) ball_redraw=1;
+            if(lights_damage&2) plunger_redraw=1;
+        }
         if(plunger_redraw) sprite(plunger_sprite,plunger_x,plunger_y);
         old_plunger_x=plunger_x; old_plunger_y=plunger_y;
         old_plunger_frame=plunger_frame;
