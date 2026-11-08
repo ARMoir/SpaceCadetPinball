@@ -241,6 +241,22 @@ int table_index(Table *t)
                 break;
         }
         if(k<MAX_SLINGS) continue;
+        /* F-002: the source pack also has short interior detail loops
+         * embedded INSIDE each slingshot (e.g. four segments near
+         * x141..153/y119..142 on the right). The solid hull already
+         * represents all collision surfaces there; leaving these
+         * secondary two-sided edges indexed creates phantom rebounds
+         * from the backs, even when the face is otherwise passive.
+         * Discard only fully contained, non-scoring source detail. */
+        for(k=0;k<MAX_SLINGS;k++) {
+            const Sling *h=&t->slings[k];
+            if(h->count && e->x>=h->left-1 && e->x<=h->right+1 &&
+               e->ex>=h->left-1 && e->ex<=h->right+1 &&
+               e->y>=h->top-1 && e->y<=h->bottom+1 &&
+               e->ey>=h->top-1 && e->ey<=h->bottom+1)
+                break;
+        }
+        if(k<MAX_SLINGS) continue;
         /* Precompute tight screen-space rejection bounds once per table.
          * 8-pixel bands cut candidate checks on a 7 MHz V20. */
         t->bounds[i].left=(short)(minimum(e->x,e->ex)-4);
