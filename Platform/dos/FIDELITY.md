@@ -1,7 +1,8 @@
 # Original-game fidelity contract and audit (DOS / Tandy)
 
 **Priority: P0 traceability requirement, subordinate only to real Tandy playability.**
-Reviewed **2026-11-07**. Original audit baseline:
+Engineering audit refreshed **2026-11-08** (the initial baseline was
+reviewed 2026-11-07). Original audit baseline:
 [`f78f87c`](https://github.com/ARMoir/SpaceCadetPinball/commit/f78f87c649edff4b4f0d02bdb65074ea4cfa3e9d);
 the exception register below tracks later changes.
 This is the standing design and review standard for `Platform/dos/`, **not**
@@ -30,6 +31,16 @@ of features that work, are simplified, or are **not implemented**, see
    as an optimization.
 
 ## Non-negotiable rules
+
+**2026-11-08 reinforcement:** For any new ramp/gate/collision workaround,
+require source-data-first comparison and separately label: exact imported
+attributes, source-*projected* contours, and inferred DOS-only fallback
+positions. Every forgiving intervention must document its trigger, maximum
+effect, exclusions, reset and failure cases. Keep /record and /smoke
+counters for ramp assists and directional rescues. Update FEATURE_STATUS.md,
+VALIDATION.md and SOURCE_MAP.md alongside code, including observations still
+UNVERIFIED on the physical V20. A 2D projection of source geometry is not
+the same as reconstructing missing source collision layers.
 
 1. **Original gameplay is the specification when compatible with playability.** Prefer the original Space Cadet
    logic and resource data in `SpaceCadetPinball/` and Windows `PINBALL.DAT`.
@@ -142,7 +153,7 @@ without certifying physical hardware performance or original-rule parity.
 | **P0** | Trapped ball / anti-stuck | The original defines `control::UnstuckBall`: exclude flipper/plunger capture zones, throw upward, eventually relaunch. DOS uses a small position-progress watchdog and staged, verified local moves before a free relaunch. | **Source-inspired playability safety net; exact source trigger/timing not established** | [F-008](#f-008-universal-trapped-ball-recovery) |
 | **P1** | Flipper physics | Original angular flippers collide throughout rotation. DOS preserves endpoints but uses rest/midpoint/raised fixed-point edges and only two art states. | **Performance-oriented approximation; fidelity still unverified** | [F-006](#f-006-flipper-and-collision-response) |
 | **P2** | Material physics / gravity | Original ball direction, spin, elasticity, smoothness, group masks and geometry are richer. DOS uses Q6, fixed restitution, 2D gravity, speed clamps and finite substeps. | **Known incomplete port** | [F-006](#f-006-flipper-and-collision-response) |
-| **P2** | Audio, layout and effects | Original sound/visual states are richer. DOS has PSG substitutes and 16-color rendering; the compact HUD now displays timed status-event messages but not the original queued TTextBox priorities. Optional TABLE3D.TGA shading is precomputed, and the moving ball is the unchanged source sprite. | **Presentation-only adaptation**, gameplay parity unchanged; CRT benefit unverified | [F-007](#f-007-rendering-audio-and-frame-rate) |
+| **P2** | Audio, layout and effects | Original sound/visual states are richer. DOS has PSG substitutes and 16-color rendering; the compact HUD now displays timed status-event messages but not the original queued TTextBox priorities. Optional TABLE3D.TGA shading is precomputed, and the default ball is a symmetric 6x5 DOS sprite (the original 4x4 asset remains available via /sourceball). | **Presentation-only adaptation**, gameplay parity unchanged; CRT benefit unverified | [F-007](#f-007-rendering-audio-and-frame-rate) |
 | **P2** | High scores | Original `high_score.cpp` ranks and stores five entries with long names and desktop settings. DOS has a sorted top-five file and three-initial dialog, but not full original settings/UI. | **Partially implemented; DOS storage/UI adaptation** | [F-009](#f-009-high-scores-and-initials) |
 
 **Verified progress, not full parity:** original-source table artwork, eight

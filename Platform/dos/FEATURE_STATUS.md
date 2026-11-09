@@ -1,7 +1,8 @@
 # DOS / Tandy 1000 EX feature inventory and project handoff
 
 **Status: playable experimental prototype, not a full Space Cadet port.**
-Reviewed November 7, 2026, on `dos/tandy-native-prototype`.
+Reviewed November 8, 2026, on `dos/tandy-native-prototype` (build 280).
+Source and emulator checks are not physical V20 acceptance.
 This is the **authoritative checklist for features not implemented** in the
 native real-mode DOS/V20 build. It describes code and converted resource
 coverage, **not a claim that the final build has passed physical-hardware
@@ -30,7 +31,7 @@ Tandy 1000 EX/V20.
 | Bumpers | Seven source-derived visible caps have radial contact, static initial 500/1500 scoring | No original per-bumper rule progression or vertical layers (F-004) |
 | Kickback saves | Left/right outlane catch, wind-up and protected high-return; original narrow kicker door opens while armed and physically/visually closes after fire; one use per side per ball | Original Hazard Target arming and 0.7+0.1s timer not yet ported; gate state and source-positioned metal overlay adapted (F-001); physical V20 validation pending |
 | Nudge / tilt | X / A / D impulses and tilt-warning/lockout | Custom thresholds, not exact original accumulation (F-005) |
-| Universal anti-stuck | Q6 position watchdog with upward nudge, two verified-clear moves and same-ball relaunch; additional bounded upward/inward impulse after 4 alternating left/right sling reflections, without teleporting | Original `UnstuckBall` timer and DOS-only cyclic-sling guard do not reproduce original rules; physical V20 outcomes pending (F-008) |
+| Universal anti-stuck | Q6 position watchdog with upward nudge, two verified-clear moves and same-ball relaunch; additional bounded near-vertical escape after 3 alternating left/right sling reflections, without teleporting | Original `UnstuckBall` timer and DOS-only cyclic-sling guard do not reproduce original rules; physical V20 outcomes pending (F-008) |
 | Inputs and UI | Source-style four-box 80px sidebar with original score digits, title/ball strip, player/score row, action and status messages; Z and / flippers, optional left/right mouse; **middle mouse plunger** on three-button drivers; Space launch; F5 sound, F8 controls, temporary event messages, initials/top-five panel | DOS INT 33h mouse driver required; keyboard and file/menu flow need physical V20 verification; reduced original TTextBox behavior (F-007/F-009) |
 | Sound | Eight distinct short prioritized non-blocking cues on Tandy PSG (some two-tone) or VGA PC speaker: bumper, launch, drain, kickback, tilt, flipper, nudge, sling; `/nosound`, S/F5 toggle | Original mixed WAV samples/music and exact source timing not ported; physical PSG/VGA quality pending (F-007) |
 | Live table lamps | 7 source-derived bumper caps flash on hit, source sling lights flash on contact, kickback lamps show armed/used state; misplaced invented shooter-ready dot removed; `/nolights` disables | Original `TLight` sprite overlays, target-based missions and timed lamp-group scripts not implemented; physical V20 cost unverified (F-007) |
@@ -57,8 +58,8 @@ and frame timing remain unverified.
 | Area | What is present | What is still **not** implemented | Fidelity audit |
 | --- | --- | --- | --- |
 | World physics | Q6 fixed-point 2D ball, wall normals, gravity, speed clamps, collision bands, bounded anti-stuck watchdog | Original 3D/world-space position and height, spin, full material friction/elasticity, stochastic drag, continuous sweep, exact collision responses | F-002, F-006 |
-| Ramps and layers | Initial ramp art and selected projected ground rails | Physical ramp elevation, traversable upper/lower layers, occlusion masks, level-dependent rail collisions and accurate ramp exits | F-002 |
-| One-way rails and gates | Special upper-left passage, source-derived **left/right** exterior rail containment and **solid left/right slingshot hulls** that reject the ball from closed sling interiors | General original `TOneway`, gate orientation, open/closed state and per-group collision filtering | F-002 |
+| Ramps and layers | Initial ramp art and projected rails, plus a DOS-only small velocity floor on an upward crossing near the two upper-ramp crests | Source TRamp plane forces, true ramp-length progress, upper/lower collision masks and accurate ramp exits remain unimplemented | F-002 |
+| One-way rails and gates | Special upper-left passage, indexed left/right exterior rails and solid slingshot hulls; a narrow upward/outward DOS-only back-lane steering guard | General original TOneway line pairs, their exact directions, component group masks and dynamic state remain unimplemented without the original source-resource metadata | F-002 |
 | Flippers | Source rest/raised geometry; midpoint and seven-substep assisted motion, leverage-based impulse, plus 5px inward active-tip forgiveness for near-center descents | Original continuous angular sweep/velocity and exact front/back collision, trap/hold and original power curve; intentional easier-than-original gap handling | F-006 |
 | Shooter | Original plunger frames and re-catch of weak return | Original 25 ms boost progression, ~2.5 s charge curve, full ~10% boost variance and exact shooter chute transitions | F-003 |
 | Bumpers | Seven radial caps, basic initial scoring | Variable score state, independent component cooldowns, full original material/layer interaction | F-004 |
@@ -66,6 +67,17 @@ and frame timing remain unverified.
 | Nudge/tilt | Three directions, reversal impulse and warning/lockout | Exact source threshold, accumulation/decay and physically accurate displacement | F-005 |
 | Visual effects | Reduced-color artwork, small dynamic event/armed lamp overlays, default unshaded round ball (source 4x4 optional), Tandy CRTC shake | Full source-derived light sprite animations, switch/mission control and depth/occlusion rendering | F-007 |
 | Audio | Eight synthetic PSG/PC speaker multi-note cues with audio priority | Source WAV samples, original soundtrack/music playback, independent source audio channels and all target/mission event mapping | F-007 |
+
+**Recent 2026-11-08 physics and art changes:** The third consecutive
+alternating true sling contact initiates the anti-loop escape (not fourth).
+A bounded crest impulse is used near each upper projected ramp; an
+upward/outward sling-apron steering correction prevents some backward
+flipper shots. These are F-002/F-008 playability adaptations, not
+imported ramp/TOneway rules. The default TABLE3D image's offline
+postprocessor rejects black pits, stray highlights and colored-object
+halos, while leaving source TABLE.TGA and runtime drawing untouched.
+The original 6x5 symmetric default ball and optional /sourceball are
+unchanged by that artwork pass.
 
 **Universal recovery (2026-11-07):** The DOS port adds a
 source-inspired F-008 anti-stuck watchdog. The original has an
@@ -206,7 +218,8 @@ Its `CADET` artifact extracts as `CADET.zip`. Failed runs publish
 `CADET-DIAGNOSTICS` instead; do not treat those as playable downloads.
 
 Copy these **matching files from the same ZIP** to a directory on the Tandy:
-`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, and `TABLE3D.TGA`. Do not mix
+`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`,
+`VGA.DAT`, and `MENU.DAT`. Do not mix
 older SCP1/SCP2 data with a newer EXE.
 
 ```dos

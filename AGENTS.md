@@ -59,6 +59,32 @@ Windows `PINBALL.DAT` data, not memory, when judging original behavior.
   gameplay impact, reason, measured evidence (or **UNVERIFIED**), tests and
   plan to restore source behavior. Reference the associated **F-###**
   exception ID in the commit and/or code comment.
+- **Use original component data before screen-coordinate heuristics.** For ramp,
+  gate, one-way, target, or collision-layer corrections, first inspect the
+  corresponding original C++ component and PINBALL.DAT attribute fields.
+  Prefer projected source endpoints, group masks, and component states
+  indexed at load time over hardcoded global x/y regions. When an original
+  source asset is unavailable, explicitly mark the fallback as provisional:
+  do not claim its geometry or direction comes from omitted source data.
+- **Bound and audit every forgiving gameplay intervention.** Specify a
+  precise trigger, phase/approach side, a maximum velocity or displacement
+  effect, exclusions (tilt, kickback, plunger, legitimate return, etc.),
+  reset/timeout and retained failure/drain paths. Do not continuously
+  accelerate, teleport, or invent scoring. Add tests of positive, negative,
+  simultaneous, and repeated-contact cases on source-derived geometry.
+- **Instrument gameplay assistance for real-hardware diagnosis.** Every
+  ramp crest, directional deflection, collision rescue, anti-loop or
+  relaunch intervention must increment a bounded counter reported by
+  CADET /record in INPUT.TXT and the deterministic /smoke report.
+  Counters are descriptive, not proof of a good outcome. Do not add disk
+  I/O inside the physics loop; use small in-memory integer counters.
+- **Synchronize the three ownership documents.** In the same change as
+  modified behavior, reconcile FEATURE_STATUS.md (present/missing
+  functionality), FIDELITY.md (source behavior, exception and evidence),
+  and VALIDATION.md (automated tests versus unverified physical acceptance).
+  Update SOURCE_MAP.md and AGENTS.md when provenance or rules change.
+  Retire contradictory historical claims in summaries without deleting
+  the history of justified exceptions.
 - **Resolve high-impact playability issues first.** Hardware-reported
   weak flippers, repetitive ball paths, missed contacts, stuck balls,
   unreliable shooter relaunch, and slow frames outrank less visible fidelity
@@ -72,8 +98,10 @@ Windows `PINBALL.DAT` data, not memory, when judging original behavior.
   Record real Tandy performance separately; successful emulation does not
   prove a 7.16 MHz V20 budget.
 - **Use matching data.** When the format or imports change, ship
-  `CADET.EXE`, `TABLE.DAT`, and `TABLE.TGA` together. Keep the Actions
-  artifact download named `CADET.zip`.
+  `CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`,
+  `VGA.DAT`, and `MENU.DAT` from one tested build together.
+  Optional assets retain explicitly documented fallback behavior. Keep
+  the Actions archive named `CADET.zip`.
 
 ## Repository workflow specific to this project
 

@@ -1,12 +1,25 @@
 # Prototype validation and final handoff
 
-Reviewed November 7, 2026, using the owner-supplied Windows PINBALL.DAT.
+Reviewed November 8, 2026, against the checked-in converted source pack.
+The original Windows PINBALL.DAT is NOT checked into this repository;
+attribute-exact future reimports must be validated with that source file.
 The [feature-status inventory](FEATURE_STATUS.md) is the definitive account
 of original-game systems **not yet implemented**; successful tests below
 do not imply complete gameplay or final V20 hardware certification.
 Source resource SHA-256 and the complete import inventory are in data/IMPORT.json.
 
 ## Completed
+
+**Current baseline:** GitHub Actions run
+[42548769975](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42548769975)
+passed the Tandy/VGA real-mode build and deterministic emulator checks for
+commit 187f15a8. Since that run, third-hit alternating-sling escape,
+fixed-coordinate near-crest ramp assistance, lower-apron outward-ball
+deflection, source-style text and offline Tandy art cleanup are in the
+tested code. The last three gameplay features are not original source
+collision/layer implementations and real V20 effectiveness remains
+UNVERIFIED. All future updates to the importer/physics should require
+paired positive/negative regression coverage and full CI.
 
 * Open Watcom 2, pinned `2026-11-01-Build`, Windows x64 host.
   Both binaries build warning-free with `-bt=dos -0 -ms -os -s -w4 -we`.
@@ -162,6 +175,19 @@ underlying collision geometry still needs fixing. Emulated tests
 do not establish actual V20 performance or exact original timing.
 
 ## Required hardware follow-up
+
+**New F-002/F-008 physical acceptance:** With `CADET /record`,
+record a set of upper-right and upper-left ramp attempts that nearly
+reach the crest, flipper shots into both outer sling backs, downhill
+return passes through those lanes, shooter and legitimate kickback
+returns, and repeated alternating slingshot contacts. Compare
+`ramp_crest_assists`, `sling_backflow_redirects`,
+`sling_loop_breaks`, `boundary_hits`, `slow_frames` and whether
+the ball actually completes the intended climb without false rescues.
+These cumulative statistics need corresponding short FLIGHT.TXT
+snapshots or live observation to establish outcome. None is a
+substitute for real-hardware testing. Final source-geometry fidelity
+requires a reimport of omitted TOneway and TRamp source attributes.
 
 **VGA compatibility physical check (2026-11-07):**
 Run `CADET /vga /record` on a conventional VGA PC with 256KB+

@@ -83,7 +83,12 @@ parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 ## November 8 gameplay tuning: ramps, slingshot loops and rear-lane shots
 
 A nearly completed climb on the source-projected upper-right or upper-left
-ramp now receives a small **one-shot** uphill velocity correction. The
+ramp now receives a small **one-shot** uphill velocity correction.
+These positions remain a DOS-only approximation; the original ramp
+planes and TOneway lines have not yet been imported. For actual Tandy
+playability diagnosis, /record and /smoke now include
+`ramp_crest_assists` and `sling_backflow_redirects` counters in
+the same report as `sling_loop_breaks`. The
 slingshot anti-loop guard triggers at the **third** alternating real front
 contact, launching mostly upward rather than toward the opposite sling.
 A directional lower-sling entry deflector redirects outward flipper shots
