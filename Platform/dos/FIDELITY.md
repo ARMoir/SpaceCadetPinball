@@ -272,6 +272,43 @@ validate kickback returns before replacing the legacy proxies.
 
 ### F-002 Collision layer and one-way projection
 
+#### Elevated s_ramp9 passage fix, source comparison (2026-11-09)
+
+Owner observation: full-power shots appear blocked near the upper-right
+crest. The supplied Windows PINBALL.DAT SHA-256 is
+`42defd5d2a339a3953fe643716aff4e35b2cea7a3e54505c82d1e78d5325bc04`.
+Unlike rising TRamp 101, upper-right `s_ramp9` **group 105**
+contains two FLAT planes with original Z=-5 (not a steep uphill ramp).
+Its entry/exit project along (161,69) -> (138,25), with a group-2
+collision mask. Original ground-layer walls 282/283/296/304 project
+onto the same area x127..161/y24..58. Original TRamp::Collision
+changes the active ball collision group on entry/exit, but the
+flattened DOS wall pass previously treated both layers as ground
+and reflected a valid upper-right shot at a false barrier.
+
+The fixed-point port now ignores *only* its ordinary ground-wall
+index and ground TOneway lines while the genuine source 105 midpoint
+path is active (entry in first quarter, within 3px and traveling
+forward). Once the raised ball passes 90% of the original path, it
+can retain elevated collision clearance for at most 8 substeps,
+only while moving upward within 12px of the source upper exit.
+Ground, descending, off-corridor, shooter, tilted, and kicker paths
+are unchanged. There is no added boost: source 105 is flat. The
+`ramp_layer_ticks` diagnostic saturates at 65535 and is logged
+only at quit by /record and /smoke. The full imported-table test
+launches a ball along the actual source centerline through the
+ground overlap and checks it reaches the upper-right endpoint,
+with negative descending and shooter checks.
+
+This is still not full TRamp elevation: upper-group side walls,
+actual mask transition timing and per-plane physics/height are
+unimplemented. Skipping all normal ground walls in this strictly
+bounded raised state can permit a lateral escape; confirm on the
+physical 7.16 MHz V20 before calling this solved. Future fidelity
+work should add upper-layer sidewalls from source group 106 and
+explicit 1301/1302 transitions. Avoid another global y-row
+velocity hack.
+
 #### Source-data path and directional-line revision (2026-11-08)
 
 Input: original Windows PINBALL.DAT, 928700 bytes, SHA-256
@@ -617,6 +654,36 @@ contacts, measured against real Tandy responsiveness.
   compare nudge cadence to source tilt/warning timings.
 
 ### F-006 Flipper and collision response
+
+#### Reduced trajectory repetition, impact-only variation (2026-11-09)
+
+The owner observed repeated near-identical trajectories. Original
+`maths::basic_collision` varies elasticity/smoothness by material,
+`TFlipperEdge` uses continuous angle and contact leverage, and
+`TBall::throw_ball` randomizes directed throws. The DOS version
+still uses fixed restitution, Q6 grid quantization, sampled flipper
+positions and little natural spin. These omissions create more
+repeatable paths than the source, especially after powerful hits.
+
+A **DOS-only approximation** now gives meaningful radial bumper
+rebounds and active/held boosted flipper contacts a random tangential
+component of at most 8 Q6 velocity units (0.125px per physics
+substep), after applying the existing source-inspired normal
+reflection. A dedicated 16-bit LCG is seeded with BIOS ticks once
+per interactive game and has a separate deterministic test seed.
+The six-substep shared cooldown avoids multiple independent
+perturbations from one overlapping contact. Passive ground walls,
+weak shooter returns, scripted kickbacks, tilt and normal physics
+integration never consume this RNG. Scores, drains and position
+are unchanged by the perturbation. This is a substitute for
+currently unimplemented material/spin state, **not** a claim
+that the original makes random decisions on every impact.
+`physics_variations` is reported to /record and /smoke; physical
+impact distribution and V20 performance remain **UNVERIFIED**.
+Tests compare fixed-seed replay, changed-session seeds, cooldown,
+scoring, and unchanged passive collisions. Next restore material
+smoothness/elasticity and 3D contact dynamics from resource data
+before considering larger artificial variance.
 
 - **Status / priority:** OPEN, P1 for flippers and P2 for other physics.
 - **Original:** `TFlipperEdge.cpp`, `TFlipper.cpp`, `TBall.cpp` and

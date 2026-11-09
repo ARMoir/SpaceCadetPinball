@@ -10,6 +10,24 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 
 ## Completed
 
+**2026-11-09 ramp and impact follow-up:** The supplied Windows
+PINBALL.DAT was checked against the imported TABLE.DAT and source C++.
+Source group105 `s_ramp9` is a two-plane flat upper route
+(z=-5, x161/y69 to x138/y25), while source ground walls
+282/283/296/304 overlap its projected crest. The new runtime
+layer filter bypasses only ordinary ground walls while a valid
+source-ramp traversal is active; a brief bounded near-exit
+transition handles the missing mask switch. Original-table positive
+and descending/shooter negative tests now check that the route
+is traversable. Existing short group101 rising boost is unchanged.
+Dedicated fixed-seed 16-bit rebound variation of <=8 Q6 is
+restricted to actual bumper/boosted flipper contacts, with
+cooldown, reproducibility and passive-wall regression tests.
+`ramp_layer_ticks` and `physics_variations` are printed only
+when the run ends. Final correctness and performance on the real
+7.16 MHz NEC V20, including side-wall exits and normal drain rate,
+are **UNVERIFIED**.
+
 **Current baseline:** GitHub Actions run
 [42548769975](https://github.com/ARMoir/SpaceCadetPinball/actions/runs/42548769975)
 passed the Tandy/VGA real-mode build and deterministic emulator checks for
