@@ -11,6 +11,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
 {
     int i,b,pressed,px,py,shooter_inner_x,edge_rescue=0;
     short old_x=g->x,old_y=g->y;
+    unsigned short prior_flipper_contacts[2];
     /* F-006: old_x/old_y are reused after walls; retain the flight ray. */
     short flight_x=g->x,flight_y=g->y;
     g->steps++; g->event=0; g->event_bumper=0;
@@ -122,6 +123,9 @@ void game_step(Game *g,const Table *t,unsigned keys)
     g->vy=(short)maximum(g->in_shooter?-132:-176,
                          minimum(g->in_shooter?132:176,g->vy));
     g->x+=g->vx; g->y+=g->vy;
+    /* Lightweight source-inspired one-way and final-crest checks. */
+    assist_ramp_crest(g,t,flight_y);
+    guard_sling_backflow(g,t,flight_y,0);
     /* Capture an incoming ball at the strike face before nearby static
      * rail contacts reverse its velocity. Walls remain active after firing. */
     if(catch_kickback(g,t)) {
@@ -170,7 +174,14 @@ void game_step(Game *g,const Table *t,unsigned keys)
     /* F-002: a paddle contact can itself correct the ball into a nearby
      * solid sling or outside a rail. Recheck only when it moves position. */
     old_x=g->x; old_y=g->y;
+    prior_flipper_contacts[0]=g->flipper_contacts[0];
+    prior_flipper_contacts[1]=g->flipper_contacts[1];
 #include "flipper.inc"
+    /* A late flipper contact can fire upward above the lip without
+     * crossing it again. Apply only on a genuine contact this tick. */
+    if(g->flipper_contacts[0]!=prior_flipper_contacts[0] ||
+       g->flipper_contacts[1]!=prior_flipper_contacts[1])
+        guard_sling_backflow(g,t,old_y,1);
     if(g->x!=old_x || g->y!=old_y) {
         contain_slingshots(g,t);
         contain_outer_right(g,t);

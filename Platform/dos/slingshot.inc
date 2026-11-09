@@ -2,23 +2,17 @@
  * ORIGINAL: TEdgeSegment.cpp; TEdgeManager.cpp
  * STATUS: ADAPTED
  * MATCHES: source-derived outlines and outward response
- * DIVERGES: solid triangle prevents center trapping
+ * DIVERGES: solid triangle prevents center trapping; third-hit near-vertical exit
  * EXCEPTIONS: F-002
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
  */
-/* F-008: the original UnstuckBall-inspired 3px position watchdog cannot
- * detect a ball that repeatedly travels from left to right slingshot and
- * back. Count actual incoming contacts with ALTERNATING hulls, not mere
- * near-sling positions or repeated overlap corrections. Four distinct,
- * alternating rebounds, each no more than ~2 seconds after the last,
- * get one
- * gentle upward/inward correction (not a power kick). A real volley can still happen:
- * up to three alternating hits are left completely alone.
- * No free balls, teleport, scoring, mission change or timer overhead.
- * See F-002 / F-008: this is a DOS flattened-layer playability guard,
- * not a source TLight or TEdgeSegment rule. */
-#define SLING_LOOP_HITS 4
+/* F-008: a repeated true L/R sling volley is not a stationary trap.
+ * Leave two alternating hits alone. A third consecutive alternating
+ * front-face hit within ~2 seconds gets a near-vertical inward exit.
+ * The tiny horizontal component cannot reach the opposite wedge before
+ * the ball clears y=105. Backside slides are never counted. */
+#define SLING_LOOP_HITS 3
 #define SLING_LOOP_WINDOW 144
 static void sling_contact(Game *g,int side)
 {
@@ -33,13 +27,12 @@ static void sling_contact(Game *g,int side)
     g->sling_chain_side=current;
     g->sling_chain_time=SLING_LOOP_WINDOW;
     if(g->sling_chain_hits<SLING_LOOP_HITS) return;
-    /* Lift the ball toward the upper center while leaving its exact
-     * source collision-resolved position intact. It is an impulse, NOT
-     * a scripted/safe-corridor kickback, and ordinary walls stay active. */
-    /* F-008: prior -144/-48 was far too powerful on real Tandy.
-     * Keep the fourth-hit detection; give a soft upward nudge only. */
-    g->vx=(short)(side?-24:24);
-    g->vy=-64;
+    /* Near-vertical -96 Q6 is below a full powered-flipper shot.
+     * A +/-18 Q6 drift travels only a few pixels while escaping
+     * the y=105..165 band, not all the way to the opposite sling.
+     * Preserve resolved position, collision, drains and ball count. */
+    g->vx=(short)(side?-18:18);
+    g->vy=-96;
     g->sling_loop_breaks++;
     g->sling_chain_side=g->sling_chain_hits=g->sling_chain_time=0;
 }

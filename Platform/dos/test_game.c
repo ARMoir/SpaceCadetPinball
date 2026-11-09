@@ -737,8 +737,8 @@ int main(int argc,char **argv)
                    (side?g.vx<0:g.vx>0));
         }
         game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
-        /* The first three alternating impacts are legitimate pinball. */
-        for(j=0;j<3;j++) {
+        /* The first TWO alternating impacts are legitimate pinball. */
+        for(j=0;j<2;j++) {
             side=j&1;
             g.x=(short)((side?144:76)*FP);
             g.y=135*FP;
@@ -749,13 +749,26 @@ int main(int argc,char **argv)
                    g.sling_loop_breaks==0 &&
                    g.balls==3 && !g.waiting);
         }
-        /* The fourth true reversal escapes upward, not down the drain. */
-        g.x=144*FP; g.y=135*FP; g.vx=96; g.vy=0;
+        /* Third real reversal exits near vertically, from LEFT sling. */
+        g.x=76*FP; g.y=135*FP; g.vx=-96; g.vy=0;
         game_step(&g,&t,0);
         assert(g.sling_loop_breaks==1 &&
                !g.sling_chain_hits && !g.sling_chain_time &&
-               g.vx==-24 && g.vy==-64 &&
+               g.vx==18 && g.vy==-96 &&
                g.balls==3 && g.score==0 && !g.waiting);
+        for(j=0;j<32;j++) {
+            game_step(&g,&t,0);
+            assert(g.sling_loop_breaks==1 && g.balls==3 &&
+                   g.sling_rescues[1]==0);
+        }
+        assert(g.y<105*FP);
+        /* Mirror test: a RIGHT-side third hit exits upward-left. */
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        g.sling_chain_side=1; g.sling_chain_hits=2;
+        g.sling_chain_time=144;
+        g.x=144*FP; g.y=135*FP; g.vx=96; g.vy=0;
+        game_step(&g,&t,0);
+        assert(g.sling_loop_breaks==1 && g.vx==-18 && g.vy==-96);
         /* Repeatedly touching only one slingshot cannot trigger it. */
         game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
         for(j=0;j<12;j++) {
@@ -769,13 +782,13 @@ int main(int argc,char **argv)
         game_step(&g,&t,0);
         assert(!g.sling_chain_hits && !g.sling_chain_side);
         /* Crossing above the slings also resets a partial volley. */
-        g.sling_chain_hits=3; g.sling_chain_time=100;
+        g.sling_chain_hits=2; g.sling_chain_time=100;
         g.sling_chain_side=1;
         g.x=110*FP; g.y=90*FP; g.vx=0; g.vy=0;
         game_step(&g,&t,0);
         assert(!g.sling_chain_hits && !g.sling_chain_time);
         /* No rescue is granted to an active shooter or tilted ball. */
-        g.sling_chain_hits=3; g.sling_chain_time=100;
+        g.sling_chain_hits=2; g.sling_chain_time=100;
         g.sling_chain_side=1; g.tilted=1;
         g.x=144*FP; g.y=135*FP; g.vx=96; g.vy=0;
         game_step(&g,&t,0);
@@ -832,6 +845,69 @@ int main(int argc,char **argv)
     puts("STAGE: synthetic tests passed; loading imported table"); fflush(stdout);
     assert(table_load(&t,"TABLE.DAT")); game_reset(&g,&t);
     puts("STAGE: imported pack loaded"); fflush(stdout);
+    /* F-002: source-shape ramp crests and directional sling gates. */
+    {
+        int side;
+        assert(t.sling_count==2 && t.outer_left_rail>=0 &&
+               t.outer_right_rail>=0);
+        for(side=0;side<2;side++) {
+            int crest_x=side?155:73;
+            int near_sling_x=side?145:90;
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(crest_x*FP); g.y=38*FP+20;
+            g.vx=-24; g.vy=-40;
+            game_step(&g,&t,0);
+            assert(g.ramp_crest_assists==1 && g.balls==3);
+            /* No continuous boost simply for lingering in the area. */
+            g.x=(short)(crest_x*FP); g.y=36*FP;
+            g.vx=-24; g.vy=-20;
+            game_step(&g,&t,0);
+            assert(g.ramp_crest_assists==1);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(crest_x*FP); g.y=38*FP+20;
+            g.vx=-24; g.vy=25;
+            game_step(&g,&t,0);
+            assert(!g.ramp_crest_assists);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=1;
+            g.x=(short)(crest_x*FP); g.y=38*FP+20;
+            g.vx=-24; g.vy=-40;
+            game_step(&g,&t,0);
+            assert(!g.ramp_crest_assists);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)((side?118:106)*FP); g.y=38*FP+20;
+            g.vx=-24; g.vy=-40;
+            game_step(&g,&t,0);
+            assert(!g.ramp_crest_assists);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(near_sling_x*FP);
+            g.y=(short)((t.slings[side].bottom+10)*FP+16);
+            g.vx=(short)(side?96:-96); g.vy=-64;
+            game_step(&g,&t,0);
+            assert(g.sling_backflow_redirects==1 && g.balls==3);
+            /* Descending, shooter, and earned kickback remain free. */
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(near_sling_x*FP);
+            g.y=(short)((t.slings[side].bottom+10)*FP-16);
+            g.vx=(short)(side?96:-96); g.vy=64;
+            game_step(&g,&t,0);
+            assert(!g.sling_backflow_redirects);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=1;
+            g.x=(short)(near_sling_x*FP);
+            g.y=(short)((t.slings[side].bottom+10)*FP+16);
+            g.vx=(short)(side?96:-96); g.vy=-64;
+            game_step(&g,&t,0);
+            assert(!g.sling_backflow_redirects);
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.kick_flight=1;
+            g.x=(short)(near_sling_x*FP);
+            g.y=(short)((t.slings[side].bottom+10)*FP+16);
+            g.vx=(short)(side?96:-96); g.vy=-64;
+            game_step(&g,&t,0);
+            assert(!g.sling_backflow_redirects);
+        }
+        puts("STAGE: source ramp crests and one-way sling backflow");
+        fflush(stdout);
+    }
     /* Original SCP2 has narrow four-edge v_gate1/v_gate2 source
      * groups inside the kicker lanes, not at invented coordinates. */
     assert(t.gate_first[0]>=0 && t.gate_first[1]>=0);

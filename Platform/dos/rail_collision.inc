@@ -2,7 +2,7 @@
  * ORIGINAL: TEdgeManager.cpp; TOneway.cpp; TGate.cpp
  * STATUS: ADAPTED
  * MATCHES: source rail positions and one-way intent
- * DIVERGES: DOS-only guards and pixel-based upper chute
+ * DIVERGES: DOS-only rail guards, ramp crest assist, sling one-way apron and upper chute
  * EXCEPTIONS: F-002
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
@@ -75,6 +75,69 @@ static void contain_outer_left(Game *g,const Table *t)
     }
     g->x=(short)limit;
     g->left_rail_saves++;
+}
+
+/* F-002: original TRamp::FieldEffect provides speed/plane forces which
+ * SCP2's flattened projection cannot reproduce. At the last ~10-15%
+ * of the upper left/right ramp, a true upward crest crossing gets one
+ * mild velocity floor. No repositioning or repeated boost; a strongly
+ * moving ball keeps its existing speed. Use source ramp contour bounds,
+ * and enable only on the original indexed source table shape. */
+static void assist_ramp_crest(Game *g,const Table *t,short old_y)
+{
+    int px=g->x/FP,target_vy,target_vx;
+    if(t->sling_count!=2 || t->outer_left_rail<0 ||
+       t->outer_right_rail<0 || g->waiting || g->over ||
+       g->in_shooter || g->kick_delay || g->kick_flight ||
+       g->vy>=0 || g->vx>=-12) return;
+    if(old_y<38*FP || g->y>=38*FP) return;
+    if(px>=139 && px<=166) {
+        target_vy=-96; target_vx=-40; /* right ramp (x133..166) */
+    } else if(px>=62 && px<=83) {
+        target_vy=-88; target_vx=-28; /* left ramp (x62..82) */
+    } else return;
+    if(g->vy>target_vy || g->vx>target_vx) {
+        if(g->vy>target_vy) g->vy=(short)target_vy;
+        if(g->vx>target_vx) g->vx=(short)target_vx;
+        g->ramp_crest_assists++;
+    }
+}
+
+/* F-002: one-way deflector at the two source-derived sling aprons.
+ * Original TOneway relies on missing 3D collision-group metadata.
+ * Stop flipper shots climbing OUTWARD into the backside return tubes;
+ * descending balls, inward shots, the shooter and valid kickbacks
+ * pass unchanged. The horizontal velocity is steered toward the open
+ * playfield, NOT kicked harder or position-snapped through walls.
+ * Check a narrow upward lip crossing, or immediately after a genuine
+ * flipper collision above that lip (which can reverse velocity midstep).
+ * The source sling hull bounds determine each deflector's footprint. */
+static void guard_sling_backflow(Game *g,const Table *t,
+                                short old_y,int from_flipper)
+{
+    int side,px=g->x/FP,py=g->y/FP;
+    if(g->waiting || g->over || g->in_shooter ||
+       g->kick_delay || g->kick_flight || g->vy>=-24) return;
+    for(side=0;side<MAX_SLINGS;side++) {
+        const Sling *h=&t->slings[side];
+        int gate_y;
+        if(!h->count) continue;
+        gate_y=h->bottom+10;
+        if(from_flipper) {
+            if(py<h->bottom || py>h->bottom+17) continue;
+        } else if(old_y<gate_y*FP || g->y>=gate_y*FP) continue;
+        if(side==0) {
+            if(px<h->left-10 || px>h->right+9 || g->vx>=-40)
+                continue;
+            g->vx=28;
+        } else {
+            if(px<h->left-9 || px>h->right+12 || g->vx<=40)
+                continue;
+            g->vx=-28;
+        }
+        g->sling_backflow_redirects++;
+        break;
+    }
 }
 
 /* The upper-left skill-shot chute includes one-way passages in the

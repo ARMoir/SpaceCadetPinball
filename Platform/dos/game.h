@@ -88,6 +88,7 @@ typedef struct {
      * Updated only on genuine approach-side hull reflections. */
     unsigned char sling_chain_side,sling_chain_hits,sling_chain_time;
     unsigned short sling_loop_breaks; /* Count deliberate loop escapes. */
+    unsigned short ramp_crest_assists,sling_backflow_redirects; /* F-002 */
     /* F-008: tiny fixed-point watchdog; no per-frame allocations. */
     short stuck_x,stuck_y,stuck_minx,stuck_maxx,stuck_miny,stuck_maxy;
     unsigned short stuck_ticks,stuck_stage_ticks;
