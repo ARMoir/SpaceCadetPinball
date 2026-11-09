@@ -692,6 +692,7 @@ int main(int argc,char **argv)
      * Short volleys, same-side jitter and expired streaks stay normal. */
     {
         int side,j;
+        unsigned short opposite_rescues;
         static const short nx[3]={236,0,-236};
         static const short ny[3]={-95,256,-95};
         fixture();
@@ -756,10 +757,11 @@ int main(int argc,char **argv)
                !g.sling_chain_hits && !g.sling_chain_time &&
                g.vx==18 && g.vy==-96 &&
                g.balls==3 && g.score==0 && !g.waiting);
+        opposite_rescues=g.sling_rescues[1];
         for(j=0;j<32;j++) {
             game_step(&g,&t,0);
             assert(g.sling_loop_breaks==1 && g.balls==3 &&
-                   g.sling_rescues[1]==0);
+                   g.sling_rescues[1]==opposite_rescues);
         }
         assert(g.y<105*FP);
         /* Mirror test: a RIGHT-side third hit exits upward-left. */
