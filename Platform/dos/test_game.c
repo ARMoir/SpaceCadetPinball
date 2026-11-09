@@ -438,6 +438,63 @@ static void component_tests(void)
     puts("STAGE: source CMP1 ramp paths and directional line regressions"); fflush(stdout);
 }
 
+/* F-002: use the full real source table, not an isolated path or
+ * one perfectly centered ray. Sweep multiple entry speeds and +/-1px
+ * lateral offsets while all ordinary geometry and layers are enabled. */
+static void right_ramp_stress_tests(void)
+{
+    int speed_index,offset,n,cleared,successes=0;
+    const RampPath *r;
+    assert(table_load(&t,"TABLE.DAT"));
+    r=&t.ramps[1];
+    assert(r->group==105 && r->count==2 && !r->assist);
+    assert(t.source_gate_count==2 && t.directional_count==18);
+    for(speed_index=0;speed_index<4;speed_index++) {
+        int speed=118+speed_index*12;
+        for(offset=-1;offset<=1;offset++) {
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(r->segments[0].x+offset*FP);
+            g.y=r->segments[0].y;
+            g.vx=(short)((long)r->segments[0].tx*speed/256);
+            g.vy=(short)((long)r->segments[0].ty*speed/256);
+            cleared=0;
+            for(n=0;n<72 && !g.waiting && !g.over;n++) {
+                game_step(&g,&t,0);
+                if(g.y<22*FP) { cleared=1; break; }
+            }
+            if(!cleared)
+                printf("RIGHT RAMP BLOCK speed=%d offset=%d frame=%d xy=%d,%d "
+                       "velocity=%d,%d layer=%u walls=%u entries=%u\\n",
+                       speed,offset,n,g.x/FP,g.y/FP,g.vx,g.vy,
+                       g.ramp_layer_ticks,g.wall_crossings,g.ramp_entries);
+            fflush(stdout);
+            assert(cleared && g.balls==3 && g.ramp_entries>=1 &&
+                   g.ramp_layer_ticks>=8 && !g.ramp_crest_assists);
+            successes++;
+        }
+    }
+    printf("STAGE: upper-right real-table entry/crest stress %d/12\\n",successes);
+    fflush(stdout);
+
+    /* Exiting downhill and stale off-corridor timers must not grant a
+     * screen-wide elevated mask. Genuine ground contacts remain active. */
+    game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+    g.ramp_active=2; g.ramp_progress=r->length;
+    g.x=r->segments[1].ex; g.y=r->segments[1].ey;
+    g.vx=48; g.vy=96;
+    game_step(&g,&t,0);
+    assert(!g.ramp_layer_ticks && !g.ramp_exit_ticks);
+    game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+    g.ramp_exit_ticks=8;
+    g.x=(short)(r->segments[1].ex+15*FP);
+    g.y=r->segments[1].ey;
+    g.vx=0; g.vy=-96;
+    game_step(&g,&t,0);
+    assert(!g.ramp_layer_ticks && g.balls==3);
+    puts("STAGE: upper-right exit direction and lateral mask exclusions");
+    fflush(stdout);
+}
+
 int main(int argc,char **argv)
 {
     int i,weak_vy,full_vy;
@@ -446,6 +503,7 @@ int main(int argc,char **argv)
     spent_gate_tests();
     component_loader_tests();
     component_tests();
+    right_ramp_stress_tests();
     wall_guard_tests();
     overlapping_bumper_tests();
     flipper_tunneling_tests();

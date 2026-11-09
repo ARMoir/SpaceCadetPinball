@@ -274,6 +274,19 @@ validate kickback returns before replacing the legacy proxies.
 
 #### Elevated s_ramp9 passage fix, source comparison (2026-11-09)
 
+**Follow-up tests after continued owner-reported obstruction:** A single
+perfectly centered shot is insufficient. The complete original
+converted table is now exercised with twelve separate legal
+upper-right ramp shots spanning four entry speeds and three slight
+horizontal offsets, with ground rails, one-ways and bumpers intact.
+Each must clear the upper end, not merely activate the mask.
+Explicit downhill and off-corridor cases must not gain raised
+clearance. A failure should guide source-layer geometry repairs,
+not larger universal velocity boosts. Real CRT/V20 outcome remains
+UNVERIFIED.
+
+
+
 Owner observation: full-power shots appear blocked near the upper-right
 crest. The supplied Windows PINBALL.DAT SHA-256 is
 `42defd5d2a339a3953fe643716aff4e35b2cea7a3e54505c82d1e78d5325bc04`.

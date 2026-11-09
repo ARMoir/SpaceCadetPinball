@@ -10,6 +10,18 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 
 ## Completed
 
+**2026-11-09 upper-right ramp regression expansion:** The real
+source-table test now probes 12 shots at four speeds (118, 130,
+142, 154 Q6) and offsets of -1, 0 and +1 pixel against the
+unmodified collision index. Each must pass beyond y=22 while
+recording a real ramp entry and elevated-mask ticks, without a
+fabricated crest boost or ball loss. Descending upper-exit and
+stale off-corridor clearance are tested as negative cases.
+Failures include velocity, coordinate and contact counters.
+These are emulator checks, not physical V20 verification.
+
+
+
 **2026-11-09 font test addition:** Verify the exact five rows of the 3x5 N
 glyph and both continuous vertical strokes. Other glyphs, score digits
 and the fixed four-pixel character advance must remain unchanged.
