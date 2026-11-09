@@ -585,6 +585,31 @@ contacts, measured against real Tandy responsiveness.
 
 ### F-007 Rendering, audio and frame rate
 
+- **2026-11-08 clarity-first cleanup of the Tandy 3D artwork:**
+  Owner requested less muddiness and fewer artifacts in the default
+  `TABLE3D.TGA`. Inspection of `enhance_table.py` found three
+  stacked offline highlight/shadow passes. Their dither sometimes
+  recolored existing dark-gray (RGBI 8) rail/ramp/bumper pixels to
+  pure black (RGBI 0), resulting in artificial holes and speckles
+  at the 320x200 CRT resolution. A final **offline-only** cleanup
+  in `polish_artifacts` removes all newly introduced black pixels,
+  shields the immediate border of original colored lamps/targets,
+  rejects isolated source-gray specks and lone unconnected highlight
+  pixels, while retaining connected gray-to-white metallic bevels.
+  The algorithm consults the unmodified original indexed image and
+  a frozen enhanced copy so cleanup is order-independent. It adds
+  no blur, smoothing, geometry or new paint outside source-neutral
+  pixels; classic `TABLE.TGA`, source `TABLE.DAT`, movable sprites,
+  score lamp art, RGBI palette, PC-encoded bank layout, screen size,
+  runtime renderer and physics remain identical. The final enhanced
+  pack stays 32,768 bytes. Explicit regression tests check pit,
+  halo, sparkle and disconnected-metal rejection, connected
+  highlights, source/color preservation and deterministic output.
+  The actual CRT aesthetic improvement and any subjective loss of
+  depth remain **UNVERIFIED** pending a physical A/B comparison
+  with `CADET /classic` and `CADET /3d`. Zero additional V20
+  workload is introduced, because conversion runs before packaging.
+
 - **2026-11-08 tiny-letter legibility (owner-observed R ambiguity):**
   The 3x5 uppercase UI glyph for `R` had a heavy three-pixel top
   bar and a left-only final stroke, making it resemble `P`. The

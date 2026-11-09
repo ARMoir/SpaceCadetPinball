@@ -191,6 +191,78 @@ def add_height_illusion(src, out, caps, counters):
                         shade(x,y,0,"high_cap_shadow")
 
 
+
+def polish_artifacts(src, out, counters):
+    """Remove high-frequency faux-3D artifacts without blurring source art.
+
+    The three existing lighting passes can create alternating white specks
+    and isolated BLACK pits *on top of original dark-gray pixels*. Keep
+    genuine connected steel bevels, but never punch black holes in metal,
+    tint the pale margin beside a colored insert, or leave lone pixel
+    highlights floating on the playfield. Work from the ORIGINAL color
+    mask and a frozen copy of the shaded result, so cleanup is repeatable
+    and independent of scan order. Everything stays inside the PC-side
+    conversion, with zero new operations in the DOS renderer.
+    """
+    before = [row[:] for row in out]
+    counts = {"artifact_pits": 0, "artifact_color_halos": 0,
+              "artifact_islands": 0, "artifact_sparkles": 0}
+    for y in range(7, PLAYFIELD_BOTTOM-3):
+        for x in range(7, PLAYFIELD_RIGHT-3):
+            old, new = src[y][x], before[y][x]
+            if old == new:
+                continue
+            # Existing source-black paint, original colored inserts and
+            # HUD are never candidates for enhancement in the first place.
+            if old not in NEUTRAL:
+                continue
+
+            # Highest-impact artifact: earlier 2x2 Bayer shadows changed
+            # original GRAY steel into black, creating hundreds of pinholes
+            # along rails, ramps and bumpers on a low-resolution CRT.
+            if new == 0:
+                out[y][x] = old
+                counts["artifact_pits"] += 1
+                continue
+
+            neighborhood = (
+                src[y-1][x-1], src[y-1][x], src[y-1][x+1],
+                src[y][x-1],                  src[y][x+1],
+                src[y+1][x-1], src[y+1][x], src[y+1][x+1])
+            # Lightbulbs, decals and targets need a clean one-pixel
+            # outline rather than a new gray/white jagged halo.
+            if any(c not in NEUTRAL and c != 0 for c in neighborhood):
+                out[y][x] = old
+                counts["artifact_color_halos"] += 1
+                continue
+
+            # Require a real painted metal region, not an isolated
+            # source speck (or a single diagonal pixel connection).
+            supports = sum(c in NEUTRAL for c in neighborhood)
+            side_supports = sum(c in NEUTRAL for c in
+                                (src[y-1][x], src[y+1][x],
+                                 src[y][x-1], src[y][x+1]))
+            if supports < 3 or side_supports < 2:
+                out[y][x] = old
+                counts["artifact_islands"] += 1
+                continue
+
+            # A dithered highlight that has no neighboring changed
+            # pixel of the same shade is likely a stray sparkle, not
+            # a visible continuous metallic rim. Diagonal peers count
+            # so curved one-pixel edges remain intact.
+            if not any(
+                    before[y+dy][x+dx] == new and
+                    before[y+dy][x+dx] != src[y+dy][x+dx]
+                    for dy, dx in ((-1,-1),(-1,0),(-1,1),
+                                   (0,-1),         (0,1),
+                                   (1,-1),(1,0),(1,1))):
+                out[y][x] = old
+                counts["artifact_sparkles"] += 1
+
+    counters.update(counts)
+
+
 def enhance(original, caps):
     """Deterministic 16-color lighting, restricted to existing neutral pixels.
 
@@ -387,6 +459,9 @@ def enhance(original, caps):
     # The default TABLE3D.TGA remains exactly 32768 bytes with the same
     # geometry and original palette. The 7.16 MHz game runs no added code.
     add_height_illusion(src,out,caps,counters)
+    # Final cleanup after ALL depth passes: do not allow later dithered
+    # overlays to reintroduce pits or bright flecks.
+    polish_artifacts(src,out,counters)
     return out, counters
 
 

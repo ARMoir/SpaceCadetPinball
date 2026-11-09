@@ -401,6 +401,14 @@ and the original seven bumper centers. One-pixel bright/dark Mach-band edges,
 1–3 pixel *internal* sidewall shading, small ordered-dither contact shadows,
 and longer offset shadows for higher bumper housings simulate extrusion.
 The masks are not exported to the game or used for ball collisions.
+**The final cleanup pass (F-007)** removes false black pits in existing
+gray metal, one-pixel speckles, disconnected source-grey shading and
+unwanted halos next to colored lamps. It preserves continuous metal
+bevels and original pixel edges rather than blurring the bitmap. This
+reduces checkerboard artifacts on the 320x200 Tandy CRT without adding
+any drawing work at runtime. A fresh `PREVIEW3D.png` is generated as
+validation evidence with each CI build. The original classic bitmap
+is still available for direct A/B comparison.
 Colored lamps and target art remain unchanged, and no perspective warp
 or new collision geometry is introduced. `TABLE.DAT`, original ball/flipper/plunger sprite data,
 gameplay state and scoring are identical between looks.

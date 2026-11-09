@@ -1,7 +1,8 @@
 import unittest
 from pathlib import Path
 from convert import pack_screen
-from enhance_table import bumper_caps, enhance, generate, unpack_screen
+from enhance_table import (bumper_caps, enhance, generate, unpack_screen,
+                           polish_artifacts)
 
 HERE = Path(__file__).resolve().parent
 
@@ -31,6 +32,45 @@ class OfflineDepthTests(unittest.TestCase):
         self.assertEqual(len(shaded), 200)
         self.assertEqual(len(shaded[0]), 320)
 
+    def test_cleanup_removes_pits_halos_isolated_sparkles_not_bevels(self):
+        base = [[0] * 320 for _ in range(200)]
+        for y in range(40, 54):
+            for x in range(50, 80):
+                base[y][x] = 7 if x < 70 else 8
+        # Source steel remains solid; do not invent a black pit on it.
+        art = [row[:] for row in base]
+        art[44][72] = 0
+        # The color and adjacent original gray should remain unmodified.
+        base[45][59] = 13
+        art[45][59] = 13
+        art[45][60] = 15
+        # Single isolated shading in otherwise unmodified metal is noise.
+        art[49][54] = 15
+        # Continuous connected bright bevel is intended detail.
+        art[42][54] = art[42][55] = art[42][56] = 15
+        counts = {}
+        polish_artifacts(base, art, counts)
+        self.assertEqual(art[44][72], 8)
+        self.assertEqual(art[45][60], base[45][60])
+        self.assertEqual(art[49][54], base[49][54])
+        self.assertEqual(art[42][54:57], [15, 15, 15])
+        self.assertEqual(art[45][59], 13)
+        self.assertEqual(counts["artifact_pits"], 1)
+        self.assertEqual(counts["artifact_color_halos"], 1)
+        self.assertEqual(counts["artifact_sparkles"], 1)
+
+    def test_cleanup_never_blurs_colored_or_classic_art(self):
+        base = [[0] * 320 for _ in range(200)]
+        # A diagonal source speck is not continuous raised metal.
+        base[60][60] = base[59][59] = 8
+        out = [row[:] for row in base]
+        out[60][60] = 7
+        counts = {}
+        polish_artifacts(base, out, counts)
+        self.assertEqual(out[60][60], 8)
+        self.assertEqual(base[60][60], 8)
+        self.assertEqual(counts["artifact_islands"], 1)
+
     def test_original_source_art_and_collision_pack_remain_untouched(self):
         raw = (HERE / "data" / "TABLE.TGA").read_bytes()
         pack = (HERE / "data" / "TABLE.DAT").read_bytes()
@@ -49,6 +89,9 @@ class OfflineDepthTests(unittest.TestCase):
                 if old != new:
                     changed += 1
                     self.assertIn(old, (7, 8, 15))
+                    # No black pinholes may be added to originally
+                    # gray/white metal in the enhanced table.
+                    self.assertIn(new, (7, 8, 15))
                     self.assertLess(x, 236)
                     self.assertLess(y, 191)
                 if x >= 240 or y >= 192:
@@ -73,6 +116,10 @@ class OfflineDepthTests(unittest.TestCase):
                            changes["height_dither"], 0)
         self.assertGreater(changes["high_cap_shadow"], 0)
         self.assertGreater(sum(changes.values()), 100)
+        self.assertGreater(changes["artifact_pits"], 0)
+        self.assertGreater(changes["artifact_color_halos"], 0)
+        self.assertGreater(changes["artifact_sparkles"], 0)
+        self.assertLess(changed, 3000)
         self.assertNotEqual(raw, enhanced)
         self.assertEqual(generate(raw, pack)[0], enhanced)  # Reproducible.
 
