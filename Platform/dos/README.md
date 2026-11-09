@@ -80,6 +80,36 @@ its original 24-bit colors. The reference video illustrates the desktop
 game, but DOS remains a simplified 320x200 port; exact desktop visual
 parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 
+## November 9 source-ramp clearance and contact feel (F-002/F-006)
+
+The original Windows PINBALL.DAT identifies the upper-right passage as
+source TRamp group 105, a **flat elevated plane**, not the rising ramp
+group 101. In 2D, nearby original **ground** walls had become a false
+barrier near its crest. The latest DOS collision code honors a bounded
+source-path elevated mask, ignoring ground walls only during an actual
+upper-right traversal and for a few steps beyond its exit. It does
+**not** add a stronger launch or unconditional "easy" ramp kick.
+Full upper-layer side rails, gravity, and height transitions are
+still approximations and need physical hardware testing.
+
+For less repetitive flights, meaningful bumper and boosted-flipper
+contacts receive an independently seeded tiny tangential velocity
+variation (maximum 8 Q6 units) representing missing spin/material
+effects. Ordinary wall bounces, shooter returns and earned kickbacks
+remain deterministic. All changes use integer math and occur on
+contact rather than continuously.
+
+On the Tandy, try `CADET /record`, play several upper-right ramp
+climbs and boosted flipper shots, then quit normally. `INPUT.TXT`
+reports `ramp_layer_ticks` and `physics_variations` on its
+comment lines. These counts show whether the new behavior activated,
+not whether it actually felt correct. The last seconds of flight
+remain in `FLIGHT.TXT` for PC-side analysis with `analyze_logs.py`.
+Compare with the earlier tested build if the ball travels through
+a formerly solid sidewall or you notice an unfair new trajectory.
+The exact 7.16 MHz V20 CPU impact and real-screen experience are
+UNVERIFIED.
+
 ## November 8 gameplay tuning: ramps, slingshot loops and rear-lane shots
 
 A nearly completed climb on the source-projected upper-right or upper-left
