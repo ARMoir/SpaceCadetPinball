@@ -53,6 +53,7 @@ static void feed(Game *g,const Table *t)
     shooter_seat(t,&x,&y);
     g->ramp_active=g->ramp_used=0; g->ramp_ticks=0; g->ramp_progress=0;
     g->ramp_exit_ticks=0;
+    g->physics_variation_cooldown=0;
     g->sling_chain_side=g->sling_chain_hits=g->sling_chain_time=0;
     g->x=x*FP; g->y=y*FP;
     g->vx=g->vy=g->charge=0; g->waiting=1;
@@ -70,6 +71,7 @@ void game_reset(Game *g,const Table *t)
     memset(g,0,sizeof(*g)); g->balls=3;
     g->kick_armed[0]=g->kick_armed[1]=1;
     g->plunger_rng=0xa5c3U; /* BIOS ticks supply a session seed on DOS. */
+    g->physics_rng=0x6d2bU; /* independent RNG: stable in unit tests */
     for(i=0;i<2;i++) {
         const short *p=t->flipper+i*6;
         for(j=0;j<2;j++)

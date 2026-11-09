@@ -7,6 +7,31 @@
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
  */
+/* F-006: the source models material-dependent smoothness and per-contact
+ * angular dynamics, while the DOS prototype has fixed 3/4 restitution.
+ * A gentle, one-time tangential bias on genuine bumper/active-flipper
+ * rebounds approximates missing spin/surface variation. No random noise
+ * on passive walls, per-frame integration, shooter return or kickback.
+ * Q6 +/-8 max is less than 0.13 pixels/physics substep. Seeded once
+ * per interactive session, deterministic in tests. V20 budget unverified. */
+static void vary_powered_contact(Game *g,int nx,int ny,long incoming)
+{
+    int jitter;
+    long vx,vy;
+    if(incoming>=-24 || g->physics_variation_cooldown ||
+       g->waiting || g->over || g->in_shooter || g->tilted ||
+       g->kick_delay || g->kick_flight) return;
+    g->physics_rng=(unsigned short)(g->physics_rng*25173U+13849U);
+    jitter=(int)((g->physics_rng>>12)&15U)-8;
+    g->physics_variation_cooldown=6; /* one change per true contact */
+    if(!jitter) return;
+    vx=(long)g->vx-(long)jitter*ny/256;
+    vy=(long)g->vy+(long)jitter*nx/256;
+    g->vx=(short)maximum(-160,minimum(160,(int)vx));
+    g->vy=(short)maximum(-176,minimum(176,(int)vy));
+    if(g->physics_variations<65535U) g->physics_variations++;
+}
+
 /* Closest-point capsule collision, with Q6 position and Q8 unit tangent.
  * Reflection uses the normal-component decomposition in maths::basic_collision.
  * Restitution is a fixed 3/4; original per-material and spin terms are not used.
@@ -62,6 +87,7 @@ static int collide(Game *g,const Edge *e,int radius,int kick)
             g->vx=(short)maximum(-160,minimum(160,g->vx));
             g->vy=(short)maximum(-176,minimum(176,g->vy));
             powered=1;
+            vary_powered_contact(g,nx,ny,dot);
         }
     }
     if(e->score && !g->hit_delay && !g->tilted) {

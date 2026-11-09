@@ -54,6 +54,7 @@ static void collide_bumpers(Game *g,const Table *t)
             impulse=-(dot*7)/4+b->boost;
             g->vx+=(short)(impulse*nx/256);
             g->vy+=(short)(impulse*ny/256);
+            if(!pass) vary_powered_contact(g,nx,ny,dot);
             if(!g->hit_delay && !g->tilted) {
                 g->score+=b->score; g->hits++;
                 g->hit_delay=8; g->event=1;

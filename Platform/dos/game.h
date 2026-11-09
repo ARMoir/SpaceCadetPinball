@@ -97,6 +97,8 @@ typedef struct {
     unsigned char nudge_return_ticks,nudge_decay_ticks;
     short nudge_return_x,nudge_return_y,nudge_heat;
     unsigned short plunger_rng;
+    unsigned short physics_rng,physics_variations; /* F-006: impact-only */
+    unsigned char physics_variation_cooldown;
     unsigned long score,steps,hits;
     unsigned short nudges,kickbacks,tilts,boundary_hits,right_rail_saves,left_rail_saves;
     unsigned short flipper_contacts[2],flipper_power_contacts[2];
