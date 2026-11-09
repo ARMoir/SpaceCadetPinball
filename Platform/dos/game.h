@@ -111,6 +111,8 @@ typedef struct {
     unsigned char ramp_active,ramp_used;
     unsigned short ramp_ticks;
     short ramp_progress;
+    unsigned char ramp_exit_ticks; /* F-002: bounded elevated exit clearance */
+    unsigned short ramp_layer_ticks; /* source layer-mask uses */
     unsigned short ramp_crest_assists,sling_backflow_redirects; /* F-002 */
     /* F-008: tiny fixed-point watchdog; no per-frame allocations. */
     short stuck_x,stuck_y,stuck_minx,stuck_maxx,stuck_miny,stuck_maxy;

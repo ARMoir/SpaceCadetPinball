@@ -85,9 +85,11 @@ static void assist_ramp_crest(Game *g,const Table *t)
 {
     int i,j,found=-1,best=3*FP+1,forward=0;
     short progress=0,tx=0,ty=0;
+    if(g->ramp_exit_ticks) g->ramp_exit_ticks--;
     if(g->waiting || g->over || g->tilted || g->in_shooter ||
        g->kick_delay || g->kick_flight) {
-        g->ramp_active=g->ramp_used=0; g->ramp_ticks=0; return;
+        g->ramp_active=g->ramp_used=g->ramp_exit_ticks=0;
+        g->ramp_ticks=0; return;
     }
     for(i=0;i<t->ramp_count;i++) {
         const RampPath *r=&t->ramps[i];
@@ -106,10 +108,21 @@ static void assist_ramp_crest(Game *g,const Table *t)
         }
     }
     if(found<0) {
+        /* Source s_ramp9 is a FLAT upper plane at z=-5. Its 1301
+         * exit changes collision mask. In our 2D projection retain
+         * that raised state briefly after leaving the last segment,
+         * instead of colliding with overlapping ground decoration. */
+        if(g->ramp_active>0 && g->ramp_active<=t->ramp_count &&
+           t->ramps[g->ramp_active-1].group==105 &&
+           (long)g->ramp_progress*10>=
+             (long)t->ramps[g->ramp_active-1].length*9 &&
+           g->vy<0)
+            g->ramp_exit_ticks=8;
         g->ramp_active=g->ramp_used=0; g->ramp_ticks=0; return;
     }
     if(g->ramp_active!=found+1) {
         g->ramp_active=g->ramp_used=0; g->ramp_ticks=0;
+        g->ramp_exit_ticks=0;
         if(progress>t->ramps[found].length/4 || forward<=0) return;
         g->ramp_active=(unsigned char)(found+1);
         if(g->ramp_entries<65535U) g->ramp_entries++;
@@ -130,6 +143,34 @@ static void assist_ramp_crest(Game *g,const Table *t)
     g->ramp_progress=progress;
 }
 
+/* F-002: while traversing the actual source TRamp 105 (s_ramp9),
+ * the ball's collision group is elevated. Its original flat z=-5
+ * planes overlap ground walls 282/283/296/304 in projection.
+ * Those ground walls should NOT become an invisible crest barrier.
+ * When legitimately exiting above 90% progress, a maximum eight
+ * substeps within 12px of the original 1301 exit preserve clearance.
+ * Other ramps, ground shots and genuine returns retain full collision.
+ * Upper-layer sidewall/collision-height physics is still incomplete. */
+static int ramp_above_ground(const Game *g,const Table *t)
+{
+    int i;
+    const RampPath *r;
+    const RampSegment *end;
+    if(g->waiting || g->over || g->in_shooter ||
+       g->kick_delay || g->kick_flight || g->tilted) return 0;
+    if(g->ramp_active>0 && g->ramp_active<=t->ramp_count &&
+       t->ramps[g->ramp_active-1].group==105) return 1;
+    if(!g->ramp_exit_ticks || g->vy>=0) return 0;
+    for(i=0;i<t->ramp_count;i++) {
+        r=&t->ramps[i];
+        if(r->group!=105 || !r->count) continue;
+        end=&r->segments[r->count-1];
+        return labs((long)g->x-end->ex)<=12L*FP &&
+               labs((long)g->y-end->ey)<=12L*FP;
+    }
+    return 0;
+}
+
 /* TOneway::Collision: front line reflects, reverse line passes. Both are
  * offset in WORLD space before projection, including the source 0.8 factor.
  * Source ground mask only: elevated group is retained but not made solid
@@ -137,13 +178,13 @@ static void assist_ramp_crest(Game *g,const Table *t)
  * F-002: passive DOS restitution and no original control/scoring dispatch. */
 static void collide_oneways(Game *g,const Table *t,short old_x,short old_y)
 {
-    int i;
+    int i,above=ramp_above_ground(g,t);
     /* F-003: preserve weak-shot returns in the still-flattened shooter. */
     if(g->in_shooter) return;
     for(i=0;i<t->directional_count;i++) {
         const DirectionalLine *e=&t->directional[i];
         long before,after,den,cx,cy,along,length2,dot;
-        if(!(e->mask&1) || g->x<e->left || g->x>e->right ||
+        if(!(e->mask&(above?2:1)) || g->x<e->left || g->x>e->right ||
            g->y<e->top || g->y>e->bottom) continue;
         before=((long)old_x-e->x)*e->nx+((long)old_y-e->y)*e->ny;
         after=((long)g->x-e->x)*e->nx+((long)g->y-e->y)*e->ny;

@@ -123,10 +123,11 @@ void game_step(Game *g,const Table *t,unsigned keys)
     g->vy=(short)maximum(g->in_shooter?-132:-176,
                          minimum(g->in_shooter?132:176,g->vy));
     g->x+=g->vx; g->y+=g->vy;
-    /* Lightweight source-inspired one-way and final-crest checks. */
+    /* Track the source ramp BEFORE querying any collision mask.
+     * Elevated s_ramp9 must not hit the ground edges below its crest. */
     collide_spent_gates(g,t,flight_x,flight_y);
-    collide_oneways(g,t,flight_x,flight_y);
     assist_ramp_crest(g,t);
+    collide_oneways(g,t,flight_x,flight_y);
     guard_sling_backflow(g,t,flight_y,0);
     /* Capture an incoming ball at the strike face before nearby static
      * rail contacts reverse its velocity. Walls remain active after firing. */
@@ -137,7 +138,11 @@ void game_step(Game *g,const Table *t,unsigned keys)
     py=g->y/FP;
     px=g->x/FP;
     b=maximum(0,minimum(BANDS-1,py/8));
-    for(i=0;i<t->band_count[b];i++) {
+    /* Original TRamp 105 temporarily changes the ball's collision
+     * mask: the generic SCP2 band contains only ground-layer walls. */
+    if(ramp_above_ground(g,t)) {
+        if(g->ramp_layer_ticks<65535U) g->ramp_layer_ticks++;
+    } else for(i=0;i<t->band_count[b];i++) {
         unsigned short index=t->band[b][i];
         const EdgeBounds *box=&t->bounds[index];
         if(px<box->left || px>box->right ||
