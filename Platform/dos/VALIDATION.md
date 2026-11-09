@@ -11,8 +11,9 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 ## Completed
 
 **2026-11-09 upper-right ramp regression expansion:** The real
-source-table test now probes 12 shots at four speeds (118, 130,
-142, 154 Q6) and offsets of -1, 0 and +1 pixel against the
+source-table test now probes 60 shots at four speeds (118, 130,
+142, 154 Q6), offsets -2..2 pixels and lateral vx deviations
+of -5, 0 and +5 Q6 against the
 unmodified collision index. Each must pass beyond y=22 while
 recording a real ramp entry and elevated-mask ticks, without a
 fabricated crest boost or ball loss. Descending upper-exit and

@@ -443,7 +443,7 @@ static void component_tests(void)
  * lateral offsets while all ordinary geometry and layers are enabled. */
 static void right_ramp_stress_tests(void)
 {
-    int speed_index,offset,n,cleared,successes=0;
+    int speed_index,offset,angle,n,cleared,successes=0;
     const RampPath *r;
     assert(table_load(&t,"TABLE.DAT"));
     r=&t.ramps[1];
@@ -451,11 +451,11 @@ static void right_ramp_stress_tests(void)
     assert(t.source_gate_count==2 && t.directional_count==18);
     for(speed_index=0;speed_index<4;speed_index++) {
         int speed=118+speed_index*12;
-        for(offset=-1;offset<=1;offset++) {
+        for(offset=-2;offset<=2;offset++) for(angle=-1;angle<=1;angle++) {
             game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
             g.x=(short)(r->segments[0].x+offset*FP);
             g.y=r->segments[0].y;
-            g.vx=(short)((long)r->segments[0].tx*speed/256);
+            g.vx=(short)((long)r->segments[0].tx*speed/256+angle*5);
             g.vy=(short)((long)r->segments[0].ty*speed/256);
             cleared=0;
             for(n=0;n<72 && !g.waiting && !g.over;n++) {
@@ -463,9 +463,9 @@ static void right_ramp_stress_tests(void)
                 if(g.y<22*FP) { cleared=1; break; }
             }
             if(!cleared)
-                printf("RIGHT RAMP BLOCK speed=%d offset=%d frame=%d xy=%d,%d "
+                printf("RIGHT RAMP BLOCK speed=%d offset=%d angle=%d frame=%d xy=%d,%d "
                        "velocity=%d,%d layer=%u walls=%u entries=%u\\n",
-                       speed,offset,n,g.x/FP,g.y/FP,g.vx,g.vy,
+                       speed,offset,angle,n,g.x/FP,g.y/FP,g.vx,g.vy,
                        g.ramp_layer_ticks,g.wall_crossings,g.ramp_entries);
             fflush(stdout);
             assert(cleared && g.balls==3 && g.ramp_entries>=1 &&
@@ -473,13 +473,15 @@ static void right_ramp_stress_tests(void)
             successes++;
         }
     }
-    printf("STAGE: upper-right real-table entry/crest stress %d/12\\n",successes);
+    printf("STAGE: upper-right real-table entry/crest stress %d/60\\n",successes);
     fflush(stdout);
 
     /* Exiting downhill and stale off-corridor timers must not grant a
      * screen-wide elevated mask. Genuine ground contacts remain active. */
     game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
-    g.ramp_active=2; g.ramp_progress=r->length;
+    /* Start outside the tracked elevated lane. Legitimate downhill
+     * travel on an already-entered ramp is a different state, not
+     * simulated by inventing ramp_active manually. */
     g.x=r->segments[1].ex; g.y=r->segments[1].ey;
     g.vx=48; g.vy=96;
     game_step(&g,&t,0);

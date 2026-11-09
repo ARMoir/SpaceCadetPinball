@@ -276,9 +276,15 @@ validate kickback returns before replacing the legacy proxies.
 
 **Follow-up tests after continued owner-reported obstruction:** A single
 perfectly centered shot is insufficient. The complete original
-converted table is now exercised with twelve separate legal
-upper-right ramp shots spanning four entry speeds and three slight
-horizontal offsets, with ground rails, one-ways and bumpers intact.
+converted table is now exercised with 60 independent legal
+upper-right ramp shots at four entry speeds, five horizontal offsets
+(-2..2px) and three small vx deviations, with ground rails,
+one-ways and bumpers intact. The original group105 triangles
+are ~7.4px across at the start and ~4.8px near the crest; because
+the ball itself has about 3px radius, a centerline-only 3px
+detector could drop a still-legitimate raised ball into ground
+walls. Group105's detection corridor is now 5px while group101
+remains 3px; entry direction and finite exit constraints remain.
 Each must clear the upper end, not merely activate the mask.
 Explicit downhill and off-corridor cases must not gain raised
 clearance. A failure should guide source-layer geometry repairs,

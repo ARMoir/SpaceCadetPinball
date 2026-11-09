@@ -80,10 +80,11 @@ static void contain_outer_left(Game *g,const Table *t)
 /* F-002: TRamp 1300 triangles -> shared-edge midpoint path, 1301/1302
  * endpoints. This is a bounded forgiveness policy, NOT FieldEffect parity.
  * Require entry in first quarter, forward progress across 90%, rising path,
- * and at most 220 ticks in a 3px corridor. No position or score changes. */
+ * and at most 220 ticks in a 3px source group101 / 5px group105
+ * ball-width corridor. No position or score changes. */
 static void assist_ramp_crest(Game *g,const Table *t)
 {
-    int i,j,found=-1,best=3*FP+1,forward=0;
+    int i,j,found=-1,best=5*FP+1,forward=0;
     short progress=0,tx=0,ty=0;
     if(g->ramp_exit_ticks) g->ramp_exit_ticks--;
     if(g->waiting || g->over || g->tilted || g->in_shooter ||
@@ -101,7 +102,12 @@ static void assist_ramp_crest(Game *g,const Table *t)
             int distance;
             if(along<0 || along>e->length) continue;
             distance=(int)labs((dx*e->ty-dy*e->tx)/256);
-            if(distance>=best) continue;
+            /* The original group105 path is 7.4px wide at entry and
+             * 4.8px at exit. A ~3px-radius ball can have its CENTER
+             * up to 5px off the middle yet remain on the raised plane.
+             * Keep the original 3px detector for rising group101. */
+            if(distance>(r->group==105?5*FP:3*FP) ||
+               distance>=best) continue;
             best=distance; found=i; progress=(short)(e->start+along);
             tx=e->tx; ty=e->ty;
             forward=(int)(((long)g->vx*tx+(long)g->vy*ty)/256);
