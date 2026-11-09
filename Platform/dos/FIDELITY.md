@@ -550,6 +550,29 @@ contacts, measured against real Tandy responsiveness.
 
 ### F-007 Rendering, audio and frame rate
 
+- **2026-11-08 score-only HUD redraw (physical V20 lag report):**
+  A gameplay score event previously set the same `ui_dirty` flag as a
+  menu transition, causing `draw_panel` to erase and reconstruct the
+  entire 80x141 right-hand sidebar, including unchanged metallic frames,
+  player numeral and title-adjacent rows. The DOS renderer now limits
+  ordinary gameplay updates to four inner rectangles: 50x10 pixels
+  for score digits, 11x9 for ball number, 74x26 for game-over command
+  text, and 74x16 for event/status text. Repeated occurrences of the
+  *same still-visible event message* change score digits without
+  re-rendering the status text. Initial display, navigation, menu/help,
+  pause and explicit UI transitions retain their full composition,
+  including the one-time splash restore on exit. The original FONT.DAT
+  numeric glyphs, title logo, palette, Tandy packed VRAM and VGA
+  graphics remain unchanged; no gameplay, file I/O, assets, timers
+  or allocations are modified. The score patch restores 250 pixels
+  (125 packed Tandy VRAM bytes; `restore` operates on 25 bytes per
+  row) instead of restoring 11,280 sidebar pixels (5,640 Tandy
+  bytes), before the additional saved frame/glyph writes. This is a
+  code-path comparison, **not** a measured speedup. Source-layout,
+  sidebar dispatch, DOSBox-X smoke/video parity and physical
+  7.16 MHz V20 latency all require validation; real timing remains
+  **UNVERIFIED**.
+
 - **2026-11-08 source-style UI revision:** the user supplied original
   Space Cadet sidebar screenshots and requested the source layout, not
   only a different font. The prior default DOS HUD listed BALL, SCORE,

@@ -64,6 +64,28 @@ class SourceSidebarTests(unittest.TestCase):
         self.assertIn("source_message(245,152,\"3D PINBALL\")",HUD)
         self.assertIn('#include "score_font.h"',MAIN)
 
+    def test_score_event_does_not_repaint_the_sidebar(self):
+        # Valid inclusive inner bounds: x266..315, y93..102 for score.
+        # All four patches exclude the metallic frames and source logo.
+        for rect in ("restore(266,93,50,10)", "restore(304,67,11,9)",
+                     "restore(243,115,74,26)", "restore(243,179,74,16)"):
+            self.assertIn(rect, HUD)
+        self.assertIn("static void draw_score_only(void)", HUD)
+        self.assertIn("static void draw_status_only(void)", HUD)
+        self.assertIn("if(old_score!=game.score) draw_score_only();", MAIN)
+        self.assertIn("if(old_balls!=game.balls) draw_ball_only();", MAIN)
+        self.assertIn("if(old_over!=game.over) draw_command_only(paused);",MAIN)
+        self.assertIn("if(hud_status_dirty || old_wait!=game.waiting", MAIN)
+        self.assertIn("if(!hud_event_frames || hud_event!=event)", MAIN)
+        event_section=re.search(
+            r"if\(event\) \{(.*?)\} else if\(hud_event_frames", MAIN, re.S)
+        self.assertIsNotNone(event_section)
+        self.assertNotIn("ui_dirty=1", event_section.group(1))
+        self.assertIn("hud_status_dirty=1", event_section.group(1))
+        self.assertEqual(HUD.count("restore(240,59,80,141)"),1)
+        # Initial, menu and explicit view/UI transitions retain full redraw.
+        self.assertEqual(MAIN.count("draw_panel(view,choice,paused);"),3)
+
     def test_no_runtime_asset_parse_or_gameplay_changes(self):
         self.assertNotIn('fopen("FONT.DAT"',MAIN)
         self.assertNotIn('fopen("FONT.DAT"',HUD)

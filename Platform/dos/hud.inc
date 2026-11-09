@@ -2,7 +2,7 @@
  * ORIGINAL: TTextBox.cpp; winmain.cpp
  * STATUS: ADAPTED
  * MATCHES: score, balls, game status, five high-score entries
- * DIVERGES: compact UI/font, reduced single-message TTextBox queue
+ * DIVERGES: compact UI/font, reduced single-message TTextBox queue; partial panel redraws
  * EXCEPTIONS: F-007
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
@@ -199,6 +199,77 @@ static void source_message(int x,int y,const char *label)
     text_color(x,y,label,13);
 }
 
+/* F-007: fixed dirty rectangles inside already-drawn metallic frames.
+ * For a score-only event Tandy 09h restores 25 bytes per row x 10
+ * instead of the 80x141 sidebar. VGA 13h uses the same coordinates. */
+static void draw_score_value(void)
+{
+    char buf[24];
+    sprintf(buf,"%lu",game.score);
+    score_number(316,94,buf);
+}
+static void draw_ball_value(void)
+{
+    char buf[8];
+    sprintf(buf,"%u",(unsigned)(4-game.balls));
+    score_number(312,68,buf);
+}
+static void draw_command_value(int paused)
+{
+    if(paused) {
+        source_message(245,118,"CONTINUE PLAY");
+        source_message(245,128,"F3 RESUME");
+    } else if(game.over) {
+        source_message(245,118,"GAME OVER");
+        source_message(245,128,"F2 NEW GAME");
+    } else {
+        source_message(245,118,"F2 STARTS NEW");
+        source_message(245,128,"GAME");
+    }
+}
+static void draw_status_value(void)
+{
+    char buf[24];
+    if(hud_event_frames) {
+        text_color(245,182,hud_event_text(hud_event),15);
+    } else if(game.tilted) {
+        text_color(245,182,"TILT",12);
+    } else if(game.over) {
+        text_color(245,182,"GAME OVER",15);
+    } else if(game.waiting) {
+        text_color(245,180,"AWAITING",7);
+        text_color(245,188,"DEPLOYMENT",7);
+    } else if(game.kick_delay) {
+        text_color(245,182,"KICKBACK",15);
+    } else {
+        sprintf(buf,"KICK %c %c",game.kick_armed[0]?'L':'-',
+                                game.kick_armed[1]?'R':'-');
+        text_color(245,184,buf,7);
+    }
+}
+
+/* No frame, title, static text or player numeral is touched here. */
+static void draw_score_only(void)
+{
+    restore(266,93,50,10);
+    draw_score_value();
+}
+static void draw_ball_only(void)
+{
+    restore(304,67,11,9);
+    draw_ball_value();
+}
+static void draw_command_only(int paused)
+{
+    restore(243,115,74,26);
+    draw_command_value(paused);
+}
+static void draw_status_only(void)
+{
+    restore(243,179,74,16);
+    draw_status_value();
+}
+
 /* view: 0=score; 1=menu; 2=controls; 3=top five; 4=initials.
  * The main HUD follows the owner's original Space Cadet screenshot:
  * title/ball, player/score, two-line command, large status box. */
@@ -209,14 +280,13 @@ static void draw_panel(int view,int choice,int paused)
     };
     int i,y;
     char buf[24];
-    /* Keep the unchanged 76x53 title art; only refresh its lower band
-     * and the panels when score/ball/state changes, never every frame. */
+    /* Full composition only for initialization and view transitions.
+     * Normal gameplay uses the small value patches above. */
     restore(240,59,80,141);
     panel_frame(240,59,80,24);
     text_color(274,68,"BALL",12);
     panel_frame(302,63,15,17);
-    sprintf(buf,"%u",(unsigned)(4-game.balls));
-    score_number(312,68,buf);
+    draw_ball_value();
 
     if(view==1) {
         panel_frame(240,86,80,111);
@@ -272,39 +342,14 @@ static void draw_panel(int view,int choice,int paused)
         panel_frame(241,87,21,22);
         panel_frame(264,87,54,22);
         score_digit(248,94,1);
-        sprintf(buf,"%lu",game.score);
-        score_number(316,94,buf);
+        draw_score_value();
 
         panel_frame(240,113,80,30);
-        if(paused) {
-            source_message(245,118,"CONTINUE PLAY");
-            source_message(245,128,"F3 RESUME");
-        } else if(game.over) {
-            source_message(245,118,"GAME OVER");
-            source_message(245,128,"F2 NEW GAME");
-        } else {
-            source_message(245,118,"F2 STARTS NEW");
-            source_message(245,128,"GAME");
-        }
+        draw_command_value(paused);
 
         panel_frame(240,146,80,52);
         source_message(245,152,"3D PINBALL");
         source_message(245,162,"SPACE CADET");
-        if(hud_event_frames) {
-            text_color(245,182,hud_event_text(hud_event),15);
-        } else if(game.tilted) {
-            text_color(245,182,"TILT",12);
-        } else if(game.over) {
-            text_color(245,182,"GAME OVER",15);
-        } else if(game.waiting) {
-            text_color(245,180,"AWAITING",7);
-            text_color(245,188,"DEPLOYMENT",7);
-        } else if(game.kick_delay) {
-            text_color(245,182,"KICKBACK",15);
-        } else {
-            sprintf(buf,"KICK %c %c",game.kick_armed[0]?'L':'-',
-                                    game.kick_armed[1]?'R':'-');
-            text_color(245,184,buf,7);
-        }
+        draw_status_value();
     }
 }

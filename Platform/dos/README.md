@@ -82,6 +82,12 @@ parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 
 ## Source-style sidebar and original score numerals (F-007)
 
+During gameplay, score changes now update only the small score-digit inset, and
+new event messages update only the status text. The static title, frames and
+other HUD fields are not redrawn on each bumper hit. Full sidebar composition
+is reserved for menu/view changes and explicit UI transitions (F-007).
+
+
 The default 80-pixel sidebar now follows the original game's boxed
 layout shown in the owner's source screenshots: large title artwork and
 red BALL counter at the top; separate player number and score boxes;

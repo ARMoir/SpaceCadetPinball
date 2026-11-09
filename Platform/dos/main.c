@@ -62,6 +62,7 @@ int main(int argc,char **argv)
     int plunger_frame,old_plunger_frame=-1,old_plunger_w=0,old_plunger_h=0;
     const Sprite *plunger_sprite;
     int view=0,choice=0,paused=0,exit_requested=0,ui_dirty=0,prior_view=0;
+    int hud_status_dirty=0; /* F-007: event text only, not full HUD */
     int old_flags=-1;
     unsigned char toggle_sound,toggle_menu,key_up,key_down;
     unsigned char key_enter,key_esc,key_f1,key_f2,key_f3,key_f5,key_f8,key_new;
@@ -170,7 +171,7 @@ int main(int argc,char **argv)
          * macro would repeat the driver call and consume press counters. */
         mouse_input=mouse_available?mouse_buttons():0;
         input|=MOUSE_GAME_KEYS(mouse_input);
-        ui_dirty=0;
+        ui_dirty=0; hud_status_dirty=0;
         if(smoke) {
             /* Hold until fully charged, then release; fixed short pulses
              * never reached the 96-substep pullback and hid failed shots.
@@ -285,9 +286,13 @@ int main(int argc,char **argv)
         /* TTextBox-inspired single transient message. Only UI changes,
          * with no source physics or rendering asset modifications. */
         if(event) {
-            hud_event=event; hud_event_frames=26; ui_dirty=1;
+            /* Keep the current message if another matching event fires.
+             * A repeated bumper score only needs its score digits. */
+            if(!hud_event_frames || hud_event!=event)
+                hud_status_dirty=1;
+            hud_event=event; hud_event_frames=26;
         } else if(hud_event_frames && !view && !paused) {
-            if(!--hud_event_frames) ui_dirty=1;
+            if(!--hud_event_frames) hud_status_dirty=1;
         }
         /* Detect a completed qualifying game exactly once. Keyboard/menu
          * entry and subsequent score file writes occur with physics stopped.
@@ -445,12 +450,20 @@ int main(int argc,char **argv)
                       (game.kick_delay?4:0)|
                       (game.kick_armed[0]?8:0)|
                       (game.kick_armed[1]?16:0);
-            if(ui_dirty || old_score!=game.score || old_balls!=game.balls ||
-               old_wait!=game.waiting || old_over!=game.over ||
-               old_flags!=flags) {
+            /* F-007: score events never recompose the full sidebar.
+             * Small non-overlapping patches preserve static frames and
+             * source title art, with minimal packed VRAM traffic. */
+            if(ui_dirty) {
                 draw_panel(view,choice,paused);
-                old_flags=flags;
+            } else {
+                if(old_score!=game.score) draw_score_only();
+                if(old_balls!=game.balls) draw_ball_only();
+                if(old_over!=game.over) draw_command_only(paused);
+                if(hud_status_dirty || old_wait!=game.waiting ||
+                   old_over!=game.over || old_flags!=flags)
+                    draw_status_only();
             }
+            old_flags=flags;
         }
         old_score=game.score; old_balls=game.balls;
         old_wait=game.waiting; old_over=game.over;
