@@ -411,7 +411,7 @@ static void component_tests(void)
         g.vy=(short)(r->segments[0].ty*122L/256);
         for(n=0;n<64 && !g.waiting && !g.over;n++) {
             game_step(&g,&t,0);
-            if(g.y<29*FP) { upper=1; break; }
+            if(g.y<22*FP) { upper=1; break; }
         }
         printf("SOURCE RIGHT ELEVATED: top=%d steps=%d layer=%u wall=%u xy=%d,%d\n",
                upper,n,g.ramp_layer_ticks,g.wall_crossings,
