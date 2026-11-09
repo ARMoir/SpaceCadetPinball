@@ -349,6 +349,45 @@ static void component_tests(void)
         }
         assert(g.score==0 && g.balls==3);
     }
+    /* Upper-right s_ramp9 uses a flat elevated source layer. Drive
+     * across the actual CMP2 table's ground-wall overlap: a fake
+     * wall near the crest must not reject a legitimate climbing shot.
+     * No synthetic wall filtering and no hardcoded coordinate boost. */
+    assert(table_load(&t,"TABLE.DAT"));
+    {
+        int n,upper=0;
+        const RampPath *r=&t.ramps[1];
+        assert(r->group==105 && r->count==2 && !r->assist);
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        g.x=r->segments[0].x; g.y=r->segments[0].y;
+        g.vx=(short)(r->segments[0].tx*122L/256);
+        g.vy=(short)(r->segments[0].ty*122L/256);
+        for(n=0;n<64 && !g.waiting && !g.over;n++) {
+            game_step(&g,&t,0);
+            if(g.y<29*FP) { upper=1; break; }
+        }
+        printf("SOURCE RIGHT ELEVATED: top=%d steps=%d layer=%u wall=%u xy=%d,%d\n",
+               upper,n,g.ramp_layer_ticks,g.wall_crossings,
+               g.x/FP,g.y/FP);
+        fflush(stdout);
+        assert(upper && g.balls==3 && g.ramp_entries>=1 &&
+               g.ramp_layer_ticks>=10 &&
+               !g.ramp_crest_assists);
+        /* Identical coordinates alone cannot grant a ground-level
+         * or descending return shot the elevated collision mask. */
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        g.x=r->segments[0].x; g.y=r->segments[0].y;
+        g.vx=0; g.vy=64;
+        game_step(&g,&t,0);
+        assert(!g.ramp_layer_ticks && !g.ramp_active);
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=1;
+        g.x=r->segments[0].x; g.y=r->segments[0].y;
+        g.vx=(short)(r->segments[0].tx*122L/256);
+        g.vy=(short)(r->segments[0].ty*122L/256);
+        game_step(&g,&t,0);
+        assert(!g.ramp_layer_ticks);
+    }
+    puts("STAGE: source elevated upper-right ramp collision mask"); fflush(stdout);
     puts("STAGE: source CMP1 ramp paths and directional line regressions"); fflush(stdout);
 }
 
