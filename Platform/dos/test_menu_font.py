@@ -45,8 +45,10 @@ class HelpTextTests(unittest.TestCase):
         self.assertEqual(glyph("N"),
                          ("#.#", "##.", "###", "#.#", "#.#"))
         rows=glyph("N")
-        self.assertTrue(all(row[0]=="#" and row[2]=="#"
-                            for row in rows))
+        self.assertTrue(all(row[0]=="#" for row in rows))
+        # In 3px, the upper diagonal uses the right-stem pixel
+        # before rejoining it; the lower right remains continuous.
+        self.assertTrue(all(row[2]=="#" for row in rows[2:]))
         self.assertNotEqual(rows[1],glyph("M")[1])
         self.assertEqual(glyph("M"),
                          ("#.#", "###", "###", "#.#", "#.#"))

@@ -781,10 +781,10 @@ before considering larger artificial variance.
 
 **2026-11-09 compact-font correction:** The 3x5 HUD/menu N bitmap
 had a disconnected lower left stroke, making the letter difficult to
-read at native Tandy resolution. The bitmap now retains continuous
-left/right stems and a central diagonal with the same 3x5 dimensions,
+read at native Tandy resolution. The bitmap now retains an unbroken
+left stem, continuous lower-right stroke and a central diagonal with the same 3x5 dimensions,
 four-pixel advance, palette and render cost. test_menu_font.py checks
-the exact five rows and stem continuity; the original score-digit
+the exact five rows and lower-stroke continuity; the original score-digit
 sprites and other alphabet glyphs are unchanged. Physical CRT
 legibility is still UNVERIFIED.
 

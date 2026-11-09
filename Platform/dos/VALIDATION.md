@@ -23,7 +23,7 @@ These are emulator checks, not physical V20 verification.
 
 
 **2026-11-09 font test addition:** Verify the exact five rows of the 3x5 N
-glyph and both continuous vertical strokes. Other glyphs, score digits
+glyph, an unbroken left stroke and an intact lower-right stem. Other glyphs, score digits
 and the fixed four-pixel character advance must remain unchanged.
 Check the word NEW on the real Tandy CRT; emulator tests do not prove
 physical readability.
