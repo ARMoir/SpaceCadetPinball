@@ -274,16 +274,17 @@ int table_index(Table *t)
     return 1;
 }
 
-/* CMP1 is optional for legacy/demo SCP2 packs; unknown/truncated data fails. */
+/* CMP1/CMP2 are optional on legacy/demo SCP2; unknown/truncated data fails. */
 static int read_components(FILE *f,Table *t)
 {
     char magic[4];
     short v[10];
     int i,j,k,c=fgetc(f);
+    t->source_gate_count=0;
     t->ramp_count=t->directional_count=0;
     if(c==EOF) return 1;
     magic[0]=(char)c;
-    if(fread(magic+1,1,3,f)!=3 || memcmp(magic,"CMP1",4)) return 0;
+    if(fread(magic+1,1,3,f)!=3 || (memcmp(magic,"CMP1",4) && memcmp(magic,"CMP2",4))) return 0;
     if(!read_short(f,&t->ramp_count) || t->ramp_count<0 ||
        t->ramp_count>MAX_RAMPS || !read_short(f,&t->directional_count) ||
        t->directional_count<0 || t->directional_count>MAX_DIRECTIONAL_LINES) return 0;
@@ -323,6 +324,18 @@ static int read_components(FILE *f,Table *t)
         e->right=maximum(e->x,e->ex)+3*FP;
         e->top=minimum(e->y,e->ey)-3*FP;
         e->bottom=maximum(e->y,e->ey)+3*FP;
+    }
+    if(!memcmp(magic,"CMP2",4)) {
+        for(i=0;i<2;i++) {
+            Edge *e=&t->source_gate[i];
+            for(j=0;j<9;j++) if(!read_short(f,&v[j])) return 0;
+            for(j=0;j<4;j++) if(v[j]<0 || v[j]>(j%2?199:239)) return 0;
+            if((v[0]==v[2] && v[1]==v[3]) ||
+               abs(v[4])>256 || abs(v[5])>256 || v[6]<FP ||
+               v[6]>32*FP || v[7] || v[8]) return 0;
+            memcpy(e,v,18);
+        }
+        t->source_gate_count=2;
     }
     return fgetc(f)==EOF;
 }

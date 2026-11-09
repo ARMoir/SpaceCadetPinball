@@ -65,7 +65,13 @@ class ImportTests(unittest.TestCase):
         self.assertEqual([g['group'] for g in c['gates']],[501,502])
         body=pack_components(c)
         self.assertTrue((root/'TABLE.DAT').read_bytes().endswith(body))
+        self.assertEqual(body[:4],b'CMP2')
         validate_extension(body)
+        # The prior CMP1 layout remains readable without gate records.
+        validate_extension(b'CMP1'+body[4:-36])
+        for side,gate in enumerate(c['gates']):
+            values=struct.unpack_from('<9h',body,len(body)-36+side*18)
+            self.assertEqual(values[:4],tuple(round(v) for p in gate['projected'] for v in p))
         for n in range(1,len(body)):
             with self.assertRaises(ValueError): validate_extension(body[:n])
         with self.assertRaises(ValueError): validate_extension(body+b'x')

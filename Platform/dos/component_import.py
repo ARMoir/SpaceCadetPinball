@@ -108,7 +108,7 @@ def components(dat, objects, project):
 
 
 def pack_components(data):
-    body=b'CMP1'+struct.pack('<2h',len(data['ramps']),len(data['oneways'])*2)
+    body=b'CMP2'+struct.pack('<2h',len(data['ramps']),len(data['oneways'])*2)
     for ramp in data['ramps']:
         segments=ramp['segments']
         body+=struct.pack('<4h',ramp['group'],len(segments),ramp['length_q6'],ramp['assist'])
@@ -116,12 +116,24 @@ def pack_components(data):
     for item in data['oneways']:
         for name,solid in (('block',1),('pass',0)):
             body+=struct.pack('<10h',item['group'],item['mask'],solid,*item[name])
+    # TGate 501/502, in source control gate1/left and gate2/right order.
+    gates=sorted(data['gates'],key=lambda g:g['name'])
+    if [g['name'] for g in gates]!=['v_gate1','v_gate2']:
+        raise ValueError('Expected both source kicker gates')
+    for gate in gates:
+        if gate['mask']!=1: raise ValueError('Expected ground kicker gate')
+        a,b=gate['projected']
+        dx,dy=b[0]-a[0],b[1]-a[1]
+        length=math.hypot(dx,dy)
+        body+=struct.pack('<9h',*(round(v) for p in (a,b) for v in p),
+                          round(dx*256/length),round(dy*256/length),
+                          round(length*64),0,0)
     return body
 
 def validate_extension(body):
     """Validate extension framing for asset tools that do not execute physics."""
     if not body: return
-    if body[:4] != b'CMP1' or len(body)<8: raise ValueError('Bad CMP1 header')
+    if body[:4] not in (b'CMP1',b'CMP2') or len(body)<8: raise ValueError('Bad CMP1 header')
     ramps,lines=struct.unpack_from('<2h',body,4)
     if not 0<=ramps<=2 or not 0<=lines<=24: raise ValueError('Component capacity')
     pos=8
@@ -132,4 +144,5 @@ def validate_extension(body):
             raise ValueError('Invalid ramp')
         pos+=8+count*16
     pos+=lines*20
+    if body[:4]==b'CMP2': pos+=36
     if pos!=len(body): raise ValueError('Truncated or trailing CMP1')

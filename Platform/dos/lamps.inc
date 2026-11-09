@@ -145,7 +145,8 @@ static int lamps_render(const Table *t,const Game *g,
     return damage;
 }
 
-/* F-001: draw the legacy kicker proxy's CLOSED metal leaf after
+/* F-001: CMP2 draws the actual source entrance line. Older packs retain
+ * their legacy kicker proxy's CLOSED metal leaf after
  * TKickback finishes. The immutable table background contains no live
  * TGate sprite; only a 3px-wide vertical overlay is needed. Open gate
  * erases the overlay back to original art. Track old ball rectangles so
@@ -157,8 +158,33 @@ static int kicker_gates_render(const Table *t,const Game *g,
                                int ball_w,int ball_h,int ball_changed)
 {
     int side,y,x,top,height,repaint,damage=0;
+    int width,left,step,steps,dx,dy;
     unsigned closed;
     for(side=0;side<2;side++) {
+        if(t->source_gate_count==2) {
+            const Edge *e=&t->source_gate[side];
+            left=(e->x<e->ex?e->x:e->ex)-1;
+            top=(e->y<e->ey?e->y:e->ey)-1;
+            width=abs(e->ex-e->x)+3; height=abs(e->ey-e->y)+3;
+            closed=g->kick_gate_closed[side]!=0;
+            repaint=gate_drawn[side]!=closed;
+            if(repaint) {
+                restore(left,top,width,height);
+                if(rect_overlaps(left,top,width,height,new_ball_x,new_ball_y,ball_w,ball_h)) damage=1;
+                gate_drawn[side]=(unsigned char)closed;
+            }
+            if(closed && (repaint || (ball_changed &&
+               rect_overlaps(left,top,width,height,old_ball_x,old_ball_y,ball_w,ball_h)))) {
+                dx=e->ex-e->x; dy=e->ey-e->y;
+                steps=abs(dx)>abs(dy)?abs(dx):abs(dy);
+                for(step=0;step<=steps;step++) {
+                    x=e->x+(int)((long)dx*step/steps);
+                    y=e->y+(int)((long)dy*step/steps);
+                    pixel(x,y-1,15); pixel(x,y,7); pixel(x,y+1,8);
+                }
+            }
+            continue;
+        }
         if(t->gate_first[side]<0) continue;
         x=(t->gate_left[side]+t->gate_right[side])/2;
         top=t->gate_top[side];

@@ -29,7 +29,7 @@ Tandy 1000 EX/V20.
 | Plunger | Eight original animation frames, hold/release, full/weak launch; ball seats immediately above visible original rod tip, and weak shooter returns can be launched again | DOS charge curve and 2D resting position are adapted from source; physical shooter testing pending (F-003) |
 | Game lifecycle | Three balls, score, drain, game over, restart, basic ball reset and persistent local top-five high scores with initials | No complete scoring rules/bonus/multiplayer (F-009 is the simplified high-score file/entry) |
 | Bumpers | Seven source-derived visible caps have radial contact, static initial 500/1500 scoring | No original per-bumper rule progression or vertical layers (F-004) |
-| Kickback saves | Left/right outlane catch, wind-up and protected high-return; legacy DOS kicker proxy opens while armed and physically/visually closes after fire; one use per side per ball | Original Hazard Target arming and 0.7+0.1s timer not yet ported; gate state and proxy metal overlay adapted (F-001); physical V20 validation pending |
+| Kickback saves | Left/right outlane catch, wind-up and protected high-return; actual source TGate entrance lines open while armed and physically/visually close after fire (CMP2); one use per side per ball | Original Hazard Target arming and 0.7+0.1s timer not yet ported; gate timing, passive capsule response and metal-line overlay adapted (F-001); physical V20 validation pending |
 | Nudge / tilt | X / A / D impulses and tilt-warning/lockout | Custom thresholds, not exact original accumulation (F-005) |
 | Universal anti-stuck | Q6 position watchdog with upward nudge, two verified-clear moves and same-ball relaunch; additional bounded near-vertical escape after 3 alternating left/right sling reflections, without teleporting | Original `UnstuckBall` timer and DOS-only cyclic-sling guard do not reproduce original rules; physical V20 outcomes pending (F-008) |
 | Inputs and UI | Source-style four-box 80px sidebar with original score digits, title/ball strip, player/score row, action and status messages; Z and / flippers, optional left/right mouse; **middle mouse plunger** on three-button drivers; Space launch; F5 sound, F8 controls, temporary event messages, initials/top-five panel | DOS INT 33h mouse driver required; keyboard and file/menu flow need physical V20 verification; reduced original TTextBox behavior (F-007/F-009) |
@@ -59,7 +59,7 @@ and frame timing remain unverified.
 | --- | --- | --- | --- |
 | World physics | Q6 fixed-point 2D ball, wall normals, gravity, speed clamps, collision bands, bounded anti-stuck watchdog | Original 3D/world-space position and height, spin, full material friction/elasticity, stochastic drag, continuous sweep, exact collision responses | F-002, F-006 |
 | Ramps and layers | Two TRamp triangle-derived midpoint paths; tracked 90% progress and bounded once-per-traversal boost on rising path | Full plane forces/damping, height, collision-mask transitions and faithful exits remain missing; flat path has no crest boost | F-002 |
-| One-way rails and gates | Nine source TOneway line pairs and masks imported; eight ground components active outside shooter state, finite blocked/pass crossings | Elevated group, full control/material callbacks and actual TGate line runtime are missing; legacy chute/apron/kicker proxies remain adaptations | F-001, F-002 |
+| One-way rails and gates | Nine source TOneway line pairs and masks imported; eight ground components active outside shooter state, finite blocked/pass crossings | Elevated group, full control/material callbacks and full target-driven TGate state are missing; actual entrance lines now close after use (CMP2), while chute/apron guards remain adaptations | F-001, F-002 |
 | Flippers | Source rest/raised geometry; midpoint and seven-substep assisted motion, leverage-based impulse, plus 5px inward active-tip forgiveness for near-center descents | Original continuous angular sweep/velocity and exact front/back collision, trap/hold and original power curve; intentional easier-than-original gap handling | F-006 |
 | Shooter | Original plunger frames and re-catch of weak return | Original 25 ms boost progression, ~2.5 s charge curve, full ~10% boost variance and exact shooter chute transitions | F-003 |
 | Bumpers | Seven radial caps, basic initial scoring | Variable score state, independent component cooldowns, full original material/layer interaction | F-004 |
@@ -253,3 +253,10 @@ This supersedes earlier RGBI-only VGA notes. `/rgbi` retains the older look
 and parity tests. Source geometry and gameplay are unchanged; original
 high-resolution presentation, dynamic lighting and Z-buffer layers are still
 missing. See F-007 and SOURCE_MAP.md for the adaptation and hardware limits.
+
+**2026-11-09 repairs:** spent kicker entries use imported gate 501/502 lines,
+including swept contact and endpoint protection. The right spent pocket is
+no longer excluded from the watchdog by the plunger coordinate box. Original
+Hazard Target arming/timing remain missing. Score and ball/player digits are
+now upright; the prior 180-degree packed-glyph error was corrected offline.
+See F-001/F-007/F-008 and VALIDATION.md for evidence and hardware limits.

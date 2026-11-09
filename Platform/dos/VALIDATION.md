@@ -444,3 +444,27 @@ oneway_blocks/oneway_passes/ramp_entries/ramp_crest_assists with FLIGHT.TXT
 and slow_frames. The previous two y=38 boost zones have been removed;
 upper-right visual-path complaints still require layer-aware investigation.
 Full GitHub Actions results are reported with the delivered commit/run.
+
+## Spent kickback / malformed digit regressions (2026-11-09)
+
+Owner photos show malformed score/ball numerals and owner reports repeated
+entry into inactive kickbacks. New tests use actual imported TGate lines,
+both sides, interior/endpoints, three speeds, closed/tilted versus open,
+and earned kickback flight. They assert passive blocking without extra
+kickbacks, scoring or ball-count changes. A stalled in-play right pocket
+at (172,155), inside the former plunger exclusion, now reaches the watchdog;
+existing shooter, held-flipper and drain exclusion tests are retained.
+
+Font tests decode the actual 2bpp bytes and verify recognizable orientation
+of 3/4/6/7/9. Enlarged 0-9 before/after strips and the emulated HUD were
+visually inspected. Width, palette, byte count and partial-redraw rules stay
+unchanged. Converter checks compare packed CMP2 gates with source endpoints
+and verify prior CMP1 framing. Local Watcom and full original-table Tandy
+regression/100000-step soak passed; complete CI results accompany release.
+
+Hardware acceptance pending: use each kickback, then try descending and
+flipper-fed re-entry on both sides. The diagonal door should remain closed;
+`spent_gate_blocks` should record contacts without a new kickback. Check that
+normal drains remain possible and armed kickbacks/shooter returns work.
+Inspect all ten score/ball digits on the CRT, especially 3, 4, 6, 7 and 9.
+No emulator result establishes actual V20 performance or physical resolution.

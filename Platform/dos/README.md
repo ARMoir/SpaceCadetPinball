@@ -726,3 +726,14 @@ trailing extension data fail startup.
 This is partial source fidelity, not full TRamp forces/height or TGate
 rules. See F-001/F-002 and VALIDATION.md, including shooter/elevated-mask
 exemptions and pending physical hardware acceptance.
+
+### CMP2 spent-kicker entrances (2026-11-09)
+
+CMP2 retains CMP1's ramp and one-way records and appends exactly two
+little-endian 9-short Edge records for original TGate 501/502 (left/right).
+Their x/y/ex/ey are pixels, tangent is Q8, length is Q6, score/boost are zero.
+TABLE.DAT grows 36 bytes to 12148. The new executable reads CMP1, CMP2 and
+legacy SCP2; older executables reject CMP2, so use all files from one release.
+Closed gates collide and render at these actual entrance lines, replacing
+legacy stand-ins. `/record` adds `spent_gate_blocks`. Score and ball/player
+digits have also been corrected to upright orientation offline.

@@ -146,7 +146,7 @@ without certifying physical hardware performance or original-rule parity.
 | Priority | Area | Original behavior versus current DOS | Fidelity status | Register |
 | --- | --- | --- | --- | --- |
 | **P0** | Kickback rules | Original kickback component uses ~0.7 s timer plus ~0.1 s follow-up, with left/right Hazard Target triplets and gate state transitions. DOS currently arms each side automatically for one use per ball, catches near an imported strike center, holds ~0.12 s, then fires a fixed upward/inward impulse. Imported strike positions are an improvement but the rules are **not** preserved. | **Unapproved behavioral approximation**, not a measured performance necessity | [F-001](#f-001-kickback-activation-and-timing) |
-| **P0** | Collision layers / one-way gates | Original has world-space collision groups, ramps and one-way/gate components. DOS projects collisions into one 2D plane and hard-codes an upper-left downhill-only screen-coordinate exception. CMP1 now imports ramp paths and directed one-way line pairs; full ramp forces, height/mask transitions, targets and actual TGate runtime geometry remain missing. | **Incomplete** with a temporary geometry workaround | [F-002](#f-002-collision-layer-and-one-way-projection) |
+| **P0** | Collision layers / one-way gates | Original has world-space collision groups, ramps and one-way/gate components. DOS projects collisions into one 2D plane and hard-codes an upper-left downhill-only screen-coordinate exception. CMP2 imports ramp paths, directed one-way pairs and actual TGate entrance geometry; full ramp forces, height/mask transitions and target-driven gate rules remain missing. | **Incomplete** with a temporary geometry workaround | [F-002](#f-002-collision-layer-and-one-way-projection) |
 | **P1** | Plunger timing and variance | Original `TPlunger` has eight visual states, 25 ms increments, boost accumulation (approximately 2.5 s to full charge for the Windows configuration), and up to 10% randomized boost. DOS correctly imports eight original frames but charges in ~1.3 s with ~1% jitter to compensate for simplified shooter physics. | **Partially faithful; unapproved behavioral approximation** | [F-003](#f-003-plunger-charge-and-launch-variation) |
 | **P1** | Bumper collisions / scoring | Original bumper response is radial and scoring can change with state. DOS precomputes one radial hit surface per imported eight-edge cap to prevent inward polygon trapping, but still flattens three elevated bumpers and uses static 500/1500 scores with shared hit delay. | **Improved contact fidelity; scoring/layers incomplete** | [F-004](#f-004-bumper-projection-and-scoring) |
 | **P1** | Nudge and tilt | Original `nudge.cpp` applies additive velocity and an inverse after 0.4 s; `pb.cpp` accumulates nudge pressure over time. DOS preserves that shape but uses its own impulses, nudge-heat thresholds and decay schedule. | **Partially faithful; tuning differs** | [F-005](#f-005-nudge-and-tilt-parameters) |
@@ -172,6 +172,36 @@ restored or a measured platform necessity is documented and approved. Do not
 silently treat legacy exceptions as precedent for new ones.
 
 ### F-001 Kickback activation and timing
+
+**2026-11-09 spent-kickback repair (owner hardware report):** the ball could
+re-enter an inactive kickback and remain trapped. CMP2 now imports the actual
+TGate attribute-600 lines, groups 501/502, in source control gate1/left and
+gate2/right order. `collide_spent_gates` activates their finite passive
+capsules and swept crossing checks when `kick_gate_closed` is set after fire.
+It runs before catch and again after wall/flipper correction. Open/armed
+entries, shooter and earned kickback flight are excluded; tilt does not open
+a spent door. The old four-edge stand-ins are excluded from active collision
+and their overlay is replaced by a small diagonal metal line at the imported
+entrance. Legacy CMP1/no-extension tables retain their previous behavior.
+
+The source references are TGate::Message(TGateEnable),
+TCollisionComponent's attribute-600 wall installation and
+control::Left/RightKickerControl on ControlTimerExpired. Source geometry and
+close intent are restored, but DOS capsule radius/restitution, one-use arming,
+0.12s timer, guided flight and metal-line rendering remain adaptations.
+No automatic rearming, extra kick, score award or ball-loss immunity is added.
+`spent_gate_blocks` saturates at 65535 and is reported by /record and /smoke.
+
+A second fault was the unconditional 12x18px plunger exclusion in
+`stuck_allowed`: it also covered the right strike point (172,155). The
+watchdog now uses existing shooter/waiting state exclusions rather than that
+broad box. A stale in-play spent-pocket stall can reach existing staged
+recovery without rearming the kickback (F-008). Held-flipper and real-drain
+exclusions remain. Tests cover both source doors, endpoints/interior at
+multiple speeds, tilt, open gates, earned flight, new-ball reset and the right
+pocket watchdog. Actual hardware acceptance/performance remain UNVERIFIED.
+This supersedes the retained historical gate-proxy status below for CMP2.
+
 
 **Raw-data correction (2026-11-08):** earlier references below to "actual
 four-edge source gate polygons" were incorrect. TGate objects 501/502
@@ -668,6 +698,20 @@ contacts, measured against real Tandy responsiveness.
   Avoid random path perturbations that hide collision problems.
 
 ### F-007 Rendering, audio and frame rate
+
+**2026-11-09 score/ball digit orientation:** owner CRT photos showed ball 3
+as an E and malformed scores. Decoding all ten score_font.h glyphs showed
+180-degree orientation error: 3's stems were on the left and 7's horizontal
+bar was at the bottom. The 40 pixels of each glyph are rotated offline and
+repacked into the same 100 bytes. The existing score_digit renderer, 5x8
+size, 2bpp palette, spacing and partial redraw rectangles are unchanged.
+This corrects score, ball-number and player-number displays together. The
+3x5 menu alphabet/numerals are unchanged. Regression checks assert character
+anatomy (3 right stems, 7 top bar, 4 lower-right stem, distinct 6/9 bowls),
+not just unique bytes. Enlarged before/after glyphs were visually inspected;
+real CRT acceptance still requires owner confirmation. The earlier claim
+that the previous mirrored orientation matched the source display was wrong.
+
 
 - **2026-11-08 clarity-first cleanup of the Tandy 3D artwork:**
   Owner requested less muddiness and fewer artifacts in the default

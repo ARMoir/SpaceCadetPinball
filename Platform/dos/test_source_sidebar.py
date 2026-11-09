@@ -31,6 +31,29 @@ class SourceSidebarTests(unittest.TestCase):
         self.assertIn("static const unsigned char colors[4]={0,1,13,15}",HUD)
         self.assertIn("score_digits[digit][i>>2]",HUD)
 
+    def test_digits_have_upright_readable_orientation(self):
+        body=re.search(r"score_digits\[10\]\[10\].*?\{(.*?)\};",FONT,re.S).group(1)
+        glyphs=[]
+        for row in re.findall(r"\{([^{}]+)\}",body):
+            data=[int(v,16) for v in re.findall(r"0x[0-9a-f]+",row)]
+            glyphs.append([[(data[(y*5+x)//4]>>(6-2*((y*5+x)%4)))&3
+                            for x in range(5)] for y in range(8)])
+        # Test character anatomy, not just ten distinct byte arrays:
+        # 3 has a right stem; 7 a top bar; 4's lower stem is on the right;
+        # 6 closes its lower bowl while 9 closes its upper bowl.
+        ink=lambda row: [v>=2 for v in row]
+        for y in (2,5):
+            self.assertTrue(any(ink(glyphs[3][y])[3:]))
+            self.assertFalse(any(ink(glyphs[3][y])[:2]))
+        self.assertGreaterEqual(sum(ink(glyphs[7][0])),3)
+        self.assertLessEqual(sum(ink(glyphs[7][7])),1)
+        self.assertFalse(any(ink(glyphs[4][6])[:2]))
+        self.assertTrue(any(ink(glyphs[4][6])[3:]))
+        self.assertTrue(any(ink(glyphs[6][5])[:2]))
+        self.assertFalse(any(ink(glyphs[9][5])[:2]))
+        self.assertTrue(any(ink(glyphs[9][2])[:2]))
+        self.assertFalse(any(ink(glyphs[6][2])[3:]))
+
     def test_all_score_sizes_fit_right_cell(self):
         # Source score region x=264..317. The last pixel always x=315.
         for length in range(1,11):

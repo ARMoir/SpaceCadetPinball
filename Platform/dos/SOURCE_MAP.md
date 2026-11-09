@@ -50,7 +50,7 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | [`bumper.inc`](bumper.inc) | [`TBumper.cpp`](../../SpaceCadetPinball/TBumper.cpp); [`control.cpp`](../../SpaceCadetPinball/control.cpp) | radial contact and score events | single layer, fixed score, shared delay, one extra cap recheck after overlap (F-004) |
 | [`slingshot.inc`](slingshot.inc) | [`TEdgeSegment.cpp`](../../SpaceCadetPinball/TEdgeSegment.cpp); [`TEdgeManager.cpp`](../../SpaceCadetPinball/TEdgeManager.cpp); [`control.cpp`](../../SpaceCadetPinball/control.cpp)::UnstuckBall | source-derived outlines and outward response | solid triangle keeps the interior out; outer/back surfaces slide instead of injecting a sling bounce, duplicate inner art excluded (F-002); third alternating front-face hit triggers near-vertical anti-loop exit (F-008) |
 | [`rail_collision.inc`](rail_collision.inc) | [`TEdgeManager.cpp`](../../SpaceCadetPinball/TEdgeManager.cpp); [`TOneway.cpp`](../../SpaceCadetPinball/TOneway.cpp); [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp); [`TRamp.cpp`](../../SpaceCadetPinball/TRamp.cpp) | source rail positions and one-way intent | DOS-only exterior rail and chute guards, source-path 90% crest assist and imported directional line crossings, directional lower-sling apron backflow deflector (F-002) |
-| [`kickback.inc`](kickback.inc), [`control.inc`](control.inc), [`table.c`](table.c) | [`TKickback.cpp`](../../SpaceCadetPinball/TKickback.cpp); [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp); [`control.cpp`](../../SpaceCadetPinball/control.cpp) | source strike center, delayed fire and legacy proxy gate close after use | automatic one-use arming and early 0.12s gate transition; guided return and missing Hazard Target gating (F-001) |
+| [`kickback.inc`](kickback.inc), [`control.inc`](control.inc), [`table.c`](table.c) | [`TKickback.cpp`](../../SpaceCadetPinball/TKickback.cpp); [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp); [`control.cpp`](../../SpaceCadetPinball/control.cpp) | source strike center, delayed fire and imported TGate entrance close after use (CMP2) | automatic one-use arming and early 0.12s gate transition; guided return and missing Hazard Target gating (F-001) |
 | [`nudge.inc`](nudge.inc) | [`nudge.cpp`](../../SpaceCadetPinball/nudge.cpp); [`pb.cpp`](../../SpaceCadetPinball/pb.cpp) | additive impulse with delayed inverse | tuned Q6 impulses, heat and thresholds (F-005) |
 | [`unstuck.inc`](unstuck.inc) | [`control.cpp`](../../SpaceCadetPinball/control.cpp)::UnstuckBall; [`TBall.h`](../../SpaceCadetPinball/TBall.h) | upward release, preserve ball count, exclude capture | Q6 progress watchdog, safe local moves (F-008) |
 | [`plunger.inc`](plunger.inc) (inline in `game_step`) | [`TPlunger.cpp`](../../SpaceCadetPinball/TPlunger.cpp) | Hold/charge/release sequence and imported plunger frames | Faster charge and reduced velocity jitter (F-003) |
@@ -169,3 +169,18 @@ F-001 correction: the prior four-edge gate index/overlay is a DOS proxy,
 not the actual source TGate geometry. See F-001/F-002 for exact limitations.
 The existing `.inc` order is unchanged. CMP1 adds no runtime file beyond
 TABLE.DAT and old executables reject the extended pack.
+
+## Spent kicker and score orientation repair (2026-11-09)
+
+`component_import.py::pack_components` adds actual TGate lines to CMP2;
+`table.c::read_components` loads them while retaining CMP1 support.
+`kickback.inc::collide_spent_gates` uses TGate enable/disable intent and
+existing passive capsule/swept response; `control.inc` calls it before catch
+and after positional contacts. Old proxy edges no longer collide in CMP2.
+`lamps.inc::kicker_gates_render` draws the same diagonal entrance segment.
+`unstuck.inc::stuck_allowed` no longer treats an in-play right kicker pocket
+as a captured shooter merely because it is near the plunger. F-001/F-008
+remain open for original target/timer rules and exact recovery semantics.
+`score_font.h` corrects all packed digits offline by 180-degree rotation;
+`hud.inc` uses those bytes unchanged for score, ball and player. F-007 tracks
+low-resolution adaptation; runtime rendering cost and data size are unchanged.

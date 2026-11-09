@@ -1,7 +1,7 @@
 /* SOURCE MAP: Kickback catch
- * ORIGINAL: TKickback.cpp; control.cpp
+ * ORIGINAL: TKickback.cpp; TGate.cpp; control.cpp
  * STATUS: ADAPTED
- * MATCHES: source strike center and delayed firing
+ * MATCHES: source strike center, delayed firing and TGate entrance closure
  * DIVERGES: automatic one-use arming; missing gate targets
  * EXCEPTIONS: F-001
  * See SOURCE_MAP.md and FIDELITY.md.
@@ -55,3 +55,23 @@ static void advance_kickback_flight(Game *g)
     /* Final clearance check happens AFTER legitimate bumper contacts. */
 }
 
+
+/* F-001: TGateEnable after firing seals the original entrance, not the
+ * former four-edge stand-in higher in the lane. Passive finite capsules
+ * and swept contacts prevent entry without rearming or granting a save. */
+static void collide_spent_gates(Game *g,const Table *t,short old_x,short old_y)
+{
+    int side,hit;
+    if(g->in_shooter || g->kick_delay || g->kick_flight) return;
+    for(side=0;side<t->source_gate_count;side++) {
+        const Edge *e=&t->source_gate[side];
+        if(!g->kick_gate_closed[side] ||
+           g->x<(minimum(e->x,e->ex)-4)*FP ||
+           g->x>(maximum(e->x,e->ex)+4)*FP ||
+           g->y<(minimum(e->y,e->ey)-4)*FP ||
+           g->y>(maximum(e->y,e->ey)+4)*FP) continue;
+        hit=guard_wall_crossing(g,e,old_x,old_y);
+        if(!hit) hit=collide(g,e,96,0);
+        if(hit && g->spent_gate_blocks<65535U) g->spent_gate_blocks++;
+    }
+}

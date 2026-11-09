@@ -22,10 +22,9 @@ static int stuck_allowed(const Game *g,const Table *t)
         return 0;
     /* Do not turn a legitimate last-second drain into a free save. */
     if(py>=t->drain_y-10) return 0;
-    /* Plunger enclosure and both flippers are excluded like the source.
-     * A held flipper intentionally traps a slowly rolling ball. */
-    if(abs(px-t->launch_x)<=12 && abs(py-t->launch_y)<=18)
-        return 0;
+    /* Shooter/READY state already excludes real plunger capture above.
+     * A broad coordinate box also excluded the spent RIGHT kicker at
+     * (172,155), leaving it permanently immune to recovery (F-001/F-008). */
     for(side=0;side<2;side++) {
         const short *p=t->flipper+6*side;
         int left=minimum(p[0],minimum(p[2],p[4]))-5;

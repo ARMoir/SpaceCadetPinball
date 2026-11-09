@@ -68,6 +68,9 @@ class SoundLampTests(unittest.TestCase):
     def test_kicker_gate_is_real_collision_state_not_lamp(self):
         self.assertIn("static int kicker_gates_render(", LAMPS)
         self.assertIn("g->kick_gate_closed[side]!=0", LAMPS)
+        self.assertIn("t->source_gate_count==2", LAMPS)
+        self.assertIn("&t->source_gate[side]", LAMPS)
+        self.assertIn("restore(left,top,width,height)", LAMPS)
         self.assertIn("t->gate_first[side]<0", LAMPS)
         self.assertIn("restore(x-1,top,3,height)", LAMPS)
         self.assertIn("kicker_gates_render(&table,&game,", MAIN)

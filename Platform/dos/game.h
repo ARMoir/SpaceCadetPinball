@@ -61,6 +61,8 @@ typedef struct {
     short x[3],y[3],nx[3],ny[3];
 } Sling;
 typedef struct {
+    short source_gate_count;
+    Edge source_gate[2]; /* original TGate 501/502, left then right */
     short ramp_count,directional_count;
     RampPath ramps[MAX_RAMPS];
     DirectionalLine directional[MAX_DIRECTIONAL_LINES];
@@ -104,6 +106,7 @@ typedef struct {
      * Updated only on genuine approach-side hull reflections. */
     unsigned char sling_chain_side,sling_chain_hits,sling_chain_time;
     unsigned short sling_loop_breaks; /* Count deliberate loop escapes. */
+    unsigned short spent_gate_blocks;
     unsigned short oneway_blocks,oneway_passes,ramp_entries;
     unsigned char ramp_active,ramp_used;
     unsigned short ramp_ticks;

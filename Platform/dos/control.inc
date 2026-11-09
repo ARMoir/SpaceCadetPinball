@@ -124,6 +124,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
                          minimum(g->in_shooter?132:176,g->vy));
     g->x+=g->vx; g->y+=g->vy;
     /* Lightweight source-inspired one-way and final-crest checks. */
+    collide_spent_gates(g,t,flight_x,flight_y);
     collide_oneways(g,t,flight_x,flight_y);
     assist_ramp_crest(g,t);
     guard_sling_backflow(g,t,flight_y,0);
@@ -141,15 +142,13 @@ void game_step(Game *g,const Table *t,unsigned keys)
         const EdgeBounds *box=&t->bounds[index];
         if(px<box->left || px>box->right ||
            py<box->top || py>box->bottom) continue;
-        /* Source TGateDisable opens the kicker entry. The legacy four-edge
-         * DOS proxy is present in SCP2. Raw source TGate 501/502 lines
-         * are elsewhere; see F-001 and the CMP1 import report. Ignore those edges
-         * until the corresponding TKickback fires and recloses gate.
-         * This also stops false rebounds along the right sling back. */
-        if((t->gate_first[0]>=0 && !g->kick_gate_closed[0] &&
+        /* CMP2 replaces these legacy proxy shapes with actual TGate
+         * entrance lines. Keep the stand-ins excluded in that format;
+         * older packs retain their armed-open/spent-closed fallback. */
+        if((t->gate_first[0]>=0 && (t->source_gate_count || !g->kick_gate_closed[0]) &&
             index>=t->gate_first[0] &&
             index<t->gate_first[0]+4) ||
-           (t->gate_first[1]>=0 && !g->kick_gate_closed[1] &&
+           (t->gate_first[1]>=0 && (t->source_gate_count || !g->kick_gate_closed[1]) &&
             index>=t->gate_first[1] &&
             index<t->gate_first[1]+4))
             continue;
@@ -188,6 +187,8 @@ void game_step(Game *g,const Table *t,unsigned keys)
         contain_outer_right(g,t);
         contain_outer_left(g,t);
     }
+    /* Wall/paddle separation must not undo a closed source gate. */
+    collide_spent_gates(g,t,flight_x,flight_y);
     /* The tube bends left above the feed point. A constant X cutoff marked
      * partial shots as in-play while they were still climbing that bend.
      * Use a conservative sloped inner boundary above the feed, preserving

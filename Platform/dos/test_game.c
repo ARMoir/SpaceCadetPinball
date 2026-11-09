@@ -182,6 +182,59 @@ static void flipper_tunneling_tests(void)
     fflush(stdout);
 }
 
+static void spent_gate_tests(void)
+{
+    int side,trial,speed,step,nx,ny;
+    long dx,dy,dot;
+    const Edge *e;
+    assert(table_load(&t,"TABLE.DAT"));
+    assert(t.source_gate_count==2);
+    for(side=0;side<2;side++) {
+        e=&t.source_gate[side];
+        nx=-e->ty; ny=e->tx;
+        dx=(long)t.kickback[side*2]*FP-(long)(e->x+e->ex)*FP/2;
+        dy=(long)t.kickback[side*2+1]*FP-(long)(e->y+e->ey)*FP/2;
+        if(dx*nx+dy*ny>0) { nx=-nx; ny=-ny; }
+        for(trial=0;trial<=4;trial++) for(speed=64;speed<=160;speed+=48) {
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0; g.steps=1;
+            g.kick_armed[side]=0; g.kick_gate_closed[side]=1;
+            g.tilted=(unsigned char)(trial&1);
+            g.x=(short)(e->x*FP+(long)(e->ex-e->x)*FP*trial/4+nx/8);
+            g.y=(short)(e->y*FP+(long)(e->ey-e->y)*FP*trial/4+ny/8);
+            g.vx=(short)(-nx*(long)speed/256); g.vy=(short)(-ny*(long)speed/256);
+            game_step(&g,&t,0);
+            dot=((long)g.x-e->x*FP)*nx+((long)g.y-e->y*FP)*ny;
+            if(!(g.spent_gate_blocks && dot>0)) {
+                printf("SPENT GATE FAIL side=%d trial=%d speed=%d xy=%d,%d dot=%ld blocks=%u\n",side,trial,speed,g.x,g.y,dot,g.spent_gate_blocks); fflush(stdout);
+            }
+            assert(g.spent_gate_blocks && dot>0);
+            assert(!g.kickbacks && !g.kick_delay && !g.kick_flight && g.score==0 && g.balls==3);
+        }
+        /* Open/armed entrances and legitimate kickback return remain free. */
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        g.x=(short)((e->x+e->ex)*FP/2); g.y=(short)((e->y+e->ey)*FP/2);
+        g.vx=0; g.vy=64; game_step(&g,&t,0);
+        assert(!g.spent_gate_blocks);
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        g.kick_armed[side]=0; g.kick_gate_closed[side]=1;
+        g.kick_flight=1; g.kick_side=(unsigned char)(side+1);
+        g.x=t.kickback[side*2]*FP; g.y=t.kickback[side*2+1]*FP;
+        for(step=0;step<10;step++) game_step(&g,&t,0);
+        assert(!g.spent_gate_blocks && g.kick_flight);
+    }
+    /* Regression: the right spent pocket overlaps the old unconditional
+     * plunger exclusion. In-play stalls there must reach the watchdog. */
+    fixture(); t.launch_x=181; t.launch_y=141;
+    game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+    g.kick_armed[1]=0; g.kick_gate_closed[1]=1;
+    for(step=0;step<UNSTICK_DETECT_TICKS+2;step++) {
+        g.x=172*FP; g.y=155*FP; g.vx=g.vy=0;
+        game_step(&g,&t,0);
+    }
+    assert(g.unstick_nudges && !g.kickbacks && !g.kick_armed[1]);
+    puts("STAGE: spent source gates block entry; right pocket watchdog enabled"); fflush(stdout);
+}
+
 static void component_loader_tests(void)
 {
     FILE *src,*dst;
@@ -196,16 +249,24 @@ static void component_loader_tests(void)
     src=fopen("TABLE.DAT","rb"); assert(src);
     assert(!fseek(src,0,SEEK_END)); size=ftell(src); fclose(src);
     assert(size>prefix);
-    for(mode=0;mode<4;mode++) {
+    for(mode=0;mode<5;mode++) {
         src=fopen("TABLE.DAT","rb"); dst=fopen("BAD.TBL","wb");
         assert(src && dst);
         limit=mode==0?prefix:(mode==1?prefix+3:(mode==2?size-1:size));
-        for(pos=0;pos<limit;pos++) { c=fgetc(src); assert(c!=EOF); fputc(c,dst); }
+        if(mode==4) limit=size-36;
+        for(pos=0;pos<limit;pos++) {
+            c=fgetc(src); assert(c!=EOF);
+            if(mode==4 && pos==prefix+3) c='1';
+            fputc(c,dst);
+        }
         if(mode==3) fputc(0,dst);
         fclose(src); fclose(dst);
         if(mode==0) {
             assert(table_load(&t,"BAD.TBL"));
             assert(!t.ramp_count && !t.directional_count);
+        } else if(mode==4) {
+            assert(table_load(&t,"BAD.TBL"));
+            assert(t.ramp_count==2 && t.directional_count==18 && !t.source_gate_count);
         } else assert(!table_load(&t,"BAD.TBL"));
     }
     remove("BAD.TBL");
@@ -295,6 +356,7 @@ int main(int argc,char **argv)
 {
     int i,weak_vy,full_vy;
     FILE *f;
+    spent_gate_tests();
     component_loader_tests();
     component_tests();
     wall_guard_tests();
