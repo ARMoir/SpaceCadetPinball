@@ -492,6 +492,8 @@ int main(int argc,char **argv)
                  game.unstick_nudges,game.unstick_moves,game.unstick_relaunches);
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=0\n",
                 enhanced?"3d":"classic");
+        fprintf(report,"# oneway_blocks=%u oneway_passes=%u ramp_entries=%u\n",
+                game.oneway_blocks,game.oneway_passes,game.ramp_entries);
         fprintf(report,"# vga_colors=%d wall_crossings=%u\n",vga_colors,game.wall_crossings);
         fclose(report);
     }

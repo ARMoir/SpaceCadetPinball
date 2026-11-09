@@ -146,7 +146,7 @@ without certifying physical hardware performance or original-rule parity.
 | Priority | Area | Original behavior versus current DOS | Fidelity status | Register |
 | --- | --- | --- | --- | --- |
 | **P0** | Kickback rules | Original kickback component uses ~0.7 s timer plus ~0.1 s follow-up, with left/right Hazard Target triplets and gate state transitions. DOS currently arms each side automatically for one use per ball, catches near an imported strike center, holds ~0.12 s, then fires a fixed upward/inward impulse. Imported strike positions are an improvement but the rules are **not** preserved. | **Unapproved behavioral approximation**, not a measured performance necessity | [F-001](#f-001-kickback-activation-and-timing) |
-| **P0** | Collision layers / one-way gates | Original has world-space collision groups, ramps and one-way/gate components. DOS projects collisions into one 2D plane and hard-codes an upper-left downhill-only screen-coordinate exception. The import inventory records omitted one-way gates, targets, sinks and ramps. | **Incomplete** with a temporary geometry workaround | [F-002](#f-002-collision-layer-and-one-way-projection) |
+| **P0** | Collision layers / one-way gates | Original has world-space collision groups, ramps and one-way/gate components. DOS projects collisions into one 2D plane and hard-codes an upper-left downhill-only screen-coordinate exception. CMP1 now imports ramp paths and directed one-way line pairs; full ramp forces, height/mask transitions, targets and actual TGate runtime geometry remain missing. | **Incomplete** with a temporary geometry workaround | [F-002](#f-002-collision-layer-and-one-way-projection) |
 | **P1** | Plunger timing and variance | Original `TPlunger` has eight visual states, 25 ms increments, boost accumulation (approximately 2.5 s to full charge for the Windows configuration), and up to 10% randomized boost. DOS correctly imports eight original frames but charges in ~1.3 s with ~1% jitter to compensate for simplified shooter physics. | **Partially faithful; unapproved behavioral approximation** | [F-003](#f-003-plunger-charge-and-launch-variation) |
 | **P1** | Bumper collisions / scoring | Original bumper response is radial and scoring can change with state. DOS precomputes one radial hit surface per imported eight-edge cap to prevent inward polygon trapping, but still flattens three elevated bumpers and uses static 500/1500 scores with shared hit delay. | **Improved contact fidelity; scoring/layers incomplete** | [F-004](#f-004-bumper-projection-and-scoring) |
 | **P1** | Nudge and tilt | Original `nudge.cpp` applies additive velocity and an inverse after 0.4 s; `pb.cpp` accumulates nudge pressure over time. DOS preserves that shape but uses its own impulses, nudge-heat thresholds and decay schedule. | **Partially faithful; tuning differs** | [F-005](#f-005-nudge-and-tilt-parameters) |
@@ -172,6 +172,19 @@ restored or a measured platform necessity is documented and approved. Do not
 silently treat legacy exceptions as precedent for new ones.
 
 ### F-001 Kickback activation and timing
+
+**Raw-data correction (2026-11-08):** earlier references below to "actual
+four-edge source gate polygons" were incorrect. TGate objects 501/502
+(`v_gate1`/`v_gate2`) use attribute-600 single lines, projected approximately
+(55.27,144.92)-(45.37,138.53) and (175.31,146.08)-(165.83,152.38).
+The existing runtime four-edge shapes at x57..61/y119..132 and
+x162..167/y119..138 are **DOS kicker proxies**, not those TGate objects.
+Their current collision/overlay and one-use state policy are retained as
+F-001 debt. `components.gates` in IMPORT.json records the actual source
+lines and masks. No claim of original gate geometry or Hazard Target parity
+is made. Restore these together with target state and source timers, then
+validate kickback returns before replacing the legacy proxies.
+
 
 - **Status / priority:** OPEN, P0; no measured performance justification.
 - **Original:** `TKickback.cpp` timer values 0.7 s and 0.1 s; `control.cpp`
@@ -228,6 +241,66 @@ silently treat legacy exceptions as precedent for new ones.
   rearm and tilt/game transitions against original source behavior.
 
 ### F-002 Collision layer and one-way projection
+
+#### Source-data path and directional-line revision (2026-11-08)
+
+Input: original Windows PINBALL.DAT, 928700 bytes, SHA-256
+`42defd5d2a339a3953fe643716aff4e35b2cea7a3e54505c82d1e78d5325bc04`.
+This supersedes the fixed y=38 "two upper ramp crests" implementation and
+its tests below; those screen regions were not the source TRamp objects.
+
+- **Source:** TRamp group 101 has 18 planes, group 105 (`s_ramp9`) has two.
+  `TRamp.cpp` reads 1300 (13 floats/plane), 1301/1302 exits/entry,
+  1303 control line, 1305 height flag and 701 damping. `maths::find_closest_edge`
+  matches ordered endpoint distances. The importer follows that matching and
+  triangle adjacency to form shared-edge midpoint paths. Main ramp length is
+  1229 Q6 units (~19.2 projected pixels), with ~1.061 world-unit rise; return
+  length is 3167 Q6 units (~49.5px), with zero rise. These are centerline
+  reductions of actual triangles, not a port of FieldEffect or a ball rail.
+- **DOS crest policy:** entry must occur in the first quarter, within 3px of
+  the path and moving forward. A forward crossing of 90% on a rising path
+  gets at most +64 Q6 tangent speed, toward a 96 Q6 tangent floor. Strong
+  shots and the flat return receive no boost. At most once per traversal;
+  leaving the corridor/feed clears tracking, and 220 ticks disables a stale
+  traversal. Tilt, shooter, waiting/game-over and kickback phases exclude
+  assistance. No position correction, invented score or guaranteed success.
+- **Source one-ways:** groups 345..353 are TOneway objects. The importer
+  applies the source ball radius in world space before projection: the front
+  line uses +radius, the reversed pass line uses -0.8*radius. It preserves
+  their masks (eight ground components, one group-4 elevated component).
+  The runtime tests finite swept crossings, reflects the blocked direction
+  with passive DOS restitution, and lets the reverse line pass. Tilt retains
+  solidity but suppresses pass events, following TOneway::Collision's split.
+  The two lines are not collapsed into a two-sided capsule.
+- **Explicit remaining deviations:** only ground-mask lines are active;
+  group-4 `s_onewy12` is retained but inactive until full height/layer state
+  exists. Original control/scoring/audio callbacks, material boost/friction,
+  nearest-time residual motion, ramp-plane forces/damping and mask transitions
+  are missing. The shooter state bypasses new directional lines: enabling
+  them there diverted a charge-24/seed-0 weak return into the playfield at
+  step 258 (two blocks/two passes), contradicting the existing return test.
+  This exemption preserves the twelve weak-return cases while shooter layers
+  remain flattened; it is not source parity. Kickback guided phases retain
+  their existing early return. Sling-apron and upper-chute guards remain
+  explicitly DOS-only; importing TOneway does not establish their identity.
+- **Data/memory:** a 704-byte CMP1 extension follows existing SCP2 sprites.
+  Legacy/demo packs without CMP1 load with zero components; malformed present
+  extensions fail. New packs require the matching executable (old loaders
+  reject trailing bytes). Artwork and the original 521 edges are unchanged.
+  Collision-band capacity is 192 instead of 256, saving 3200 static bytes;
+  conservative source occupancy before exclusions is at most 122. Loader
+  overflow rejection is retained. CADET DGROUP is below 64KB; V20 timing
+  and end-to-end hardware benefit are **UNVERIFIED**.
+- **Diagnostics/tests:** saturated `oneway_blocks`, `oneway_passes`,
+  `ramp_entries`, and `ramp_crest_assists` in INPUT.TXT/SMOKE.TXT. No physics
+  disk I/O. Tests cover each imported direction, retreat, endpoints, tilt,
+  elevated mask, shooter exclusion, rising/flat paths, absent entry, strong
+  shots, timeout, reverse motion, repeat crest and kickback/tilt exclusions;
+  converter/framing and full imported-table regression/soak remain required.
+- **Restoration:** retain original plane coefficients in IMPORT.json, port
+  force/height/mask state and component control callbacks, and then remove
+  the shooter and legacy positional exceptions only with trajectory evidence.
+
 
 - **2026-11-08 upper-ramp / back-lane playability adaptation:** Original
   `TRamp::FieldEffect` applies a plane-specific force and speed-based

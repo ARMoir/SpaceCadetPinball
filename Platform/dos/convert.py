@@ -11,6 +11,7 @@ import math
 from pathlib import Path
 import struct
 import zlib
+from component_import import components, pack_components
 
 PALETTE = [(0,0,0),(0,0,170),(0,170,0),(0,170,170),
            (170,0,0),(170,0,170),(170,85,0),(170,170,170),
@@ -186,7 +187,7 @@ def export(dat, output, vga=False):
         shorts = struct.unpack('<'+'h'*(len(attrs)//2),attrs)
         upper = any(shorts[i]==602 and shorts[i+1]!=0 for i in range(0,len(shorts)-1,2))
         if kind not in (1000,1010,1005) or not wall or (upper and kind!=1005):
-            if wall:
+            if wall and kind != 1016:
                 omitted.append({'group':group,'name':dat.name(group),'type':kind})
             continue
         shape = math.floor(wall[0])
@@ -271,9 +272,10 @@ def export(dat, output, vga=False):
         },indent=2)+'\n')
         print('Exported VGA.DAT: source-color table and thirteen sprites')
         return
-    write_pack(output,pixels,edges,flippers,launch,drain,sprites,plunger,kicks)
+    component_data = components(dat, objects, project)
+    write_pack(output,pixels,edges,flippers,launch,drain,sprites,plunger,kicks,component_data)
     report = {'source_sha256':hashlib.sha256(dat.data).hexdigest(), 'source':'Windows PINBALL.DAT',
-              'segments':len(edges),'imported_collision_objects':imported,'omitted_collision_objects':omitted,
+              'components':component_data, 'segments':len(edges),'imported_collision_objects':imported,'omitted_collision_objects':omitted,
               'simplifications':['Projected 2D fixed-point physics; not original world-space integrator',
               'Static ground walls; all seven bumper layers flattened to visible sprite caps; two-state flipper animation',
               'No ramp elevation, missions, multiball, target progression, or original audio'],
@@ -283,7 +285,7 @@ def export(dat, output, vga=False):
     print(f'Imported {len(edges)} segments; {len(omitted)} collision objects omitted. See IMPORT.json.')
 
 
-def write_pack(output,pixels,edges,flippers,launch,drain,sprites,plunger=None,kicks=None):
+def write_pack(output,pixels,edges,flippers,launch,drain,sprites,plunger=None,kicks=None,component_data=None):
     if len(edges)>640:
         raise ValueError('Too many collision segments (limit 640)')
     if plunger is None:  # Diagnostic table, with no commercial sprites.
@@ -299,6 +301,8 @@ def write_pack(output,pixels,edges,flippers,launch,drain,sprites,plunger=None,ki
         if w*h > 1024:
             raise ValueError('Sprite exceeds 1024-byte limit')
         body += struct.pack('<4h',x,y,w,h)+data
+    if component_data is not None:
+        body += pack_components(component_data)
     (output/'TABLE.DAT').write_bytes(body)
     (output/'TABLE.TGA').write_bytes(pack_screen(pixels))  # Tandy bank image, NOT a Targa file.
     png(output/'PREVIEW.png',pixels)

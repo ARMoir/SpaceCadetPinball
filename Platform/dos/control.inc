@@ -124,7 +124,8 @@ void game_step(Game *g,const Table *t,unsigned keys)
                          minimum(g->in_shooter?132:176,g->vy));
     g->x+=g->vx; g->y+=g->vy;
     /* Lightweight source-inspired one-way and final-crest checks. */
-    assist_ramp_crest(g,t,flight_y);
+    collide_oneways(g,t,flight_x,flight_y);
+    assist_ramp_crest(g,t);
     guard_sling_backflow(g,t,flight_y,0);
     /* Capture an incoming ball at the strike face before nearby static
      * rail contacts reverse its velocity. Walls remain active after firing. */
@@ -140,9 +141,9 @@ void game_step(Game *g,const Table *t,unsigned keys)
         const EdgeBounds *box=&t->bounds[index];
         if(px<box->left || px>box->right ||
            py<box->top || py>box->bottom) continue;
-        /* Source TGateDisable opens the kicker entry. The original
-         * four-edge narrow gate is present in SCP2, but the old DOS
-         * importer made it permanently solid! Ignore those edges
+        /* Source TGateDisable opens the kicker entry. The legacy four-edge
+         * DOS proxy is present in SCP2. Raw source TGate 501/502 lines
+         * are elsewhere; see F-001 and the CMP1 import report. Ignore those edges
          * until the corresponding TKickback fires and recloses gate.
          * This also stops false rebounds along the right sling back. */
         if((t->gate_first[0]>=0 && !g->kick_gate_closed[0] &&

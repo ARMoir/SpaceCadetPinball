@@ -145,7 +145,7 @@ static int lamps_render(const Table *t,const Game *g,
     return damage;
 }
 
-/* F-001: draw the original-source narrow gate's CLOSED metal leaf after
+/* F-001: draw the legacy kicker proxy's CLOSED metal leaf after
  * TKickback finishes. The immutable table background contains no live
  * TGate sprite; only a 3px-wide vertical overlay is needed. Open gate
  * erases the overlay back to original art. Track old ball rectangles so

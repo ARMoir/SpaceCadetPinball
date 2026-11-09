@@ -182,10 +182,121 @@ static void flipper_tunneling_tests(void)
     fflush(stdout);
 }
 
+static void component_loader_tests(void)
+{
+    FILE *src,*dst;
+    long size,prefix,pos,limit;
+    int i,mode,c;
+    assert(table_load(&t,"TABLE.DAT"));
+    prefix=44L+18L*t.count;
+    for(i=0;i<13;i++) {
+        const Sprite *s=i<5?&t.sprites[i]:&t.plunger[i-5];
+        prefix+=8L+(long)s->w*s->h;
+    }
+    src=fopen("TABLE.DAT","rb"); assert(src);
+    assert(!fseek(src,0,SEEK_END)); size=ftell(src); fclose(src);
+    assert(size>prefix);
+    for(mode=0;mode<4;mode++) {
+        src=fopen("TABLE.DAT","rb"); dst=fopen("BAD.TBL","wb");
+        assert(src && dst);
+        limit=mode==0?prefix:(mode==1?prefix+3:(mode==2?size-1:size));
+        for(pos=0;pos<limit;pos++) { c=fgetc(src); assert(c!=EOF); fputc(c,dst); }
+        if(mode==3) fputc(0,dst);
+        fclose(src); fclose(dst);
+        if(mode==0) {
+            assert(table_load(&t,"BAD.TBL"));
+            assert(!t.ramp_count && !t.directional_count);
+        } else assert(!table_load(&t,"BAD.TBL"));
+    }
+    remove("BAD.TBL");
+}
+
+/* Use actual imported lines, but isolate each from unrelated walls so both
+ * permitted and forbidden directions are independently observable. */
+static void component_tests(void)
+{
+    int i,trial,step;
+    DirectionalLine line;
+    assert(table_load(&t,"TABLE.DAT"));
+    assert(t.ramp_count==2 && t.directional_count==18);
+    assert(t.ramps[0].group==101 && t.ramps[0].count==18 && t.ramps[0].assist);
+    assert(t.ramps[1].group==105 && t.ramps[1].count==2 && !t.ramps[1].assist);
+    for(i=0;i<18;i++) {
+        assert(table_load(&t,"TABLE.DAT")); line=t.directional[i];
+        for(trial=0;trial<6;trial++) {
+            fixture(); memset(t.band_count,0,sizeof(t.band_count));
+            t.directional_count=1; t.directional[0]=line;
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0; g.steps=1;
+            g.x=(short)((line.x+line.ex)/2+line.nx/8);
+            g.y=(short)((line.y+line.ey)/2+line.ny/8);
+            g.vx=(short)(-line.nx*96L/256); g.vy=(short)(-line.ny*96L/256);
+            if(trial==1) { g.vx=-g.vx; g.vy=-g.vy; } /* retreat */
+            if(trial==2) g.tilted=1;
+            if(trial==3) { /* beyond endpoint */
+                g.x=(short)(line.ex+(line.ex-line.x)/2+line.nx/8);
+                g.y=(short)(line.ey+(line.ey-line.y)/2+line.ny/8);
+            }
+            if(trial==5) g.in_shooter=1;
+            if(trial==4) t.directional[0].mask=4; /* upper level */
+            game_step(&g,&t,0);
+            if((line.mask&1) && trial!=1 && trial!=3 && trial!=4 && trial!=5) {
+                assert(g.oneway_blocks==(unsigned)line.solid);
+                assert(g.oneway_passes==(unsigned)(!line.solid && trial!=2));
+                if(line.solid) assert((long)g.vx*line.nx+(long)g.vy*line.ny>0);
+            } else assert(!g.oneway_blocks && !g.oneway_passes);
+            assert(g.score==0 && g.balls==3);
+        }
+    }
+    /* Source path traversed with controlled samples through every segment.
+     * Runtime only supplies the limited crest impulse, never moves the ball
+     * along this test path. Exclude static collisions to inspect the policy. */
+    for(trial=0;trial<10;trial++) {
+        const RampPath *r;
+        assert(table_load(&t,"TABLE.DAT"));
+        memset(t.band_count,0,sizeof(t.band_count));
+        t.bumper_count=t.sling_count=t.directional_count=0;
+        memset(t.slings,0,sizeof(t.slings));
+        t.outer_left_rail=t.outer_right_rail=-1;
+        game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+        if(trial==1) g.tilted=1;
+        if(trial==2) g.in_shooter=1;
+        r=&t.ramps[trial==7?1:0];
+        for(step=trial==5?r->count*3/4:0;step<r->count;step++) {
+            const RampSegment *e=&r->segments[step];
+            int speed=trial==3?144:32;
+            g.steps=1;
+            g.vx=(short)((long)e->tx*speed/256);
+            g.vy=(short)((long)e->ty*speed/256);
+            g.x=(short)((e->x+e->ex)/2-g.vx);
+            g.y=(short)((e->y+e->ey)/2-g.vy);
+            if(trial==4) g.y+=20*FP;
+            if(trial==6) g.kick_delay=2;
+            if(trial==8 && step) g.ramp_ticks=220;
+            if(trial==9) { g.vx=-g.vx; g.vy=-g.vy; }
+            if(trial==2) g.in_shooter=1;
+            game_step(&g,&t,0);
+        }
+        assert(g.ramp_crest_assists==(unsigned)(trial==0));
+        if(trial==0) {
+            /* Re-crossing the crest within one traversal cannot reboost. */
+            for(step=r->count-3;step<r->count;step++) {
+                const RampSegment *e=&r->segments[step];
+                g.x=e->x; g.y=e->y; g.vx=e->tx/8; g.vy=e->ty/8;
+                game_step(&g,&t,0);
+            }
+            assert(g.ramp_crest_assists==1);
+        }
+        assert(g.score==0 && g.balls==3);
+    }
+    puts("STAGE: source CMP1 ramp paths and directional line regressions"); fflush(stdout);
+}
+
 int main(int argc,char **argv)
 {
     int i,weak_vy,full_vy;
     FILE *f;
+    component_loader_tests();
+    component_tests();
     wall_guard_tests();
     overlapping_bumper_tests();
     flipper_tunneling_tests();
@@ -847,39 +958,13 @@ int main(int argc,char **argv)
     puts("STAGE: synthetic tests passed; loading imported table"); fflush(stdout);
     assert(table_load(&t,"TABLE.DAT")); game_reset(&g,&t);
     puts("STAGE: imported pack loaded"); fflush(stdout);
-    /* F-002: source-shape ramp crests and directional sling gates. */
+    /* F-002: retained DOS-only sling apron safeguard. */
     {
         int side;
         assert(t.sling_count==2 && t.outer_left_rail>=0 &&
                t.outer_right_rail>=0);
         for(side=0;side<2;side++) {
-            int crest_x=side?155:73;
             int near_sling_x=side?145:90;
-            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
-            g.x=(short)(crest_x*FP); g.y=38*FP+20;
-            g.vx=-24; g.vy=-40;
-            game_step(&g,&t,0);
-            assert(g.ramp_crest_assists==1 && g.balls==3);
-            /* No continuous boost simply for lingering in the area. */
-            g.x=(short)(crest_x*FP); g.y=36*FP;
-            g.vx=-24; g.vy=-20;
-            game_step(&g,&t,0);
-            assert(g.ramp_crest_assists==1);
-            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
-            g.x=(short)(crest_x*FP); g.y=38*FP+20;
-            g.vx=-24; g.vy=25;
-            game_step(&g,&t,0);
-            assert(!g.ramp_crest_assists);
-            game_reset(&g,&t); g.waiting=0; g.in_shooter=1;
-            g.x=(short)(crest_x*FP); g.y=38*FP+20;
-            g.vx=-24; g.vy=-40;
-            game_step(&g,&t,0);
-            assert(!g.ramp_crest_assists);
-            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
-            g.x=(short)((side?118:106)*FP); g.y=38*FP+20;
-            g.vx=-24; g.vy=-40;
-            game_step(&g,&t,0);
-            assert(!g.ramp_crest_assists);
             game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
             g.x=(short)(near_sling_x*FP);
             g.y=(short)((t.slings[side].bottom+10)*FP+16);
@@ -907,17 +992,16 @@ int main(int argc,char **argv)
             game_step(&g,&t,0);
             assert(!g.sling_backflow_redirects);
         }
-        puts("STAGE: source ramp crests and one-way sling backflow");
+        puts("STAGE: DOS-only sling backflow");
         fflush(stdout);
     }
-    /* Original SCP2 has narrow four-edge v_gate1/v_gate2 source
-     * groups inside the kicker lanes, not at invented coordinates. */
+    /* Legacy four-edge kicker proxies; actual TGate lines are 501/502. */
     assert(t.gate_first[0]>=0 && t.gate_first[1]>=0);
     assert(t.gate_left[0]>=55 && t.gate_right[0]<=72 &&
            t.gate_top[0]>=115 && t.gate_bottom[0]<=145);
     assert(t.gate_left[1]>=160 && t.gate_right[1]<=170 &&
            t.gate_top[1]>=115 && t.gate_bottom[1]<=145);
-    printf("SOURCE GATES L:%d x%d..%d y%d..%d R:%d x%d..%d y%d..%d\n",
+    printf("DOS GATE PROXIES L:%d x%d..%d y%d..%d R:%d x%d..%d y%d..%d\n",
            t.gate_first[0],t.gate_left[0],t.gate_right[0],
            t.gate_top[0],t.gate_bottom[0],t.gate_first[1],
            t.gate_left[1],t.gate_right[1],
@@ -1261,7 +1345,13 @@ int main(int argc,char **argv)
                 assert(!g.waiting && g.vy<0);
                 for(i=0;i<1500 && !g.waiting && !g.over;i++) {
                     game_step(&g,&t,0);
+                    if(!g.in_shooter || g.balls!=3) {
+                        printf("WEAK FAIL charge=%d seed=%d step=%d xy=%d,%d v=%d,%d shooter=%d blocks=%u passes=%u\n",v,seed,i,g.x,g.y,g.vx,g.vy,g.in_shooter,g.oneway_blocks,g.oneway_passes); fflush(stdout);
+                    }
                     assert(g.in_shooter && g.balls==3);
+                }
+                if(!(i<1500 && g.waiting && g.balls==3 && !g.over)) {
+                    printf("WEAK TIMEOUT charge=%d seed=%d step=%d xy=%d,%d v=%d,%d shooter=%d blocks=%u passes=%u\n",v,seed,i,g.x,g.y,g.vx,g.vy,g.in_shooter,g.oneway_blocks,g.oneway_passes); fflush(stdout);
                 }
                 assert(i<1500 && g.waiting && g.balls==3 && !g.over);
                 assert(g.x==(t.plunger[0].x+t.plunger[0].w/2)*FP &&

@@ -187,7 +187,7 @@ the ball actually completes the intended climb without false rescues.
 These cumulative statistics need corresponding short FLIGHT.TXT
 snapshots or live observation to establish outcome. None is a
 substitute for real-hardware testing. Final source-geometry fidelity
-requires a reimport of omitted TOneway and TRamp source attributes.
+now requires runtime plane forces, height/mask transitions and control callbacks; the source paths/one-way pairs have been imported in CMP1.
 
 **VGA compatibility physical check (2026-11-07):**
 Run `CADET /vga /record` on a conventional VGA PC with 256KB+
@@ -419,3 +419,28 @@ each active playfield step, in addition to the existing 20,000-step soak.
 The sling assertion includes its finite AABB; extending its acute half-planes
 infinitely would incorrectly flag valid space above the sling. See F-002 for
 scope and performance uncertainty; this is not a hardware certification.
+
+## CMP1 ramp/one-way validation (2026-11-08)
+
+Local Open Watcom 8086 build and memory verification passed. Source component
+regressions exercise both directions of all 18 imported lines, endpoints,
+retreat, tilt, elevated-mask and shooter exemptions. Ramp cases use the
+imported path and cover entry, 90% crossing, strong/flat/reverse/no-entry,
+timeout and repeated contact, with no score or ball-count change. Converter
+checks verify source hash/IDs, direction under reflected projection, exact
+packed report agreement and truncated/trailing extension rejection.
+
+The local Tandy original-table suite passed weak/full launches, flippers,
+kickbacks, seven bumpers, 20000-step soak and 80000-step containment. Its
+360-frame smoke recorded 3 one-way blocks, 1 pass, 0 ramp entries and
+0 crest assists. Thus smoke demonstrates directional contacts, **not** a
+natural successful ramp traversal. Controlled path tests verify the crest
+policy independently of the still-incomplete layered playfield.
+
+Physical acceptance remains UNVERIFIED: record attempts on the actual main
+ramp (group 101, approximately x97/y80 to x83/y68), flat return (group 105),
+weak shooter returns, both one-way directions and valid drains. Compare
+oneway_blocks/oneway_passes/ramp_entries/ramp_crest_assists with FLIGHT.TXT
+and slow_frames. The previous two y=38 boost zones have been removed;
+upper-right visual-path complaints still require layer-aware investigation.
+Full GitHub Actions results are reported with the delivered commit/run.

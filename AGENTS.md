@@ -66,6 +66,11 @@ Windows `PINBALL.DAT` data, not memory, when judging original behavior.
   indexed at load time over hardcoded global x/y regions. When an original
   source asset is unavailable, explicitly mark the fallback as provisional:
   do not claim its geometry or direction comes from omitted source data.
+- **Do not infer component identity from a similar outline.** Preserve original
+  object type, group ID, attribute IDs and input SHA-256 in the import report.
+  A four-edge static shape is not a TGate merely because it resembles a door.
+  Generated component extensions must be regenerated from the same DAT and
+  validated with their executable; preserve legacy-pack rejection/fallback tests.
 - **Bound and audit every forgiving gameplay intervention.** Specify a
   precise trigger, phase/approach side, a maximum velocity or displacement
   effect, exclusions (tilt, kickback, plunger, legitimate return, etc.),

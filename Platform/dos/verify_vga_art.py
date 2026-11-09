@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 import struct
 from convert import PALETTE
+from component_import import validate_extension
 from run_tests import validate_smoke
 
 
@@ -27,7 +28,8 @@ def validate_pack(vga, table):
         if [c==255 for c in x]!=[c==255 for c in y]:
             raise ValueError("Sprite transparency changed")
         vp+=size; tp+=size
-    if vp!=len(vga) or tp!=len(table): raise ValueError("Trailing data")
+    if vp!=len(vga): raise ValueError("Trailing data")
+    validate_extension(table[tp:])
 
 
 def compare_gameplay(directory):

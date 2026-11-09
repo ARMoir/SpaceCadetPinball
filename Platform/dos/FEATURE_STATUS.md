@@ -29,7 +29,7 @@ Tandy 1000 EX/V20.
 | Plunger | Eight original animation frames, hold/release, full/weak launch; ball seats immediately above visible original rod tip, and weak shooter returns can be launched again | DOS charge curve and 2D resting position are adapted from source; physical shooter testing pending (F-003) |
 | Game lifecycle | Three balls, score, drain, game over, restart, basic ball reset and persistent local top-five high scores with initials | No complete scoring rules/bonus/multiplayer (F-009 is the simplified high-score file/entry) |
 | Bumpers | Seven source-derived visible caps have radial contact, static initial 500/1500 scoring | No original per-bumper rule progression or vertical layers (F-004) |
-| Kickback saves | Left/right outlane catch, wind-up and protected high-return; original narrow kicker door opens while armed and physically/visually closes after fire; one use per side per ball | Original Hazard Target arming and 0.7+0.1s timer not yet ported; gate state and source-positioned metal overlay adapted (F-001); physical V20 validation pending |
+| Kickback saves | Left/right outlane catch, wind-up and protected high-return; legacy DOS kicker proxy opens while armed and physically/visually closes after fire; one use per side per ball | Original Hazard Target arming and 0.7+0.1s timer not yet ported; gate state and proxy metal overlay adapted (F-001); physical V20 validation pending |
 | Nudge / tilt | X / A / D impulses and tilt-warning/lockout | Custom thresholds, not exact original accumulation (F-005) |
 | Universal anti-stuck | Q6 position watchdog with upward nudge, two verified-clear moves and same-ball relaunch; additional bounded near-vertical escape after 3 alternating left/right sling reflections, without teleporting | Original `UnstuckBall` timer and DOS-only cyclic-sling guard do not reproduce original rules; physical V20 outcomes pending (F-008) |
 | Inputs and UI | Source-style four-box 80px sidebar with original score digits, title/ball strip, player/score row, action and status messages; Z and / flippers, optional left/right mouse; **middle mouse plunger** on three-button drivers; Space launch; F5 sound, F8 controls, temporary event messages, initials/top-five panel | DOS INT 33h mouse driver required; keyboard and file/menu flow need physical V20 verification; reduced original TTextBox behavior (F-007/F-009) |
@@ -58,8 +58,8 @@ and frame timing remain unverified.
 | Area | What is present | What is still **not** implemented | Fidelity audit |
 | --- | --- | --- | --- |
 | World physics | Q6 fixed-point 2D ball, wall normals, gravity, speed clamps, collision bands, bounded anti-stuck watchdog | Original 3D/world-space position and height, spin, full material friction/elasticity, stochastic drag, continuous sweep, exact collision responses | F-002, F-006 |
-| Ramps and layers | Initial ramp art and projected rails, plus a DOS-only small velocity floor on an upward crossing near the two upper-ramp crests | Source TRamp plane forces, true ramp-length progress, upper/lower collision masks and accurate ramp exits remain unimplemented | F-002 |
-| One-way rails and gates | Special upper-left passage, indexed left/right exterior rails and solid slingshot hulls; a narrow upward/outward DOS-only back-lane steering guard | General original TOneway line pairs, their exact directions, component group masks and dynamic state remain unimplemented without the original source-resource metadata | F-002 |
+| Ramps and layers | Two TRamp triangle-derived midpoint paths; tracked 90% progress and bounded once-per-traversal boost on rising path | Full plane forces/damping, height, collision-mask transitions and faithful exits remain missing; flat path has no crest boost | F-002 |
+| One-way rails and gates | Nine source TOneway line pairs and masks imported; eight ground components active outside shooter state, finite blocked/pass crossings | Elevated group, full control/material callbacks and actual TGate line runtime are missing; legacy chute/apron/kicker proxies remain adaptations | F-001, F-002 |
 | Flippers | Source rest/raised geometry; midpoint and seven-substep assisted motion, leverage-based impulse, plus 5px inward active-tip forgiveness for near-center descents | Original continuous angular sweep/velocity and exact front/back collision, trap/hold and original power curve; intentional easier-than-original gap handling | F-006 |
 | Shooter | Original plunger frames and re-catch of weak return | Original 25 ms boost progression, ~2.5 s charge curve, full ~10% boost variance and exact shooter chute transitions | F-003 |
 | Bumpers | Seven radial caps, basic initial scoring | Variable score state, independent component cooldowns, full original material/layer interaction | F-004 |
@@ -70,10 +70,10 @@ and frame timing remain unverified.
 
 **Recent 2026-11-08 physics and art changes:** The third consecutive
 alternating true sling contact initiates the anti-loop escape (not fourth).
-A bounded crest impulse is used near each upper projected ramp; an
+The earlier fixed upper-screen crest impulse is superseded by source-path progress; an
 upward/outward sling-apron steering correction prevents some backward
 flipper shots. These are F-002/F-008 playability adaptations, not
-imported ramp/TOneway rules. The default TABLE3D image's offline
+complete original ramp/TOneway rules. See the CMP1 revision in FIDELITY.md. The default TABLE3D image's offline
 postprocessor rejects black pits, stray highlights and colored-object
 halos, while leaving source TABLE.TGA and runtime drawing untouched.
 The original 6x5 symmetric default ball and optional /sourceball are
@@ -135,7 +135,7 @@ resource provenance and importer omissions:
   **62** source collision objects are included in the import inventory.
 - **80** source collision objects are excluded from the *generic collision
   import*, including named `a_targ*` targets, `a_roll*` rollovers,
-  `s_onewy*` one-way components, `v_gate*` gates, `v_sink*` sinks,
+  `v_gate*` gates, `v_sink*` sinks (the `s_onewy*` line pairs are now imported separately),
   `s_trip*` triggers, `ramp_hole`, flags, and kickout objects.
 
 This inventory is **not** a count of completely missing rendered objects.

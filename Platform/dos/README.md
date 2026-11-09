@@ -705,3 +705,24 @@ steps), checking rail boundaries and solid bumper/sling contacts after each
 step. Normal drains, weak-shot returns and both kickbacks remain tested.
 This improves guards for the current 2D model; omitted source ramps, layers
 and state-dependent gates remain incomplete. Hardware timing is unverified.
+
+### CMP1 source components (2026-11-08)
+
+Regenerate TABLE.DAT and IMPORT.json with `convert.py` and the original
+Windows PINBALL.DAT. The SCP2 prefix/sprites stay byte-identical; a CMP1
+extension adds two triangle-derived ramp paths and 18 directional lines.
+Use the matching CADET.EXE and TABLE.DAT from one tested CADET.zip. Legacy
+packs without the extension load without these components; old executables
+reject new packs. All Tandy/VGA artwork remains unchanged.
+
+CMP1 encoding is little-endian signed 16-bit words: signature, ramp count,
+directional-line count; each ramp has group/count/total-Q6-length/assist,
+then count records of x/y/ex/ey (Q6), tangent x/y (Q8), length/start (Q6).
+Each directional record has group/mask/solid, x/y/ex/ey (Q6), normal x/y
+(Q8), length (Q6). Bounds are derived once at load; no floats or allocations
+are added to physics. Counts are bounded by game.h; truncated, unknown and
+trailing extension data fail startup.
+
+This is partial source fidelity, not full TRamp forces/height or TGate
+rules. See F-001/F-002 and VALIDATION.md, including shooter/elevated-mask
+exemptions and pending physical hardware acceptance.

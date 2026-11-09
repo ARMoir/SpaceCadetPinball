@@ -28,7 +28,7 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | Plunger charging or weak return | [`plunger.inc`](plunger.inc), [`state.inc`](state.inc) | `TPlunger.cpp` (F-003) |
 | Bumper hitboxes and scoring | [`bumper.inc`](bumper.inc), [`table.c`](table.c) | `TBumper.cpp`, `control.cpp` (F-004) |
 | Slingshot or outer-rail trapping | [`slingshot.inc`](slingshot.inc), [`rail_collision.inc`](rail_collision.inc), [`table.c`](table.c) | `TEdgeManager.cpp`, `TEdgeSegment.cpp`, `TOneway.cpp`; directional lower-apron entry guard, passive backside and excluded interior detail (F-002) |
-| Kickback catch, gate and rendering | [`kickback.inc`](kickback.inc), [`control.inc`](control.inc), [`table.c`](table.c), [`lamps.inc`](lamps.inc) | `TKickback.cpp`, `TGate.cpp`, `control.cpp::RightKickerControl`; source gate reclose (F-001) |
+| Kickback catch, gate and rendering | [`kickback.inc`](kickback.inc), [`control.inc`](control.inc), [`table.c`](table.c), [`lamps.inc`](lamps.inc) | `TKickback.cpp`, `TGate.cpp`, `control.cpp::RightKickerControl`; source-inspired proxy gate reclose (F-001) |
 | Nudge and tilt | [`nudge.inc`](nudge.inc), [`control.inc`](control.inc) | `nudge.cpp`, `pb.cpp` (F-005) |
 | Stuck-ball rescue | [`unstuck.inc`](unstuck.inc), [`slingshot.inc`](slingshot.inc), [`control.inc`](control.inc) | `control.cpp::UnstuckBall`; position watchdog plus DOS-only alternate sling contact sequence (F-002/F-008) |
 | Offline Tandy 3D metal/bumper shading | [`enhance_table.py`](enhance_table.py), [`test_enhance_table.py`](test_enhance_table.py) | Source `PINBALL.DAT` table bitmap via [`convert.py`](convert.py); multiple original-neutral metallic lighting passes, followed by artifact/pinhole/sparkle cleanup; no runtime paint or geometry changes (F-007) |
@@ -49,8 +49,8 @@ specific aspects in the MATCHES column are more limited than whole functions.
 | [`ball_collision.inc`](ball_collision.inc) | [`TBall.cpp`](../../SpaceCadetPinball/TBall.cpp); [`TEdgeSegment.cpp`](../../SpaceCadetPinball/TEdgeSegment.cpp); [`maths.cpp`](../../SpaceCadetPinball/maths.cpp) | contact normal, response impulse and correction | Q6/Q8 capsules, bounded flipper ball-path sweep and sampled impulses (F-002, F-006) |
 | [`bumper.inc`](bumper.inc) | [`TBumper.cpp`](../../SpaceCadetPinball/TBumper.cpp); [`control.cpp`](../../SpaceCadetPinball/control.cpp) | radial contact and score events | single layer, fixed score, shared delay, one extra cap recheck after overlap (F-004) |
 | [`slingshot.inc`](slingshot.inc) | [`TEdgeSegment.cpp`](../../SpaceCadetPinball/TEdgeSegment.cpp); [`TEdgeManager.cpp`](../../SpaceCadetPinball/TEdgeManager.cpp); [`control.cpp`](../../SpaceCadetPinball/control.cpp)::UnstuckBall | source-derived outlines and outward response | solid triangle keeps the interior out; outer/back surfaces slide instead of injecting a sling bounce, duplicate inner art excluded (F-002); third alternating front-face hit triggers near-vertical anti-loop exit (F-008) |
-| [`rail_collision.inc`](rail_collision.inc) | [`TEdgeManager.cpp`](../../SpaceCadetPinball/TEdgeManager.cpp); [`TOneway.cpp`](../../SpaceCadetPinball/TOneway.cpp); [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp); [`TRamp.cpp`](../../SpaceCadetPinball/TRamp.cpp) | source rail positions and one-way intent | DOS-only exterior rail and chute guards, bounded upper ramp-crest velocity assist, directional lower-sling apron backflow deflector (F-002) |
-| [`kickback.inc`](kickback.inc), [`control.inc`](control.inc), [`table.c`](table.c) | [`TKickback.cpp`](../../SpaceCadetPinball/TKickback.cpp); [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp); [`control.cpp`](../../SpaceCadetPinball/control.cpp) | source strike center, delayed fire and source-positioned gate close after use | automatic one-use arming and early 0.12s gate transition; guided return and missing Hazard Target gating (F-001) |
+| [`rail_collision.inc`](rail_collision.inc) | [`TEdgeManager.cpp`](../../SpaceCadetPinball/TEdgeManager.cpp); [`TOneway.cpp`](../../SpaceCadetPinball/TOneway.cpp); [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp); [`TRamp.cpp`](../../SpaceCadetPinball/TRamp.cpp) | source rail positions and one-way intent | DOS-only exterior rail and chute guards, source-path 90% crest assist and imported directional line crossings, directional lower-sling apron backflow deflector (F-002) |
+| [`kickback.inc`](kickback.inc), [`control.inc`](control.inc), [`table.c`](table.c) | [`TKickback.cpp`](../../SpaceCadetPinball/TKickback.cpp); [`TGate.cpp`](../../SpaceCadetPinball/TGate.cpp); [`control.cpp`](../../SpaceCadetPinball/control.cpp) | source strike center, delayed fire and legacy proxy gate close after use | automatic one-use arming and early 0.12s gate transition; guided return and missing Hazard Target gating (F-001) |
 | [`nudge.inc`](nudge.inc) | [`nudge.cpp`](../../SpaceCadetPinball/nudge.cpp); [`pb.cpp`](../../SpaceCadetPinball/pb.cpp) | additive impulse with delayed inverse | tuned Q6 impulses, heat and thresholds (F-005) |
 | [`unstuck.inc`](unstuck.inc) | [`control.cpp`](../../SpaceCadetPinball/control.cpp)::UnstuckBall; [`TBall.h`](../../SpaceCadetPinball/TBall.h) | upward release, preserve ball count, exclude capture | Q6 progress watchdog, safe local moves (F-008) |
 | [`plunger.inc`](plunger.inc) (inline in `game_step`) | [`TPlunger.cpp`](../../SpaceCadetPinball/TPlunger.cpp) | Hold/charge/release sequence and imported plunger frames | Faster charge and reduced velocity jitter (F-003) |
@@ -148,3 +148,24 @@ signed-plane/segment checks on existing nearby static candidates. It retains
 the approached side and passive reflection; it is not original continuous
 3D/mask collision processing. `control.inc` also rechecks slings/outer rails
 only after a paddle changes ball position. See the F-002 entry and tests.
+
+## CMP1 original component import (2026-11-08)
+
+`component_import.py` is owned by `convert.py`: TRamp.cpp attributes 1300,
+1301/1302 and maths::find_closest_edge produce two ordered midpoint paths;
+TOneway.cpp/TLine.cpp produce projected world-offset line pairs and masks.
+`data/IMPORT.json` retains raw planes, ordered boundaries, group IDs and
+source hash, plus the actual TGate 501/502 lines for comparison.
+`table.c::read_components` validates the optional CMP1 tail and derives
+bounds. `rail_collision.inc::assist_ramp_crest` tracks bounded path progress;
+`collide_oneways` handles finite directional crossings. `state.inc` clears
+traversal on feed and `main.c` reports the saturated counters.
+
+MATCHES: source component identity, triangle adjacency, ordered entry/exit
+matching, one-way line offset/direction and blocked-versus-pass distinction.
+ADAPTED/MISSING: ground-only mask activation outside shooter, 2D restitution,
+path-based forgiveness rather than FieldEffect, no height/control callbacks.
+F-001 correction: the prior four-edge gate index/overlay is a DOS proxy,
+not the actual source TGate geometry. See F-001/F-002 for exact limitations.
+The existing `.inc` order is unchanged. CMP1 adds no runtime file beyond
+TABLE.DAT and old executables reject the extended pack.

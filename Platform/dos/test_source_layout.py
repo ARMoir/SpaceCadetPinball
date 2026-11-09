@@ -47,7 +47,7 @@ class SourceLayoutTests(unittest.TestCase):
         self.assertIn("for(i=0;i<2;i++)", (DOS/"flipper.inc").read_text())
         self.assertIn("g->charge<PLUNGER_MAX_CHARGE", (DOS/"plunger.inc").read_text())
 
-    def test_ramp_and_backflow_hooks_stay_constant_time(self):
+    def test_component_and_backflow_hooks_stay_bounded(self):
         rail=(DOS/"rail_collision.inc").read_text()
         ctrl=(DOS/"control.inc").read_text()
         sling=(DOS/"slingshot.inc").read_text()
@@ -55,8 +55,9 @@ class SourceLayoutTests(unittest.TestCase):
         self.assertIn("g->vx=(short)(side?-18:18);",sling)
         self.assertIn("g->vy=-96;",sling)
         self.assertIn("static void assist_ramp_crest(",rail)
+        self.assertIn("collide_oneways(g,t,flight_x,flight_y);",ctrl)
         self.assertIn("static void guard_sling_backflow(",rail)
-        self.assertIn("assist_ramp_crest(g,t,flight_y);",ctrl)
+        self.assertIn("assist_ramp_crest(g,t);",ctrl)
         self.assertIn("guard_sling_backflow(g,t,old_y,1);",ctrl)
         self.assertIn("g->kick_delay || g->kick_flight",rail)
         self.assertNotIn("fopen(",rail)

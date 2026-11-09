@@ -107,7 +107,8 @@ static void index_slings(Table *t)
     }
 }
 
-/* F-001: map original v_gate1 / v_gate2 outlines, not guessed positions.
+/* F-001: legacy four-edge kicker proxies, NOT original v_gate1/v_gate2.
+ * Raw PINBALL.DAT audit: actual TGate objects are single lines (501/502).
  * The real SCP2 contains narrow CLOSED four-line groups immediately
  * inward of the two outlane strike centers. On the reference table the
  * left gate sits at x57..61/y119..132, and right at x162..167/y119..138.
@@ -273,6 +274,59 @@ int table_index(Table *t)
     return 1;
 }
 
+/* CMP1 is optional for legacy/demo SCP2 packs; unknown/truncated data fails. */
+static int read_components(FILE *f,Table *t)
+{
+    char magic[4];
+    short v[10];
+    int i,j,k,c=fgetc(f);
+    t->ramp_count=t->directional_count=0;
+    if(c==EOF) return 1;
+    magic[0]=(char)c;
+    if(fread(magic+1,1,3,f)!=3 || memcmp(magic,"CMP1",4)) return 0;
+    if(!read_short(f,&t->ramp_count) || t->ramp_count<0 ||
+       t->ramp_count>MAX_RAMPS || !read_short(f,&t->directional_count) ||
+       t->directional_count<0 || t->directional_count>MAX_DIRECTIONAL_LINES) return 0;
+    for(i=0;i<t->ramp_count;i++) {
+        RampPath *r=&t->ramps[i];
+        for(j=0;j<4;j++) if(!read_short(f,&v[j])) return 0;
+        r->group=v[0]; r->count=v[1]; r->length=v[2]; r->assist=v[3];
+        if(r->count<1 || r->count>MAX_RAMP_SEGMENTS ||
+           r->length<1 || r->length>16000 || r->assist<0 || r->assist>1) return 0;
+        r->left=r->top=32767; r->right=r->bottom=0;
+        for(j=0;j<r->count;j++) {
+            RampSegment *e=&r->segments[j];
+            for(k=0;k<8;k++) if(!read_short(f,&v[k])) return 0;
+            memcpy(e,v,16);
+            for(k=0;k<4;k++) if(v[k]<0 || v[k]>(k%2?199:239)*FP) return 0;
+            if(abs(e->tx)>256 || abs(e->ty)>256 || e->length<1 ||
+               e->length>16000 || e->start<0 ||
+               (long)e->start+e->length>r->length) return 0;
+            if(j==0 && e->start!=0) return 0;
+            if(j && (e->start!=r->segments[j-1].start+r->segments[j-1].length ||
+                     e->x!=r->segments[j-1].ex || e->y!=r->segments[j-1].ey)) return 0;
+            r->left=minimum(r->left,minimum(e->x,e->ex)-3*FP);
+            r->right=maximum(r->right,maximum(e->x,e->ex)+3*FP);
+            r->top=minimum(r->top,minimum(e->y,e->ey)-3*FP);
+            r->bottom=maximum(r->bottom,maximum(e->y,e->ey)+3*FP);
+        }
+        if(r->segments[r->count-1].start+r->segments[r->count-1].length!=r->length) return 0;
+    }
+    for(i=0;i<t->directional_count;i++) {
+        DirectionalLine *e=&t->directional[i];
+        for(j=0;j<10;j++) if(!read_short(f,&v[j])) return 0;
+        memcpy(e,v,20);
+        if(e->mask<1 || e->solid<0 || e->solid>1 ||
+           abs(e->nx)>256 || abs(e->ny)>256 || e->length<1 || e->length>16000) return 0;
+        for(j=3;j<7;j++) if(v[j]<0 || v[j]>((j-3)%2?199:239)*FP) return 0;
+        e->left=minimum(e->x,e->ex)-3*FP;
+        e->right=maximum(e->x,e->ex)+3*FP;
+        e->top=minimum(e->y,e->ey)-3*FP;
+        e->bottom=maximum(e->y,e->ey)+3*FP;
+    }
+    return fgetc(f)==EOF;
+}
+
 int table_load(Table *t,const char *path)
 {
     FILE *f=fopen(path,"rb");
@@ -309,7 +363,7 @@ int table_load(Table *t,const char *path)
         for(j=0;j<s->w*s->h;j++)
             if(s->pixels[j]>15 && s->pixels[j]!=255) goto done;
     }
-    if(fgetc(f)!=EOF) goto done;
+    if(!read_components(f,t)) goto done;
     ok=table_index(t);
 done:
     fclose(f);

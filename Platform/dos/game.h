@@ -2,10 +2,13 @@
 #define DOS_GAME_H
 /* C89, 16-bit int / 32-bit long. No floating point or DOS extender. */
 #define MAX_EDGES 640
+#define MAX_RAMPS 2
+#define MAX_RAMP_SEGMENTS 24
+#define MAX_DIRECTIONAL_LINES 24
 #define MAX_BUMPERS 8
 #define MAX_SLINGS 2 /* closed source-projected triangular sling outlines */
 #define BANDS 25
-#define BAND_EDGES 256
+#define BAND_EDGES 192 /* source maximum <=192, loader rejects overflow */
 #define FP 64
 /* F-006: five-pixel active flipper tip forgiveness. The original 2D
  * projection leaves a larger center gap than a fast, 3D rotating paddle
@@ -34,6 +37,16 @@
 #define MOUSE_GAME_KEYS(buttons) \
     (MOUSE_FLIPPER_KEYS(buttons) | (((buttons)&4U)?KEY_LAUNCH:0U))
 typedef struct { short x,y,ex,ey,tx,ty,length,score,boost; } Edge;
+/* CMP1 extension: all positions/lengths Q6; direction/normal Q8. */
+typedef struct { short x,y,ex,ey,tx,ty,length,start; } RampSegment;
+typedef struct {
+    short group,count,length,assist,left,right,top,bottom;
+    RampSegment segments[MAX_RAMP_SEGMENTS];
+} RampPath;
+typedef struct {
+    short group,mask,solid,x,y,ex,ey,nx,ny,length;
+    short left,right,top,bottom;
+} DirectionalLine;
 typedef struct { short x,y,w,h; unsigned char pixels[1024]; } Sprite;
 /* Runtime-only collision AABBs, not part of SCP2 on-disk format. */
 typedef struct { short left,right,top,bottom; } EdgeBounds;
@@ -48,6 +61,9 @@ typedef struct {
     short x[3],y[3],nx[3],ny[3];
 } Sling;
 typedef struct {
+    short ramp_count,directional_count;
+    RampPath ramps[MAX_RAMPS];
+    DirectionalLine directional[MAX_DIRECTIONAL_LINES];
     short count,launch_x,launch_y,drain_y,flipper[12];
     short kickback[4]; /* Source-projected left/right strike centers. */
     Edge edges[MAX_EDGES];
@@ -55,7 +71,7 @@ typedef struct {
     Bumper bumpers[MAX_BUMPERS];
     Sling slings[MAX_SLINGS];
     short sling_count;
-    /* F-001/F-002: source four-edge narrow v_gate1 / v_gate2
+    /* F-001/F-002: legacy four-edge narrow kicker proxy
      * barriers between the sling backs and kicker outlanes. Indexed
      * normally but active only after a kickback has been consumed. */
     short gate_first[2],gate_left[2],gate_right[2];
@@ -88,6 +104,10 @@ typedef struct {
      * Updated only on genuine approach-side hull reflections. */
     unsigned char sling_chain_side,sling_chain_hits,sling_chain_time;
     unsigned short sling_loop_breaks; /* Count deliberate loop escapes. */
+    unsigned short oneway_blocks,oneway_passes,ramp_entries;
+    unsigned char ramp_active,ramp_used;
+    unsigned short ramp_ticks;
+    short ramp_progress;
     unsigned short ramp_crest_assists,sling_backflow_redirects; /* F-002 */
     /* F-008: tiny fixed-point watchdog; no per-frame allocations. */
     short stuck_x,stuck_y,stuck_minx,stuck_maxx,stuck_miny,stuck_maxy;

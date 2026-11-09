@@ -1,8 +1,8 @@
 /* SOURCE MAP: Outer rail/gate constraints
  * ORIGINAL: TEdgeManager.cpp; TOneway.cpp; TGate.cpp
  * STATUS: ADAPTED
- * MATCHES: source rail positions and one-way intent
- * DIVERGES: DOS-only rail guards, ramp crest assist, sling one-way apron and upper chute
+ * MATCHES: source rail positions, imported TOneway directions and ramp paths
+ * DIVERGES: ground-only lines, DOS crest policy, rail/apron/chute guards
  * EXCEPTIONS: F-002
  * See SOURCE_MAP.md and FIDELITY.md.
  * One implementation fragment included by its owning C translation unit.
@@ -77,34 +77,103 @@ static void contain_outer_left(Game *g,const Table *t)
     g->left_rail_saves++;
 }
 
-/* F-002: original TRamp::FieldEffect provides speed/plane forces which
- * SCP2's flattened projection cannot reproduce. At the last ~10-15%
- * of the upper left/right ramp, a true upward crest crossing gets one
- * mild velocity floor. No repositioning or repeated boost; a strongly
- * moving ball keeps its existing speed. Use source ramp contour bounds,
- * and enable only on the original indexed source table shape. */
-static void assist_ramp_crest(Game *g,const Table *t,short old_y)
+/* F-002: TRamp 1300 triangles -> shared-edge midpoint path, 1301/1302
+ * endpoints. This is a bounded forgiveness policy, NOT FieldEffect parity.
+ * Require entry in first quarter, forward progress across 90%, rising path,
+ * and at most 220 ticks in a 3px corridor. No position or score changes. */
+static void assist_ramp_crest(Game *g,const Table *t)
 {
-    int px=g->x/FP,target_vy,target_vx;
-    if(t->sling_count!=2 || t->outer_left_rail<0 ||
-       t->outer_right_rail<0 || g->waiting || g->over ||
-       g->in_shooter || g->kick_delay || g->kick_flight ||
-       g->vy>=0 || g->vx>=-12) return;
-    if(old_y<38*FP || g->y>=38*FP) return;
-    if(px>=139 && px<=166) {
-        target_vy=-96; target_vx=-40; /* right ramp (x133..166) */
-    } else if(px>=62 && px<=83) {
-        target_vy=-88; target_vx=-28; /* left ramp (x62..82) */
-    } else return;
-    if(g->vy>target_vy || g->vx>target_vx) {
-        if(g->vy>target_vy) g->vy=(short)target_vy;
-        if(g->vx>target_vx) g->vx=(short)target_vx;
-        g->ramp_crest_assists++;
+    int i,j,found=-1,best=3*FP+1,forward=0;
+    short progress=0,tx=0,ty=0;
+    if(g->waiting || g->over || g->tilted || g->in_shooter ||
+       g->kick_delay || g->kick_flight) {
+        g->ramp_active=g->ramp_used=0; g->ramp_ticks=0; return;
+    }
+    for(i=0;i<t->ramp_count;i++) {
+        const RampPath *r=&t->ramps[i];
+        if(g->x<r->left || g->x>r->right || g->y<r->top || g->y>r->bottom) continue;
+        for(j=0;j<r->count;j++) {
+            const RampSegment *e=&r->segments[j];
+            long dx=(long)g->x-e->x,dy=(long)g->y-e->y;
+            long along=(dx*e->tx+dy*e->ty)/256;
+            int distance;
+            if(along<0 || along>e->length) continue;
+            distance=(int)labs((dx*e->ty-dy*e->tx)/256);
+            if(distance>=best) continue;
+            best=distance; found=i; progress=(short)(e->start+along);
+            tx=e->tx; ty=e->ty;
+            forward=(int)(((long)g->vx*tx+(long)g->vy*ty)/256);
+        }
+    }
+    if(found<0) {
+        g->ramp_active=g->ramp_used=0; g->ramp_ticks=0; return;
+    }
+    if(g->ramp_active!=found+1) {
+        g->ramp_active=g->ramp_used=0; g->ramp_ticks=0;
+        if(progress>t->ramps[found].length/4 || forward<=0) return;
+        g->ramp_active=(unsigned char)(found+1);
+        if(g->ramp_entries<65535U) g->ramp_entries++;
+        g->ramp_progress=progress;
+    }
+    if(++g->ramp_ticks>220) { g->ramp_used=1; return; }
+    if(!g->ramp_used && t->ramps[found].assist && forward>0 &&
+       (long)progress*10>=t->ramps[found].length*9L &&
+       (long)g->ramp_progress*10<t->ramps[found].length*9L) {
+        int boost=minimum(64,96-forward);
+        g->ramp_used=1;
+        if(boost>0) {
+            g->vx+=(short)((long)boost*tx/256);
+            g->vy+=(short)((long)boost*ty/256);
+            if(g->ramp_crest_assists<65535U) g->ramp_crest_assists++;
+        }
+    }
+    g->ramp_progress=progress;
+}
+
+/* TOneway::Collision: front line reflects, reverse line passes. Both are
+ * offset in WORLD space before projection, including the source 0.8 factor.
+ * Source ground mask only: elevated group is retained but not made solid
+ * in the flattened playfield. Tilt suppresses pass events, never solidity.
+ * F-002: passive DOS restitution and no original control/scoring dispatch. */
+static void collide_oneways(Game *g,const Table *t,short old_x,short old_y)
+{
+    int i;
+    /* F-003: preserve weak-shot returns in the still-flattened shooter. */
+    if(g->in_shooter) return;
+    for(i=0;i<t->directional_count;i++) {
+        const DirectionalLine *e=&t->directional[i];
+        long before,after,den,cx,cy,along,length2,dot;
+        if(!(e->mask&1) || g->x<e->left || g->x>e->right ||
+           g->y<e->top || g->y>e->bottom) continue;
+        before=((long)old_x-e->x)*e->nx+((long)old_y-e->y)*e->ny;
+        after=((long)g->x-e->x)*e->nx+((long)g->y-e->y)*e->ny;
+        if(before<0 || after>=0) continue;
+        den=before-after;
+        /* Divide before multiplication: Q8 fraction keeps products 32-bit. */
+        dot=before*256/den;
+        cx=old_x+((long)g->x-old_x)*dot/256;
+        cy=old_y+((long)g->y-old_y)*dot/256;
+        along=(cx-e->x)*(e->ex-e->x)+(cy-e->y)*(e->ey-e->y);
+        length2=(long)(e->ex-e->x)*(e->ex-e->x)+(long)(e->ey-e->y)*(e->ey-e->y);
+        if(along<0 || along>length2) continue;
+        if(!e->solid) {
+            if(!g->tilted && g->oneway_passes<65535U) g->oneway_passes++;
+            continue;
+        }
+        dot=((long)g->vx*e->nx+(long)g->vy*e->ny)/256;
+        if(dot<0) {
+            g->vx-=(short)(dot*7/4*e->nx/256);
+            g->vy-=(short)(dot*7/4*e->ny/256);
+        }
+        /* 1/4 pixel on approached side, no infinite endpoint barrier. */
+        g->x=(short)(cx+e->nx/16); g->y=(short)(cy+e->ny/16);
+        if(g->oneway_blocks<65535U) g->oneway_blocks++;
+        break; /* Other lines must not reuse a ray changed by this contact. */
     }
 }
 
 /* F-002: one-way deflector at the two source-derived sling aprons.
- * Original TOneway relies on missing 3D collision-group metadata.
+ * DOS-only apron safeguard, distinct from imported TOneway components.
  * Stop flipper shots climbing OUTWARD into the backside return tubes;
  * descending balls, inward shots, the shooter and valid kickbacks
  * pass unchanged. The horizontal velocity is steered toward the open
