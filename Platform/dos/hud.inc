@@ -30,12 +30,12 @@ static const char *hud_event_text(int event)
  * The 80px Tandy sidebar requires four-pixel character advance, so
  * preserve the 15-bit bitmaps and avoid wider/slower font rendering.
  * Readability fix: R gets a distinct curved bowl and right-foot diagonal;
- * P has an open lower half; N has a diagonal distinct from M.
+ * P has an open lower half; N retains two unbroken stems with a legible diagonal distinct from M.
  * Original FONT.DAT applies to the separate numeric score display only. */
 static const unsigned short font[]={
     31599,11415,29671,29647,23497,31183,31215,29257,31727,31695,
     11245,27566,31015,27502,31207,31204,31087,23533,29847,4719,
-    23469,18727,24557,24029,31599,27556,31609,27565,31183,29842,
+    23469,18727,24557,24045,31599,27556,31609,27565,31183,29842,
     23407,23402,23421,23213,23186,29351
 };
 

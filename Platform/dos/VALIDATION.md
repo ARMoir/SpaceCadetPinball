@@ -10,6 +10,14 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 
 ## Completed
 
+**2026-11-09 font test addition:** Verify the exact five rows of the 3x5 N
+glyph and both continuous vertical strokes. Other glyphs, score digits
+and the fixed four-pixel character advance must remain unchanged.
+Check the word NEW on the real Tandy CRT; emulator tests do not prove
+physical readability.
+
+
+
 **2026-11-09 ramp and impact follow-up:** The supplied Windows
 PINBALL.DAT was checked against the imported TABLE.DAT and source C++.
 Source group105 `s_ramp9` is a two-plane flat upper route

@@ -53,6 +53,10 @@ Tandy-only PSG output. Both emulated backends have produced identical
 final frames and scored gameplay, but real VGA hardware compatibility
 and frame timing remain unverified.
 
+**2026-11-09 3x5 menu font follow-up:** Corrected the N bitmap to use
+continuous stems and a readable center stroke. The score digit art
+and layout remain unchanged. CRT review remains pending.
+
 ## Partially implemented, approximated, or not faithful to source
 
 | Area | What is present | What is still **not** implemented | Fidelity audit |

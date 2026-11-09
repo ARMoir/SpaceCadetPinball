@@ -766,6 +766,15 @@ before considering larger artificial variance.
 
 ### F-007 Rendering, audio and frame rate
 
+**2026-11-09 compact-font correction:** The 3x5 HUD/menu N bitmap
+had a disconnected lower left stroke, making the letter difficult to
+read at native Tandy resolution. The bitmap now retains continuous
+left/right stems and a central diagonal with the same 3x5 dimensions,
+four-pixel advance, palette and render cost. test_menu_font.py checks
+the exact five rows and stem continuity; the original score-digit
+sprites and other alphabet glyphs are unchanged. Physical CRT
+legibility is still UNVERIFIED.
+
 **2026-11-09 score/ball digit orientation:** owner CRT photos showed ball 3
 as an E and malformed scores. Decoding all ten score_font.h glyphs showed
 180-degree orientation error: 3's stems were on the left and 7's horizontal

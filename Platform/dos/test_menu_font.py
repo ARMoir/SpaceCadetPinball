@@ -40,10 +40,14 @@ class HelpTextTests(unittest.TestCase):
                          ("##.", "#.#", "##.", "#.#", "#.#"))
         self.assertEqual(glyph("P"),
                          ("##.", "#.#", "##.", "#..", "#.."))
-        # N must have a recognizable diagonal instead of being a clone
-        # of the M bitmap in the previous 3x5 font.
+        # A readable N needs continuous left/right vertical strokes.
+        # A broken lower-left stem made the former diagonal ambiguous.
         self.assertEqual(glyph("N"),
-                         ("#.#", "##.", "###", ".##", "#.#"))
+                         ("#.#", "##.", "###", "#.#", "#.#"))
+        rows=glyph("N")
+        self.assertTrue(all(row[0]=="#" and row[2]=="#"
+                            for row in rows))
+        self.assertNotEqual(rows[1],glyph("M")[1])
         self.assertEqual(glyph("M"),
                          ("#.#", "###", "###", "#.#", "#.#"))
         self.assertNotEqual(glyph("R"), glyph("P"))
