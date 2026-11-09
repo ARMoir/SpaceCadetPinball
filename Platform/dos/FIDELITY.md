@@ -218,6 +218,41 @@ silently treat legacy exceptions as precedent for new ones.
 
 ### F-002 Collision layer and one-way projection
 
+- **2026-11-08 upper-ramp / back-lane playability adaptation:** Original
+  `TRamp::FieldEffect` applies a plane-specific force and speed-based
+  damping, while `TOneway::Collision` and `TGate` use directed
+  3D collision groups. The SCP2 DOS projection has neither ramp plane
+  attributes nor complete one-way collision masks. After physical
+  Tandy feedback that shots stall very close to the upper-right ramp
+  crest, `rail_collision.inc` provides a **single, bounded** assist
+  when an already-rising, leftward-traveling ball crosses y=38 Q6
+  within source-contour x139..166 on the right, or x62..83 on the left.
+  The right-hand target is -96 Q6 vertical / -40 Q6 leftward,
+  the left target -88 / -28; a stronger shot is not changed. There is
+  **no vertical reset, teleport, extra per-tick force or scoring**
+  and the source pack remains unmodified. The implementation requires
+  source-identified slings and exterior rail anchors so that arbitrary
+  test/demo geometry cannot activate these absolute screen zones.
+  This is a near-crest playability compromise, **not** actual
+  imported ramp plane physics. Real 7.16 MHz V20 improvement is UNVERIFIED.
+
+  The other reported problem is flipper-powered reentry up the narrow
+  corridors behind the slingshots. An invisible full-width wall would
+  stop valid downward returns and might break real kickback paths.
+  Instead a directional one-way **lower-sling apron deflector** redirects
+  only upward and outward shots near each source hull base (y=bottom+10),
+  or immediately after a genuine flipper contact in that apron.
+  It gives the ball a modest inward horizontal velocity of +/-28 Q6,
+  preserving its upward velocity and exact position. Backside sliding,
+  downward returns, strong inward shots, shooter travel and earned
+  kickback launches remain eligible to pass. No art, score, lives or
+  assets are changed. The gate has no permanent solid hitbox.
+  Two lightweight Game counters support positive/negative original-pack
+  regressions. Long-term source-fidelity remedy is to import TRamp
+  plane forces, TOneway and gate-group metadata with geometry rather
+  than rely on fixed projected zones. Actual real-hardware performance,
+  visual behavior and interactions with every ramp are **UNVERIFIED**.
+
 - **Status / priority:** OPEN, P0; performance impact of fuller import unmeasured.
 - **Original:** `TEdgeSegment.cpp`, `TGate.cpp`, one-way collision components,
   ramp/layer occlusion and source collision group masks.
@@ -878,12 +913,15 @@ this upgrade does not resolve missing 3D collision/occlusion or mission rules.
   is no upper bound on a repeated two-sling cycle. DOS now records only
   actual incoming/reflecting contacts with the two source-derived
   solid sling hulls (F-002), rather than overlapping their collision
-  boxes. Four alternating contacts, with no gap longer than 144 Q6
-  substeps (~2 seconds), trigger one bounded upward-and-inward escape
-  impulse. **2026-11-08 owner feedback:** the initial -144 vertical and
-  +/-48 horizontal Q6 correction was far too energetic. Reduce to
-  -64 vertical and +/-24 inward Q6, approximately one-fifth the
-  previous kinetic energy, while preserving four-hit gating. Physical
+  boxes. **2026-11-08 revision:** only THREE alternating contacts
+  (not four), within 144 Q6 substeps (~2 seconds) of each other,
+  trigger a near-vertical inward escape. The first two hits are
+  undisturbed. The earlier four-hit / -64 vertical / +/-24 inward
+  correction could still feed the repeated loop; the new -96 Q6
+  vertical and +/-18 Q6 horizontal vector carries the ball out of
+  the y=105..165 loop zone before it can traverse back to the
+  opposite sling. This is less energetic than a normal powered
+  flipper shot, not a return to the old excessive -144/-48 vector. Physical
   effectiveness remains **UNVERIFIED**. The immediate return is ordinary physics: the ball is **not**
   teleported or moved through walls, has no score or ball count changes,
   and remains vulnerable to normal drains. The sequence expires after
@@ -902,8 +940,8 @@ this upgrade does not resolve missing 3D collision/occlusion or mission rules.
   `unstick_moves`, `unstick_relaunches` into
   `INPUT.TXT`; `/smoke` writes the same counters to `SMOKE.TXT`.
 - **Tests:** synthetic alternating genuine approach-side reflections
-  (four sides, correct inward/upward vector), three-hit ordinary
-  volleys, same-side recontacts, expired progress, upper-table
+  (third hit on both sides, correct near-vertical vector), two-hit
+  ordinary volleys, same-side recontacts, expired progress, upper-table
   departure, tilt exclusion; plus prior
   synthetic stuck/jitter loops with zero or nonzero velocity;
   110-step detection, 73-step safe moves, eventual free relaunch with

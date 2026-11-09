@@ -80,6 +80,19 @@ its original 24-bit colors. The reference video illustrates the desktop
 game, but DOS remains a simplified 320x200 port; exact desktop visual
 parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 
+## November 8 gameplay tuning: ramps, slingshot loops and rear-lane shots
+
+A nearly completed climb on the source-projected upper-right or upper-left
+ramp now receives a small **one-shot** uphill velocity correction. The
+slingshot anti-loop guard triggers at the **third** alternating real front
+contact, launching mostly upward rather than toward the opposite sling.
+A directional lower-sling entry deflector redirects outward flipper shots
+away from the rear tube while leaving downward return balls, the normal
+shooter lane and genuine kicker flights unchanged. No global invisible
+walls, teleporting, extra score or new runtime assets are involved.
+See [F-002 and F-008](FIDELITY.md) for the source-deviation details.
+Actual 7.16 MHz V20 behavior remains to be tested.
+
 ## Source-style sidebar and original score numerals (F-007)
 
 During gameplay, score changes now update only the small score-digit inset, and
