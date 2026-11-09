@@ -550,6 +550,21 @@ contacts, measured against real Tandy responsiveness.
 
 ### F-007 Rendering, audio and frame rate
 
+- **2026-11-08 tiny-letter legibility (owner-observed R ambiguity):**
+  The 3x5 uppercase UI glyph for `R` had a heavy three-pixel top
+  bar and a left-only final stroke, making it resemble `P`. The
+  bitmaps now give `R` the conventional open-right upper bowl and
+  two diagonally separated lower feet (##./#.#/##./#.#/#.#);
+  `P` uses a matching upper bowl and a clearly straight left stem.
+  The original `N` bitmap was identical to `M`, so `N` now
+  includes a three-row stair-step diagonal. No spacing, font data
+  size (36 two-byte glyphs), source numeric FONT.DAT glyphs, 80px
+  layout, event timing, VRAM renderer or partial HUD redrawing
+  changes. Python tests assert the actual 15-bit glyphs, uniqueness
+  of all 26 letters and unchanged four-pixel advance. DOSBox-X
+  parity/build and physical CRT legibility remain to be checked;
+  visible improvement on the real Tandy is **UNVERIFIED**.
+
 - **2026-11-08 score-only HUD redraw (physical V20 lag report):**
   A gameplay score event previously set the same `ui_dirty` flag as a
   menu transition, causing `draw_panel` to erase and reconstruct the

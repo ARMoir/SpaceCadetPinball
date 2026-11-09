@@ -33,6 +33,40 @@ class HelpTextTests(unittest.TestCase):
         self.assertEqual(glyph("H"), ("#.#", "#.#", "###", "#.#", "#.#"))
         self.assertNotEqual(glyph("A"), glyph("H"))
 
+    def test_readable_R_and_distinct_P_M_N_at_three_by_five(self):
+        # R must have a closed upper bowl and TWO feet, rather than
+        # looking like the old 'P' with one descending stroke.
+        self.assertEqual(glyph("R"),
+                         ("##.", "#.#", "##.", "#.#", "#.#"))
+        self.assertEqual(glyph("P"),
+                         ("##.", "#.#", "##.", "#..", "#.."))
+        # N must have a recognizable diagonal instead of being a clone
+        # of the M bitmap in the previous 3x5 font.
+        self.assertEqual(glyph("N"),
+                         ("#.#", "##.", "###", ".##", "#.#"))
+        self.assertEqual(glyph("M"),
+                         ("#.#", "###", "###", "#.#", "#.#"))
+        self.assertNotEqual(glyph("R"), glyph("P"))
+        self.assertNotEqual(glyph("R"), glyph("B"))
+        self.assertNotEqual(glyph("N"), glyph("M"))
+        alphabet=[glyph(chr(c)) for c in range(ord("A"),ord("Z")+1)]
+        self.assertEqual(len(set(alphabet)),26)
+
+    def test_font_stays_tiny_and_renderer_keeps_sidebar_spacing(self):
+        match=re.search(
+            r"static const unsigned short font\[\]\s*=\s*\{([^}]+)\};",
+            HUD, flags=re.S)
+        self.assertIsNotNone(match)
+        values=[int(n) for n in re.findall(r"\d+",match.group(1))]
+        self.assertEqual(len(values),36)
+        self.assertTrue(all(0 <= value < (1<<15) for value in values))
+        self.assertIn("bits&(1U<<(14-j*3-i))",HUD)
+        self.assertIn("x+=4; s++;",HUD)
+        self.assertIn("for(j=0;j<5;j++) for(i=0;i<3;i++)",HUD)
+        # The source-style score digits remain their separate 5x8 font.
+        self.assertIn("score_digits[digit][i>>2]",HUD)
+        self.assertIn("restore(266,93,50,10)",HUD)
+
     def test_mouse_help_and_driver_latching_are_available(self):
         self.assertIn('"Z OR LEFT CLICK"', HUD)
         self.assertIn('"/ OR RIGHT CLICK"', HUD)
