@@ -121,7 +121,11 @@ int main(int argc,char **argv)
      * all high-score I/O so deterministic emulator tests never write it. */
     scores_reset();
     if(!smoke) scores_load("SCORES.DAT");
-    if(!smoke) game.plunger_rng^=ticks(); /* Reproducible smoke, varied interactive play. */
+    if(!smoke) {
+        unsigned short seed=(unsigned short)ticks();
+        game.plunger_rng^=seed;
+        game.physics_rng^=(unsigned short)(seed+0x9e37U);
+    } /* Reproducible smoke, varied interactive impacts. */
     memset(&r,0,sizeof(r)); r.h.ah=15; int86(0x10,&r,&r); old_mode=r.h.al;
     mode((unsigned char)(vga_mode?0x13:9));
     if(vga_mode) set_vga_palette();
@@ -245,6 +249,7 @@ int main(int argc,char **argv)
             lamps_reset(&game);
             prev_nudges=prev_slings[0]=prev_slings[1]=0;
             game.plunger_rng^=ticks();
+            game.physics_rng^=(unsigned short)(ticks()+0x9e37U);
             paused=0; view=0; ui_dirty=1;
         }
         old_new=keys[49];
@@ -493,9 +498,9 @@ int main(int argc,char **argv)
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=0\n",
                 enhanced?"3d":"classic");
         fprintf(report,"# spent_gate_blocks=%u\n",game.spent_gate_blocks);
-        fprintf(report,"# oneway_blocks=%u oneway_passes=%u ramp_entries=%u ramp_layer_ticks=%u\n",
+        fprintf(report,"# oneway_blocks=%u oneway_passes=%u ramp_entries=%u ramp_layer_ticks=%u physics_variations=%u\n",
                 game.oneway_blocks,game.oneway_passes,game.ramp_entries,
-                game.ramp_layer_ticks);
+                game.ramp_layer_ticks,game.physics_variations);
         fprintf(report,"# vga_colors=%d wall_crossings=%u\n",vga_colors,game.wall_crossings);
         fclose(report);
     }

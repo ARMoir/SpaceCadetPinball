@@ -55,6 +55,8 @@ class SourceLayoutTests(unittest.TestCase):
         self.assertIn("g->vx=(short)(side?-18:18);",sling)
         self.assertIn("g->vy=-96;",sling)
         self.assertIn("static void assist_ramp_crest(",rail)
+        self.assertIn("vary_powered_contact(",(DOS/"ball_collision.inc").read_text())
+        self.assertIn("physics_variations",(DOS/"main.c").read_text())
         self.assertIn("static int ramp_above_ground(",rail)
         self.assertIn("g->ramp_layer_ticks",ctrl)
         self.assertIn("game.ramp_layer_ticks", (DOS/"main.c").read_text())

@@ -89,6 +89,53 @@ static void wall_guard_tests(void)
     fflush(stdout);
 }
 
+/* F-006: verify that impacts vary only when genuinely powered,
+ * remain reproducible under the fixed test seed and respect the
+ * six-step cooldown. Passive walls must never consume RNG state.
+ * The bounded lateral component changes no scoring/lives. */
+static void impact_variation_tests(void)
+{
+    short first_vy,first_vx;
+    unsigned short after_rng;
+    fixture(); t.bumper_count=1;
+    memset(t.bumpers,0,sizeof(t.bumpers));
+    t.bumpers[0].x=110*FP; t.bumpers[0].y=80*FP;
+    t.bumpers[0].radius=5*FP; t.bumpers[0].score=500;
+    t.bumpers[0].boost=35;
+    game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+    g.x=114*FP; g.y=80*FP; g.vx=-100; g.vy=0;
+    game_step(&g,&t,0);
+    assert(g.physics_variations==1 && g.physics_variation_cooldown==6 &&
+           g.hits==1 && g.score==500 && g.vy!=0);
+    first_vx=g.vx; first_vy=g.vy; after_rng=g.physics_rng;
+    /* Repeating the same seed/approach must be bit-exact for tests. */
+    game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+    g.x=114*FP; g.y=80*FP; g.vx=-100; g.vy=0;
+    game_step(&g,&t,0);
+    assert(g.physics_variations==1 && g.vx==first_vx &&
+           g.vy==first_vy && g.physics_rng==after_rng);
+    /* A second real contact inside cooldown does not add randomness
+     * or add an extra scored hit. */
+    g.x=114*FP; g.y=80*FP; g.vx=-100; g.vy=0;
+    game_step(&g,&t,0);
+    assert(g.physics_variations==1 && g.hits==1);
+    /* Different session seeds change the tangential direction. */
+    game_reset(&g,&t); g.physics_rng^=0xffffU;
+    g.waiting=0; g.in_shooter=0;
+    g.x=114*FP; g.y=80*FP; g.vx=-100; g.vy=0;
+    game_step(&g,&t,0);
+    assert(g.physics_variations==1 && g.vy!=first_vy &&
+           g.score==500 && g.balls==3);
+    /* Passive/static contacts leave the RNG and variation count alone. */
+    fixture(); g.waiting=0; g.in_shooter=0; g.steps=1;
+    after_rng=g.physics_rng;
+    g.x=100*FP+FP/2; g.y=60*FP; g.vx=-96; g.vy=0;
+    game_step(&g,&t,0);
+    assert(!g.physics_variations && g.physics_rng==after_rng);
+    puts("STAGE: bounded deterministic impact variation and exclusions");
+    fflush(stdout);
+}
+
 /* F-004: two adjacent imported upper-left bumper caps overlap in the
  * flattened table. Resolving the later cap can push the ball back into
  * the earlier cap. Avoid weakening the 80k-step outside-solids check. */
@@ -393,6 +440,7 @@ static void component_tests(void)
 
 int main(int argc,char **argv)
 {
+    impact_variation_tests();
     int i,weak_vy,full_vy;
     FILE *f;
     spent_gate_tests();

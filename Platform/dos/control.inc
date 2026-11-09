@@ -32,6 +32,7 @@ void game_step(Game *g,const Table *t,unsigned keys)
         return;
     }
     if(g->hit_delay) g->hit_delay--;
+    if(g->physics_variation_cooldown) g->physics_variation_cooldown--;
     if(g->nudge_delay) g->nudge_delay--;
     if(g->shake_frames) g->shake_frames--;
     if(g->nudge_return_ticks && !--g->nudge_return_ticks) {
