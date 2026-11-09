@@ -440,9 +440,9 @@ static void component_tests(void)
 
 int main(int argc,char **argv)
 {
-    impact_variation_tests();
     int i,weak_vy,full_vy;
     FILE *f;
+    impact_variation_tests();
     spent_gate_tests();
     component_loader_tests();
     component_tests();
