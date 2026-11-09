@@ -564,8 +564,8 @@ contacts, measured against real Tandy responsiveness.
   including the one-time splash restore on exit. The original FONT.DAT
   numeric glyphs, title logo, palette, Tandy packed VRAM and VGA
   graphics remain unchanged; no gameplay, file I/O, assets, timers
-  or allocations are modified. The score patch restores 250 pixels
-  (125 packed Tandy VRAM bytes; `restore` operates on 25 bytes per
+  or allocations are modified. The score patch restores 500 pixels
+  (250 packed Tandy VRAM bytes; `restore` operates on 25 bytes per
   row) instead of restoring 11,280 sidebar pixels (5,640 Tandy
   bytes), before the additional saved frame/glyph writes. This is a
   code-path comparison, **not** a measured speedup. Source-layout,
