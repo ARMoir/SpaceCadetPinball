@@ -104,7 +104,7 @@ Windows `PINBALL.DAT` data, not memory, when judging original behavior.
   prove a 7.16 MHz V20 budget.
 - **Use matching data.** When the format or imports change, ship
   `CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`,
-  `VGA.DAT`, and `MENU.DAT` from one tested build together.
+  `TABLESRC.TGA`, `VGA.DAT`, and `MENU.DAT` from one tested build together.
   Optional assets retain explicitly documented fallback behavior. Keep
   the Actions archive named `CADET.zip`.
 
