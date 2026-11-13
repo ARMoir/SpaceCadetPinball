@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from convert import pack_screen
 from enhance_table import (bumper_caps, enhance, generate, unpack_screen,
-                           polish_artifacts)
+                           polish_artifacts, sharpen_metal_from_vga)
 
 HERE = Path(__file__).resolve().parent
 
@@ -70,6 +70,69 @@ class OfflineDepthTests(unittest.TestCase):
         self.assertEqual(out[60][60], 8)
         self.assertEqual(base[60][60], 8)
         self.assertEqual(counts["artifact_islands"], 1)
+
+    def test_source_color_edge_guide_sharpens_only_protected_metal(self):
+        # Synthetic 6-bit DAC edge: center metal is locally brighter.
+        image = [[0]*320 for _ in range(200)]
+        for y in range(40, 51):
+            for x in range(45, 61):
+                image[y][x] = 7
+        out = [row[:] for row in image]
+        # Colored lamps and the immediately adjacent gray border stay safe.
+        image[45][56] = out[45][56] = 13
+        rgb = bytearray(768)
+        for i, level in ((1,18),(2,32),(3,56),(4,12),(5,50)):
+            rgb[i*3:i*3+3] = bytes([level]*3)
+        indices = bytearray([2]*64000)
+        center = 48*320+51
+        indices[center] = 3
+        indices[center-1] = 1
+        groove = 48*320+57
+        indices[groove] = 4
+        indices[groove-1] = 1
+        indices[groove+1] = 5
+        indices[groove-320] = 5
+        indices[groove+320] = 5
+        pack = b"VGA1" + bytes(rgb) + bytes(indices)
+        counters = {}
+        sharpen_metal_from_vga(image,out,pack,counters)
+        self.assertEqual(out[48][51], 15)
+        self.assertEqual(out[48][57], 8)
+        self.assertEqual(out[45][56], 13)
+        self.assertEqual(out[45][55], image[45][55])
+        self.assertEqual(out[10][10], 0)
+        self.assertGreater(counters["sharp_light"], 0)
+        self.assertGreater(counters["sharp_dark"], 0)
+        with self.assertRaises(ValueError):
+            sharpen_metal_from_vga(image,out,pack[:-640],{})
+
+    def test_enhanced_asset_guided_by_original_vga_colors(self):
+        raw=(HERE/"data"/"TABLE.TGA").read_bytes()
+        table=(HERE/"data"/"TABLE.DAT").read_bytes()
+        vga=(HERE/"data"/"VGA.DAT").read_bytes()
+        original=unpack_screen(raw)
+        previous=generate(raw,table)[0]
+        improved,frame,caps,stats=generate(raw,table,vga)
+        self.assertEqual(len(improved),32768)
+        self.assertEqual(bytes(pack_screen(frame)),improved)
+        self.assertEqual(generate(raw,table,vga)[0],improved)
+        self.assertNotEqual(previous,improved)
+        self.assertEqual(len(caps),7)
+        sharpened=sum(stats[k] for k in
+                      ("sharp_light","sharp_dark","sharp_contours"))
+        self.assertGreater(sharpened,0)
+        self.assertLess(sharpened,5000)
+        for y in range(200):
+            for x in range(320):
+                initial=original[y][x]
+                result=frame[y][x]
+                if initial not in (7,8,15) or x>=236 or y>=191:
+                    self.assertEqual(initial,result)
+                elif initial != result:
+                    self.assertIn(result,(7,8,15))
+        self.assertEqual((HERE/"data"/"TABLE.TGA").read_bytes(),raw)
+        self.assertEqual((HERE/"data"/"TABLE.DAT").read_bytes(),table)
+        self.assertEqual((HERE/"data"/"VGA.DAT").read_bytes(),vga)
 
     def test_original_source_art_and_collision_pack_remain_untouched(self):
         raw = (HERE / "data" / "TABLE.TGA").read_bytes()
