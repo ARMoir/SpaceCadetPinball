@@ -41,10 +41,14 @@ def compare_frames(tandy, vga):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("directory",nargs="?",type=Path,default=Path("build/dos"))
+    p.add_argument("--sourceart",action="store_true",
+                   help="Compare source-color-matched TABLESRC.TGA captures")
     args=p.parse_args()
-    count=compare_frames((args.directory/"SCREEN-TANDY.BIN").read_bytes(),
-                         (args.directory/"SCREEN-VGA.BIN").read_bytes())
-    print("PASS Tandy09/VGA13 frame parity: %d pixels identical, 16-color indexed" % count)
+    suffix="-SOURCE" if args.sourceart else ""
+    count=compare_frames((args.directory/("SCREEN-TANDY"+suffix+".BIN")).read_bytes(),
+                         (args.directory/("SCREEN-VGA"+suffix+".BIN")).read_bytes())
+    print("PASS Tandy09/VGA13 %sframe parity: %d pixels identical, 16-color indexed" %
+          ("sourceart " if args.sourceart else "",count))
 
 
 if __name__=="__main__":
