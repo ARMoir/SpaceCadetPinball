@@ -269,10 +269,10 @@ behavior remains to be tested. See [F-001](FIDELITY.md).
    `python Platform/dos/source_art.py --vga build/dos/VGA.DAT --pack build/dos/TABLE.DAT --classic build/dos/TABLE.TGA --output build/dos/TABLESRC.TGA --preview build/dos/PREVIEWSRC.png`.
    GitHub Actions runs both offline operations and packages all three looks.
 5. Copy **`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`, `TABLESRC.TGA`, `VGA.DAT`, and `MENU.DAT`** into
-   the same DOS directory. `CADET` uses the enhanced background by default;
+   the same DOS directory. `CADET` uses `TABLESRC.TGA` by default on Tandy;
    `CADET /classic` loads the original unmodified background.
-   `CADET /3d` requests the enhanced style explicitly; `CADET /sourceart`
-   loads the source-color-matched Tandy rendition. All styles preserve the
+   `CADET /3d` selects the earlier shaded style; `CADET /sourceart`
+   explicitly selects the new default Tandy look. All styles preserve the
    same metallic ball without extra shadow pixels. Missing `TABLESRC.TGA`
    falls back to `TABLE3D.TGA`, then `TABLE.TGA`; a missing default
    `TABLE3D.TGA` falls back to `TABLE.TGA`.
@@ -342,7 +342,8 @@ on pause, menu and exit, with no full-screen redraw.
 | `CADET /vga` | Force **VGA BIOS mode 13h**, 320x200, 256-color-capable (existing **16-color artwork** is preserved), linear A000h framebuffer |
 | `CADET /tandy` | Force the original **Tandy/PCjr BIOS mode 09h**, 320x200, 16 colors, banked B800h framebuffer |
 | `CADET /vga /classic` | Standard VGA with the untouched original artwork |
-| `CADET /tandy /3d` | Tandy graphics with the enhanced static-shaded artwork |
+| `CADET /tandy` | Default source-color-paired `TABLESRC.TGA` art, on explicit or BIOS-selected Tandy |
+| `CADET /tandy /3d` | Previous enhanced static-shaded artwork, still available |
 | `CADET /tandy /sourceart` | Tandy graphics with original VGA1-guided two-color RGBI artwork, baked offline |
 | `CADET /vga /rgbi /sourceart` | The identical 16-color source-art background in VGA mode (without `/rgbi`, source-color VGA art takes precedence) |
 
@@ -701,8 +702,8 @@ Compiler: https://github.com/open-watcom/open-watcom-v2
 The Actions **CADET** artifact downloads as **CADET.zip** with exactly seven
 files at its root: `CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`,
 `TABLESRC.TGA`, `VGA.DAT`, and `MENU.DAT`. The enhanced image preserves
-the default appearance; `/classic` selects the unmodified RGBI baseline
-and `/sourceart` selects the source-guided alternative. Extract all seven
+the default Tandy source-colored appearance; `/classic` selects the unmodified RGBI baseline
+and `/3d` selects the earlier shading. Extract all seven
 together and run CADET from that
 folder. Keep an existing `SCORES.DAT`: scores are created locally and never
 bundled. No emulator, test program, Python, maps or logs are needed to play.
@@ -778,7 +779,7 @@ digits have also been corrected to upright orientation offline.
 
 ### V20 renderer micro-optimizations (2026-11-12)### Source-faithful Tandy image, using WolfensteinCGA color-pair ideas (F-007)
 
-`CADET /tandy /sourceart` loads `TABLESRC.TGA`, a third **optional**
+`CADET /tandy` (or `/sourceart`) loads `TABLESRC.TGA`, a third **optional**
 prepacked 32768-byte table image. Its source is the existing `VGA.DAT`
 built from the original Windows `PINBALL.DAT`. Unlike `/3d`, the new
 generator starts from the higher-color *source projection* itself.
@@ -795,7 +796,7 @@ This is inspired by the palette-pair search in
 not its raycaster or generated code. No Wolfenstein assets or source
 files are copied. **There is still an offline color conversion:** the
 Tandy does not gain extra colors, and a single pixel remains one of its
-16 RGBI colors. `/3d` remains the default, and `/classic` still loads
+16 RGBI colors. `/sourceart` is now the Tandy default, while `/classic` still loads
 the earlier 16-color conversion unchanged. Only the static background
 changes. No additional DOS framebuffer, executable decoder, CPU cycles
 per frame, RAM, sprites, collisions, physics or scoring are introduced.
