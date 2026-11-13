@@ -70,7 +70,9 @@ class HelpTextTests(unittest.TestCase):
         self.assertIn("x+=4; s++;",HUD)
         self.assertIn("for(j=0;j<5;j++) for(i=0;i<3;i++)",HUD)
         # The source-style score digits remain their separate 5x8 font.
-        self.assertIn("score_digits[digit][i>>2]",HUD)
+        self.assertIn("score_digits[digit][source>>2]",HUD)
+        self.assertIn("for(row=0;row<8U;row++)",HUD)
+        self.assertIn("for(col=0;col<5U;col++,source++)",HUD)
         self.assertIn("restore(266,93,50,10)",HUD)
 
     def test_mouse_help_and_driver_latching_are_available(self):
