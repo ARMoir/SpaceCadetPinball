@@ -80,7 +80,35 @@ its original 24-bit colors. The reference video illustrates the desktop
 game, but DOS remains a simplified 320x200 port; exact desktop visual
 parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 
-## November 9 source-ramp clearance and contact feel (F-002/F-006)
+## November 9 source-ramp clearance and contact feel (F-002/F-006)## November 13: source-based ramp traversal audit (F-002)
+
+The Windows source contains two TRamp objects: **group101**, a short
+18-segment rising curve on the left, and **group105**, the long flat
+upper-right elevated path. Cadet now uses both source paths to handle
+ball-radius-aware entry at segment joins and to suppress projected
+ground collisions while the ball is on an actual elevated ramp.
+The long upper-right path also has a consistent 5px fast-search
+boundary; the 3px detector remains on the rising ramp.
+
+The 18-segment ramp previously let the ball fly straight through the
+curve. A **bounded steering correction** follows the source tangent,
+maximum 24 Q6 sideways velocity per physics substep, only when the
+ball is already traversing the rising ramp forward. It does **not**
+teleport the ball, guarantee completion or add a speed boost; the
+existing weak-shot boost still triggers only at 90% progress.
+The flat upper-right path is unsteered and unboosted.
+
+For hardware A/B testing, try two sessions with `CADET /record`, one
+on each ramp. When you exit, `INPUT.TXT` reports separate
+`ramp_short_entries`, `ramp_short_crests`,
+`ramp_right_entries`, `ramp_right_crests`, and
+`ramp_steer_ticks`. A crest count is stronger evidence than simply
+entering a ramp; compare `FLIGHT.TXT` for actual trajectories.
+The original upper-layer walls, true plane damping/gravity and
+full entry/exit mask switching are still not ported, and improvement
+on a physical 7.16MHz V20 remains to be verified.
+
+
 
 The original Windows PINBALL.DAT identifies the upper-right passage as
 source TRamp group 105, a **flat elevated plane**, not the rising ramp
