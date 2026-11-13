@@ -768,7 +768,25 @@ Closed gates collide and render at these actual entrance lines, replacing
 legacy stand-ins. `/record` adds `spent_gate_blocks`. Score and ball/player
 digits have also been corrected to upright orientation offline.
 
-### V20 renderer micro-optimizations (2026-11-12)
+### V20 renderer micro-optimizations (2026-11-12)### Sharper original-color-guided Tandy playfield (F-007)
+
+The default `TABLE3D.TGA` now gains a **build-time** contrast refinement
+guided by the higher-color source pixels in `VGA.DAT`. Only existing
+gray metal (rails, bumpers and playfield hardware) can change, by one
+RGBI gray/white shade per pixel, with deliberate protection for lamps,
+colored labels and the HUD. Small one-pixel gaps in connected white-metal
+rims can be joined. The image is still 320x200, 16 colors, 32768 bytes,
+with no blur, upscale, moving-object changes, collision changes, memory
+increase or runtime CPU cost. This is not a new video mode.
+
+The build command is `python Platform/dos/enhance_table.py --table
+build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --vga-source
+build/dos/VGA.DAT --output build/dos/TABLE3D.TGA`.
+Compare `CADET /tandy /classic` with `CADET /tandy /3d` on the
+actual Tandy. Original classic art and VGA1/source-color VGA artwork are
+not modified. Physical CRT improvement is not yet verified.
+
+
 
 Inspired by the *techniques* in jhhoward/WolfensteinCGA, not by its
 raycaster or copyrighted game content. These optimizations affect only the
