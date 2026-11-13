@@ -12,6 +12,7 @@ class PackageTests(unittest.TestCase):
             source.mkdir()
             for name, data in {"CADET.EXE": b"MZtest", "TABLE.DAT": (Path(__file__).parent/"data/TABLE.DAT").read_bytes(),
                                "TABLE.TGA": bytes(32768), "TABLE3D.TGA": bytes(32768),
+                               "TABLESRC.TGA": bytes(32768),
                                "VGA.DAT": (Path(__file__).parent/"data/VGA.DAT").read_bytes(),
                                "MENU.DAT": b"SCM1" + decode_source(),
                                "SCORES.DAT": b"private", "TEST.EXE": b"test",
@@ -30,7 +31,10 @@ class PackageTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 package(source, Path(tmp)/"invalid_menu")
             self.assertFalse((Path(tmp)/"invalid_menu").exists())
-            (source/"TABLE3D.TGA").unlink()
+            (source/"TABLESRC.TGA").write_bytes(b"truncated")
+            with self.assertRaises(ValueError):
+                package(source, Path(tmp)/"invalid_source_art")
+            (source/"TABLESRC.TGA").unlink()
             with self.assertRaises(FileNotFoundError):
                 package(source, Path(tmp)/"missing")
 
