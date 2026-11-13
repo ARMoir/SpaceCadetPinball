@@ -95,6 +95,8 @@ int main(int argc,char **argv)
     }
     vga_mode=(video_choice==1 ||
               (video_choice<0 && detect_vga()));
+    /* Precompute the fixed video layout before the first sprite/HUD write. */
+    init_video_rows();
     if(!table_load(&table,"TABLE.DAT")) {
         puts("Missing or invalid TABLE.DAT. Run convert.py or make_demo.py first."); return 1;
     }
