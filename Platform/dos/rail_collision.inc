@@ -179,8 +179,15 @@ static int ramp_above_ground(const Game *g,const Table *t)
     const RampSegment *end;
     if(g->waiting || g->over || g->in_shooter ||
        g->kick_delay || g->kick_flight || g->tilted) return 0;
+    /* Both original TRamp 101 (18 rising planes) and TRamp 105
+     * (two flat upper planes) switch CollisionMask to the ramp's
+     * own elevated CollisionGroup on plane contact. The old port only
+     * suppressed ground-wall collisions on 105, so a valid shot on 101
+     * was reflected by a projected ground rail almost immediately.
+     * Do not grant this clearance without legitimate source-path entry. */
     if(g->ramp_active>0 && g->ramp_active<=t->ramp_count &&
-       t->ramps[g->ramp_active-1].group==105) return 1;
+       (t->ramps[g->ramp_active-1].group==101 ||
+        t->ramps[g->ramp_active-1].group==105)) return 1;
     if(!g->ramp_exit_ticks || g->vy>=0) return 0;
     for(i=0;i<t->ramp_count;i++) {
         r=&t->ramps[i];
