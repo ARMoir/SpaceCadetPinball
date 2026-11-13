@@ -767,3 +767,46 @@ legacy SCP2; older executables reject CMP2, so use all files from one release.
 Closed gates collide and render at these actual entrance lines, replacing
 legacy stand-ins. `/record` adds `spent_gate_blocks`. Score and ball/player
 digits have also been corrected to upright orientation offline.
+
+### V20 renderer micro-optimizations (2026-11-12)
+
+Inspired by the *techniques* in jhhoward/WolfensteinCGA, not by its
+raycaster or copyrighted game content. These optimizations affect only the
+native DOS display backend; gameplay, ball geometry, physics, timing,
+score values, source assets and user-visible images are intentionally
+unchanged:
+
+- `video.inc` computes a single 200-entry table of 16-bit scanline offsets
+  once at startup. Both VGA 13h and four-bank Tandy 09h sprite and
+  dirty-rectangle paths use it instead of repeatedly multiplying by the
+  video stride and calculating Tandy bank selection.
+- Tandy sprite compositing now handles two aligned, 4-bit pixels per VRAM
+  byte. Opaque pairs are written in one store without a VRAM read;
+  transparent and partially transparent pairs preserve the other nibble.
+  Odd X coordinates and clipped edges use masked single-nibble writes.
+  The VGA sprite path is unchanged aside from its row-offset lookup.
+- Source-style score digits iterate their original 5x8 bitmap by row and
+  column rather than dividing/modulo by five for each pixel.
+
+The existing build already uses preconverted table/sprite/menu assets,
+fixed-point collision geometry, selective redraws, and 2-pixel dirty
+rectangles, so these were not duplicated. Wolfenstein's ray-per-column
+tracing and runtime generated wall scalers do **not** apply to this
+2D, mostly stationary playfield; duplicating them would waste the
+Tandy's limited 16-bit memory budget.
+
+`test_video_blitter.py` models the former per-pixel renderer versus the
+packed-pair renderer over transparent, opaque, mixed, odd-width, clipped
+and randomized rows, and validates lookup limits. CI also builds the
+Open Watcom 8086 executables, runs actual DOSBox-X Tandy and VGA game
+smoke tests, and requires pixel-perfect RGBI frame parity. These tests
+verify output correctness; they **do not** establish a speedup on a physical
+7.16 MHz V20.
+
+For a hardware A/B comparison, keep the last known-good 298f33a build
+and a new tested build in separate directories (each with its own matching
+TABLE.DAT). Compare like-for-like gameplay at the same monitor settings
+with `CADET /tandy`. Record responsiveness, missed updates, and optionally
+run `CADET /tandy /record` to inspect the cumulative late-frame count in
+INPUT.TXT. Treat the count as coarse: it includes gameplay and display
+cost and is not a CPU-cycle benchmark.
