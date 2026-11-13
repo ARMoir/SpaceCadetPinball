@@ -86,11 +86,12 @@ static void assist_ramp_crest(Game *g,const Table *t)
 {
     int i,j,found=-1,forward=0;
     long best2=5L*FP*5L*FP+1L;
-    short progress=0,tx=0,ty=0;
+    short progress=0,tx=0,ty=0,side=0;
     if(g->ramp_exit_ticks) g->ramp_exit_ticks--;
     if(g->waiting || g->over || g->tilted || g->in_shooter ||
        g->kick_delay || g->kick_flight) {
         g->ramp_active=g->ramp_used=g->ramp_exit_ticks=0;
+        g->ramp_crest_seen=0;
         g->ramp_ticks=0; return;
     }
     for(i=0;i<t->ramp_count;i++) {
@@ -125,6 +126,7 @@ static void assist_ramp_crest(Game *g,const Table *t)
             if(distance2>limit*limit || distance2>=best2) continue;
             best2=distance2; found=i; progress=(short)(e->start+along);
             tx=e->tx; ty=e->ty;
+            side=(short)((dx*e->ty-dy*e->tx)/256);
             forward=(int)(((long)g->vx*tx+(long)g->vy*ty)/256);
         }
     }
@@ -139,17 +141,30 @@ static void assist_ramp_crest(Game *g,const Table *t)
              (long)t->ramps[g->ramp_active-1].length*9 &&
            g->vy<0)
             g->ramp_exit_ticks=8;
-        g->ramp_active=g->ramp_used=0; g->ramp_ticks=0; return;
+        g->ramp_active=g->ramp_used=0; g->ramp_ticks=0;
+        g->ramp_crest_seen=0; return;
     }
     if(g->ramp_active!=found+1) {
         g->ramp_active=g->ramp_used=0; g->ramp_ticks=0;
-        g->ramp_exit_ticks=0;
+        g->ramp_exit_ticks=g->ramp_crest_seen=0;
         if(progress>t->ramps[found].length/4 || forward<=0) return;
         g->ramp_active=(unsigned char)(found+1);
         if(g->ramp_entries<65535U) g->ramp_entries++;
+        if(g->ramp_entry_by_group[found]<65535U)
+            g->ramp_entry_by_group[found]++;
         g->ramp_progress=progress;
     }
     if(++g->ramp_ticks>220) { g->ramp_used=1; return; }
+    /* F-002: crossing the actual source crest is distinct from applying
+     * a weak-shot boost. Both TRamps report one successful crossing per
+     * entry (the flat 105 has no boost), allowing real V20 diagnosis. */
+    if(!g->ramp_crest_seen && forward>0 &&
+       (long)progress*10>=t->ramps[found].length*9L &&
+       (long)g->ramp_progress*10<t->ramps[found].length*9L) {
+        g->ramp_crest_seen=1;
+        if(g->ramp_crest_by_group[found]<65535U)
+            g->ramp_crest_by_group[found]++;
+    }
     if(!g->ramp_used && t->ramps[found].assist && forward>0 &&
        (long)progress*10>=t->ramps[found].length*9L &&
        (long)g->ramp_progress*10<t->ramps[found].length*9L) {
@@ -159,6 +174,27 @@ static void assist_ramp_crest(Game *g,const Table *t)
             g->vx+=(short)((long)boost*tx/256);
             g->vy+=(short)((long)boost*ty/256);
             if(g->ramp_crest_assists<65535U) g->ramp_crest_assists++;
+        }
+    }
+    /* F-002: small source-guided COURSE correction, only on the curved
+     * 18-plane rising ramp. The Windows TRamp uses side-edge collisions
+     * plus FieldEffect/plane damping to steer the ball. Flattened DOS
+     * has neither; without a directional constraint its initial steep
+     * heading flies straight off the rapidly curving ramp after 4 ticks.
+     * Remove at most 24 Q6 units of sideways speed per substep, with
+     * a quarter of source-path lateral error to help centered shots
+     * negotiate tight triangle joins. This rotates velocity, not position;
+     * it adds no uphill impulse, scores, new collisions or teleports.
+     * Flat ramp105 NEVER steers. Retreat/tilt/shooter/kickback exclude it.
+     * Changes saturate the diagnostic counter at 65535. */
+    if(t->ramps[found].group==101 && forward>0 && !g->ramp_used) {
+        int lateral=(int)(((long)g->vx*ty-(long)g->vy*tx)/256);
+        int steer=lateral/2+side/4;
+        steer=maximum(-24,minimum(24,steer));
+        if(steer<=-2 || steer>=2) {
+            g->vx-=(short)((long)steer*ty/256);
+            g->vy+=(short)((long)steer*tx/256);
+            if(g->ramp_steer_ticks<65535U) g->ramp_steer_ticks++;
         }
     }
     g->ramp_progress=progress;
