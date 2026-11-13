@@ -9,6 +9,21 @@ do not imply complete gameplay or final V20 hardware certification.
 Source resource SHA-256 and the complete import inventory are in data/IMPORT.json.
 
 ## Completed
+**2026-11-13 source-color RGBI conversion and /sourceart selector
+(F-007):** Added a third packed 32768-byte Tandy background
+`TABLESRC.TGA` and a static alternate selection command.
+`test_source_art.py` checks the original matching source pack,
+deterministic 16-color bank layout, original geometry and HUD,
+2x2 approximation of a synthetic red midtone, edge-safe one-pixel
+rails, corrupted/mismatched assets and reproduction of real input.
+The CI emulator workflow runs `CADET /tandy /sourceart` and
+`CADET /vga /rgbi /sourceart` and compares their final 64000
+pixels, plus gameplay counters against the default art. The
+generator makes no runtime modifications to the DOS video pipeline.
+A 7.16 MHz V20 performance improvement is **not claimed**:
+only the static appearance differs, and image quality is still
+**UNVERIFIED** on physical Tandy/IBM monitors.
+
 
 **2026-11-12 source-guided RGBI board sharpening (F-007):**
 `enhance_table.py --vga-source VGA.DAT` now makes a conservative
