@@ -497,6 +497,97 @@ static void right_ramp_stress_tests(void)
     fflush(stdout);
 }
 
+/* F-002: source-derived entrance geometry must agree with the *runtime*
+ * corridor distance test. Previously s_ramp9 used a 5px distance cap
+ * behind a 3px AABB: off-center balls could enter from one side but not
+ * the other, with ground walls suddenly blocking the long raised path. */
+static void ramp_corridor_width_tests(void)
+{
+    int index,side;
+    assert(table_load(&t,"TABLE.DAT"));
+    for(index=0;index<2;index++) {
+        const RampPath *r=&t.ramps[index];
+        const RampSegment *e=&r->segments[0];
+        int width=r->group==105?9:5; /* half pixels: 4.5 or 2.5 */
+        int margin=r->group==105?5:3;
+        assert(r->left<=e->x-margin*FP && r->right>=e->x+margin*FP);
+        assert(r->top<=e->y-margin*FP && r->bottom>=e->y+margin*FP);
+        for(side=-1;side<=1;side++) {
+            int halfpx=side*width;
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(e->x+(long)e->ty*halfpx*FP/(2*256));
+            g.y=(short)(e->y-(long)e->tx*halfpx*FP/(2*256));
+            g.vx=(short)((long)e->tx*112/256);
+            g.vy=(short)((long)e->ty*112/256);
+            game_step(&g,&t,0);
+            if(g.ramp_entries!=1 || g.ramp_active!=(unsigned)(index+1))
+                printf("RAMP ENTRY MISS group=%d side=%d at=%d,%d "
+                       "vx=%d vy=%d entries=%u active=%u\n",
+                       r->group,side,g.x/FP,g.y/FP,
+                       g.vx,g.vy,g.ramp_entries,g.ramp_active);
+            assert(g.ramp_entries==1 && g.ramp_active==(unsigned)(index+1));
+            if(r->group==105) assert(g.ramp_layer_ticks>=1);
+            else assert(!g.ramp_layer_ticks);
+        }
+        /* No entry from outside the physical source corridor. */
+        for(side=-1;side<=1;side+=2) {
+            int halfpx=side*(margin+1)*2;
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(e->x+(long)e->ty*halfpx*FP/(2*256));
+            g.y=(short)(e->y-(long)e->tx*halfpx*FP/(2*256));
+            g.vx=(short)((long)e->tx*112/256);
+            g.vy=(short)((long)e->ty*112/256);
+            game_step(&g,&t,0);
+            assert(!g.ramp_entries && !g.ramp_active && !g.ramp_layer_ticks);
+        }
+    }
+    puts("STAGE: both real TRamp entry corridors and negative side exits");
+    fflush(stdout);
+}
+
+/* F-002: exercise the short, 18-plane rising ramp WITH the actual
+ * source walls/oneways/slings in place (unlike isolated crest-policy
+ * tests). A legal shot may bounce or stall, so this measures successes
+ * rather than granting free progress or teleporting to an exit. */
+static void rising_ramp_real_table_tests(void)
+{
+    int speed_index,side,aim,n,entries=0,crest=0,assists=0,shots=0;
+    assert(table_load(&t,"TABLE.DAT"));
+    assert(t.ramps[0].group==101 && t.ramps[0].count==18);
+    for(speed_index=0;speed_index<4;speed_index++) {
+        int speed=64+speed_index*28;
+        const RampPath *r=&t.ramps[0];
+        const RampSegment *start=&r->segments[0];
+        for(side=-1;side<=1;side++) for(aim=-1;aim<=1;aim++) {
+            short best=0;
+            game_reset(&g,&t); g.waiting=0; g.in_shooter=0;
+            g.x=(short)(start->x+(long)start->ty*side*FP/256);
+            g.y=(short)(start->y-(long)start->tx*side*FP/256);
+            g.vx=(short)((long)start->tx*speed/256+aim*4);
+            g.vy=(short)((long)start->ty*speed/256);
+            for(n=0;n<46 && !g.waiting && !g.over;n++) {
+                game_step(&g,&t,0);
+                if(g.ramp_active==1 && g.ramp_progress>best)
+                    best=g.ramp_progress;
+                if(best*10L>=r->length*9L) break;
+            }
+            if(g.ramp_entries) entries++;
+            if(best*10L>=r->length*9L) crest++;
+            if(g.ramp_crest_assists) assists++;
+            assert(g.balls==3 && g.ramp_crest_assists<=1);
+            shots++;
+        }
+    }
+    printf("STAGE: rising source TRamp actual walls entry=%d crest=%d "
+           "assisted=%d / %d trials\n",entries,crest,assists,shots);
+    fflush(stdout);
+    assert(shots==36 && entries>=12);
+    /* A physical path should be climbable with the imported walls
+     * enabled; if not, fail CI instead of silently accepting a blocked
+     * 18-plane ramp just because the synthetic isolated policy passes. */
+    assert(crest>=1);
+}
+
 int main(int argc,char **argv)
 {
     int i,weak_vy,full_vy;
@@ -506,6 +597,8 @@ int main(int argc,char **argv)
     component_loader_tests();
     component_tests();
     right_ramp_stress_tests();
+    ramp_corridor_width_tests();
+    rising_ramp_real_table_tests();
     wall_guard_tests();
     overlapping_bumper_tests();
     flipper_tunneling_tests();
