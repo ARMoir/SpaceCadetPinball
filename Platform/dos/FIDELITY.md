@@ -786,8 +786,8 @@ before considering larger artificial variance.
 ### F-007 Rendering, audio and frame rate
 **2026-11-13 separate WolfensteinCGA-inspired source-color Tandy art:**
 `/sourceart` selects `TABLESRC.TGA` in Tandy 09h (and VGA 13h with
-`/rgbi`); the existing `/3d` remains the default and `/classic`
-still uses the unchanged original RGBI reduction. The new offline
+`/rgbi`); **on 2026-11-13 the owner selected `/sourceart` as the Tandy default** after examining the real Tandy/IBM monitor. `/classic`
+still uses the unchanged original RGBI reduction; `/3d` stays available explicitly. Standard VGA preserves the richer source-color `VGA.DAT` default, and `/vga /rgbi` preserves the former `/3d` default. The new offline
 `source_art.py` reads the same source-derived VGA1 pack, validates all
 thirteen sprites and SCP2 geometry, then matches its projected
 320x200 source RGB palette to genuine RGBI solid colors or weighted
