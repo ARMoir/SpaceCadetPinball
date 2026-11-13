@@ -72,7 +72,7 @@ jobs:
           python Platform/dos/verify_build.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item Platform/dos/data/TABLE.DAT,Platform/dos/data/TABLE.TGA,Platform/dos/data/IMPORT.json,Platform/dos/data/PREVIEW.png,Platform/dos/data/VGA.DAT build/dos/
-          python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png
+          python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --vga-source build/dos/VGA.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           if ((Get-Item build/dos/TABLE3D.TGA).Length -ne 32768) { throw 'Wrong enhanced artwork size' }
       - name: Run Tandy09 and VGA13 DOS gameplay, video and parity tests
