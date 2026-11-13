@@ -29,7 +29,7 @@ class SourceSidebarTests(unittest.TestCase):
         self.assertIn("SCORE_DIGIT_H 8",FONT)
         self.assertIn("ba89418be9aed5d7f5bc197c00fab4cacf3aff23a1ddc0de134010414acf2d0b",FONT)
         self.assertIn("static const unsigned char colors[4]={0,1,13,15}",HUD)
-        self.assertIn("score_digits[digit][i>>2]",HUD)
+        self.assertIn("score_digits[digit][source>>2]",HUD)
 
     def test_digits_have_upright_readable_orientation(self):
         body=re.search(r"score_digits\[10\]\[10\].*?\{(.*?)\};",FONT,re.S).group(1)
