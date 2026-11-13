@@ -86,7 +86,8 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"/sourceball")) source_ball=1;
         else if(!strcmp(argv[i],"/classic")) enhanced=0;
         else if(!strcmp(argv[i],"/3d")) enhanced=1;
-        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/nolights] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d] [/rgbi] [/sourceball]"); return 1; }
+        else if(!strcmp(argv[i],"/sourceart")) enhanced=2;
+        else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/nolights] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d|/sourceart] [/rgbi] [/sourceball]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
     if(video_choice==1 && !detect_vga()) {
