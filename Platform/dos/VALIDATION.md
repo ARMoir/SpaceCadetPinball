@@ -10,6 +10,18 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 
 ## Completed
 
+**2026-11-12 source-guided RGBI board sharpening (F-007):**
+`enhance_table.py --vga-source VGA.DAT` now makes a conservative
+edge-aware pass over the already-enhanced 320x200 Tandy board using
+the original source-color asset's luminance gradients. Tests protect
+source colors/black, source geometry, all bank/nibble bits, panel margin,
+unaltered moving sprites, both classic and source-color VGA display modes,
+and repeatable output. CI packages the revised `TABLE3D.TGA`, exactly
+32768 bytes, at no extra V20 cost. The original `TABLE.TGA` stays
+selectable through `/classic`. Whether it looks sharper on the real
+CM-5/CRT is **UNVERIFIED** and requires an A/B photo or observation.
+
+
 **2026-11-09 upper-right ramp regression expansion:** The real
 source-table test now probes 60 shots at four speeds (118, 130,
 142, 154 Q6), offsets -2..2 pixels and lateral vx deviations
