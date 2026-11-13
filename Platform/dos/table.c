@@ -306,10 +306,19 @@ static int read_components(FILE *f,Table *t)
             if(j==0 && e->start!=0) return 0;
             if(j && (e->start!=r->segments[j-1].start+r->segments[j-1].length ||
                      e->x!=r->segments[j-1].ex || e->y!=r->segments[j-1].ey)) return 0;
-            r->left=minimum(r->left,minimum(e->x,e->ex)-3*FP);
-            r->right=maximum(r->right,maximum(e->x,e->ex)+3*FP);
-            r->top=minimum(r->top,minimum(e->y,e->ey)-3*FP);
-            r->bottom=maximum(r->bottom,maximum(e->y,e->ey)+3*FP);
+            /* F-002: the source group105 raised plane is narrower than
+             * the ~3px ball diameter but permits a center up to 5px
+             * from its midpoint path. The fast AABB MUST cover the same
+             * corridor as assist_ramp_crest(), or valid outer-side
+             * entries are rejected before the distance test runs.
+             * Keep rising group101's existing 3px bounds. */
+            {
+                int margin=(r->group==105?5:3)*FP;
+                r->left=minimum(r->left,minimum(e->x,e->ex)-margin);
+                r->right=maximum(r->right,maximum(e->x,e->ex)+margin);
+                r->top=minimum(r->top,minimum(e->y,e->ey)-margin);
+                r->bottom=maximum(r->bottom,maximum(e->y,e->ey)+margin);
+            }
         }
         if(r->segments[r->count-1].start+r->segments[r->count-1].length!=r->length) return 0;
     }
