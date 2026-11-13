@@ -578,8 +578,18 @@ static void rising_ramp_real_table_tests(void)
                 game_step(&g,&t,0);
                 if(g.ramp_active==1 && g.ramp_progress>best)
                     best=g.ramp_progress;
+                if(speed_index==3 && side==0 && aim==0 && n<20)
+                    printf("RISING TRACE tick=%d xy=%d,%d v=%d,%d active=%u "
+                           "progress=%d walls=%u layer=%u\\n",
+                           n,g.x,g.y,g.vx,g.vy,g.ramp_active,g.ramp_progress,
+                           g.wall_crossings,g.ramp_layer_ticks);
                 if(best*10L>=r->length*9L) break;
             }
+            printf("RISING SHOT speed=%d side=%d aim=%d best=%d/%d "
+                   "entries=%u assists=%u end=%d,%d v=%d,%d walls=%u\\n",
+                   speed,side,aim,best,r->length,g.ramp_entries,
+                   g.ramp_crest_assists,g.x,g.y,g.vx,g.vy,g.wall_crossings);
+            fflush(stdout);
             if(g.ramp_entries) entries++;
             if(best*10L>=r->length*9L) crest++;
             if(g.ramp_crest_assists) assists++;
