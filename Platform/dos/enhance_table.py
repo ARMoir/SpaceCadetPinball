@@ -263,6 +263,94 @@ def polish_artifacts(src, out, counters):
     counters.update(counts)
 
 
+def sharpen_metal_from_vga(src, out, source_vga, counters):
+    """Subpixel-free, source-guided edge contrast for the 16-color Tandy.
+
+    VGA1 was converted from the SAME PINBALL.DAT and already contains the
+    source's richer 320x200 artwork. Its luma edges identify steel detail
+    flattened by RGBI palette reduction. Only a single 8 -> 7 -> 15 shade
+    step is allowed on *existing* neutral paint; nearby colored bulbs,
+    decals, classic assets, sprites and all geometry are immutable.
+
+    This is performed on the build host, with ZERO V20 runtime cost.
+    """
+    if (len(source_vga) < 64772 or source_vga[:4] != b"VGA1" or
+            any(c > 63 for c in source_vga[4:772])):
+        raise ValueError("Expected VGA1 pack with 6-bit RGB source palette")
+    palette = source_vga[4:772]
+    indices = source_vga[772:64772]
+    if any(i >= 252 for i in indices):
+        raise ValueError("Unexpected VGA1 source color index")
+    # 6-bit integer luma, approximate Rec.709 with no float math.
+    luminance = [(54*palette[i*3]+183*palette[i*3+1]+
+                  19*palette[i*3+2]) >> 8 for i in range(252)]
+    light = [[luminance[indices[y*WIDTH+x]] for x in range(WIDTH)]
+             for y in range(HEIGHT)]
+    before = [row[:] for row in out]
+    counts = {"sharp_light": 0, "sharp_dark": 0, "sharp_contours": 0}
+    shades = (8, 7, 15)
+
+    def eligible(x, y):
+        if src[y][x] not in NEUTRAL:
+            return False
+        neighbors = (src[y-1][x], src[y+1][x],
+                     src[y][x-1], src[y][x+1])
+        # Protect original colored inserts and one-pixel colored outlines.
+        if any(c != 0 and c not in NEUTRAL for row in src[y-1:y+2]
+               for c in row[x-1:x+2]):
+            return False
+        # Avoid sharpening a few isolated dither pixels in the black field.
+        return sum(c in NEUTRAL for c in neighbors) >= 3
+
+    # Preserve a one-pixel sharp edge at the SAME coordinates. No blur,
+    # interpolation, new pixels, black holes, palette change or resampling.
+    for y in range(8, PLAYFIELD_BOTTOM-4):
+        for x in range(8, PLAYFIELD_RIGHT-4):
+            if not eligible(x, y):
+                continue
+            center = light[y][x]
+            n, s = light[y-1][x], light[y+1][x]
+            w, e = light[y][x-1], light[y][x+1]
+            if max(abs(w-e), abs(n-s)) < 10:
+                continue  # A true edge, not a flat surface or lone fleck.
+            difference = center - ((n+s+w+e) // 4)
+            old = before[y][x]
+            if old not in shades:
+                continue
+            step = shades.index(old)
+            if difference >= 9 and step < 2:
+                out[y][x] = shades[step+1]
+                counts["sharp_light"] += 1
+            elif difference <= -10 and step > 0:
+                out[y][x] = shades[step-1]
+                counts["sharp_dark"] += 1
+
+    # Close only single-pixel gaps between contiguous pale metal outlines.
+    # A frozen copy avoids chain-growing through whole surfaces; 8 -> 7
+    # gaps are conservative, while 7 -> 15 may connect existing bright rims.
+    contrast = [row[:] for row in out]
+    for y in range(8, PLAYFIELD_BOTTOM-4):
+        for x in range(8, PLAYFIELD_RIGHT-4):
+            if not eligible(x, y):
+                continue
+            old = contrast[y][x]
+            if old not in (7, 8):
+                continue
+            across = (contrast[y][x-1] == 15 and
+                      contrast[y][x+1] == 15 and
+                      src[y][x-1] in NEUTRAL and
+                      src[y][x+1] in NEUTRAL)
+            down = (contrast[y-1][x] == 15 and
+                    contrast[y+1][x] == 15 and
+                    src[y-1][x] in NEUTRAL and
+                    src[y+1][x] in NEUTRAL)
+            if across or down:
+                out[y][x] = 15 if old == 7 else 7
+                counts["sharp_contours"] += 1
+
+    counters.update(counts)
+
+
 def enhance(original, caps):
     """Deterministic 16-color lighting, restricted to existing neutral pixels.
 
@@ -465,12 +553,14 @@ def enhance(original, caps):
     return out, counters
 
 
-def generate(original, pack):
+def generate(original, pack, source_vga=None):
     pixels=unpack_screen(original)
     caps=bumper_caps(pack)
     if not caps:
         raise ValueError("No source bumper caps found in SCP2 table")
     shaded,counts=enhance(pixels,caps)
+    if source_vga is not None:
+        sharpen_metal_from_vga(pixels,shaded,source_vga,counts)
     result=bytes(pack_screen(shaded))
     if len(result)!=len(original):
         raise AssertionError("Unexpected Tandy image length")
@@ -481,11 +571,15 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--table",type=Path,required=True,help="Unmodified TABLE.TGA")
     p.add_argument("--pack",type=Path,required=True,help="Matching TABLE.DAT")
+    p.add_argument("--vga-source",type=Path,
+                   help="Optional matching source-color VGA.DAT for sharper metal edges")
     p.add_argument("--output",type=Path,required=True,help="Enhanced TABLE3D.TGA")
     p.add_argument("--preview",type=Path,help="Optional PNG preview")
     a=p.parse_args()
     old=a.table.read_bytes()
-    data,shaded,caps,counts=generate(old,a.pack.read_bytes())
+    data,shaded,caps,counts=generate(
+        old,a.pack.read_bytes(),
+        a.vga_source.read_bytes() if a.vga_source else None)
     a.output.parent.mkdir(parents=True,exist_ok=True)
     a.output.write_bytes(data)
     if a.preview:
