@@ -510,6 +510,9 @@ static void ramp_corridor_width_tests(void)
         const RampSegment *e=&r->segments[0];
         int width=r->group==105?9:5; /* half pixels: 4.5 or 2.5 */
         int margin=r->group==105?5:3;
+        printf("RAMP BOUNDS group=%d x=%d..%d y=%d..%d start=%d,%d margin=%d\\n",
+               r->group,r->left,r->right,r->top,r->bottom,e->x,e->y,margin*FP);
+        fflush(stdout);
         assert(r->left<=e->x-margin*FP && r->right>=e->x+margin*FP);
         assert(r->top<=e->y-margin*FP && r->bottom>=e->y+margin*FP);
         for(side=-1;side<=1;side++) {
@@ -520,6 +523,9 @@ static void ramp_corridor_width_tests(void)
             g.vx=(short)((long)e->tx*112/256);
             g.vy=(short)((long)e->ty*112/256);
             game_step(&g,&t,0);
+            printf("RAMP ENTRY group=%d side=%d entries=%u active=%u layer=%u xy=%d,%d\\n",
+                   r->group,side,g.ramp_entries,g.ramp_active,g.ramp_layer_ticks,g.x,g.y);
+            fflush(stdout);
             if(g.ramp_entries!=1 || g.ramp_active!=(unsigned)(index+1))
                 printf("RAMP ENTRY MISS group=%d side=%d at=%d,%d "
                        "vx=%d vy=%d entries=%u active=%u\n",
@@ -538,6 +544,9 @@ static void ramp_corridor_width_tests(void)
             g.vx=(short)((long)e->tx*112/256);
             g.vy=(short)((long)e->ty*112/256);
             game_step(&g,&t,0);
+            printf("RAMP OUTSIDE group=%d side=%d entries=%u active=%u layer=%u\\n",
+                   r->group,side,g.ramp_entries,g.ramp_active,g.ramp_layer_ticks);
+            fflush(stdout);
             assert(!g.ramp_entries && !g.ramp_active && !g.ramp_layer_ticks);
         }
     }
