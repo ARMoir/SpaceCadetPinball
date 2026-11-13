@@ -532,8 +532,9 @@ static void ramp_corridor_width_tests(void)
                        r->group,side,g.x/FP,g.y/FP,
                        g.vx,g.vy,g.ramp_entries,g.ramp_active);
             assert(g.ramp_entries==1 && g.ramp_active==(unsigned)(index+1));
-            if(r->group==105) assert(g.ramp_layer_ticks>=1);
-            else assert(!g.ramp_layer_ticks);
+            /* Both source ramps elevate the ball's CollisionMask.
+             * Previously only group105 did so in the DOS projection. */
+            assert(g.ramp_layer_ticks>=1);
         }
         /* No entry from outside the physical source corridor. */
         for(side=-1;side<=1;side+=2) {
