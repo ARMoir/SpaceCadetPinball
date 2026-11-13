@@ -336,6 +336,10 @@ def sharpen_metal_from_vga(src, out, source_vga, counters):
             old = contrast[y][x]
             if old not in (7, 8):
                 continue
+            # Never bridge across a groove deliberately darkened by
+            # the source-color gradient. It is real texture, not a gap.
+            if (before[y][x], old) in ((7, 8), (15, 7)):
+                continue
             across = (contrast[y][x-1] == 15 and
                       contrast[y][x+1] == 15 and
                       src[y][x-1] in NEUTRAL and
