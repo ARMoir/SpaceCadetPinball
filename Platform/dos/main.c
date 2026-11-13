@@ -499,7 +499,7 @@ int main(int argc,char **argv)
                  game.sling_backflow_redirects,
                  game.unstick_nudges,game.unstick_moves,game.unstick_relaunches);
         fprintf(report,"# art=%s static_baked=1 moving_ball_shadow=0\n",
-                enhanced?"3d":"classic");
+                enhanced==2?"sourceart":(enhanced?"3d":"classic"));
         fprintf(report,"# spent_gate_blocks=%u\n",game.spent_gate_blocks);
         fprintf(report,"# oneway_blocks=%u oneway_passes=%u ramp_entries=%u ramp_layer_ticks=%u physics_variations=%u\n",
                 game.oneway_blocks,game.oneway_passes,game.ramp_entries,
