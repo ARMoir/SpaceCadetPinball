@@ -272,6 +272,61 @@ validate kickback returns before replacing the legacy proxies.
 
 ### F-002 Collision layer and one-way projection
 
+#### Full two-TRamp source audit (2026-11-13)
+
+The imported Windows `PINBALL.DAT` has **two actual TRamp components**:
+source group **101** (18 rising triangular planes, ~19px projected) and
+source group **105** (`s_ramp9`, two flat z=-5 elevated planes,
+~49px projected). Other painted rails and routes are not independent
+TRamp objects. Original `TRamp.cpp::Collision` assigns the ramp's
+elevated `CollisionGroup` on a plane contact; `FieldEffect` applies
+plane gravity/damping, while real triangle sidewalls help turn a ball.
+The existing DOS model had three traceable failures:
+
+1. Group105 accepted a 5px-radius source-path corridor but `table.c`
+   built its fast AABB at only +/-3px. Legitimate outer-side entries
+   were excluded before the fine distance test. The AABB now uses
+   +/-5px for group105 and retains +/-3px for group101, with exact
+   positive/negative lateral-entry tests on the real imported table.
+2. The rising ramp's 18 short segments meet at sharp corners. The old
+   nearest-path search discarded projections past segment endpoints,
+   even when a 3px-radius ball was next to the valid source join.
+   It now clamps to **finite endpoints** and checks squared Euclidean
+   distance, rejecting the infinite extensions and avoiding square-root
+   calculations on the V20. Group105 uses the same safe nearest-point
+   procedure.
+3. A full-collision 36-shot probe of group101, with ground walls intact
+   and no manual movement along its path, initially scored 0/36 crest
+   crossings. A centered 148-Q6 shot entered correctly but the flattened
+   ground-wall collision reflected it after just two ticks; after
+   group101's elevated plane mask was restored, it still flew straight
+   off the highly curved ramp around half its source length. DOS now
+   suppresses the *ground-only* indexed wall pass while **either**
+   source ramp is legitimately active, and applies a small
+   **source-tangent-based course correction only on rising group101**.
+   Lateral Q6 velocity is damped toward the nearest imported segment,
+   with a quarter of signed off-center error; at most **24 Q6 units
+   per physics substep**, only for valid forward on-ramp travel.
+   No position snapping, automatic crest, forced speed floor, score
+   change, extra impulse on flat group105 or broad screen-zone hack.
+   Downhill/tilt/shooter/kickback shots cannot activate this help.
+   This is an explicit **forgiving DOS approximation** to source
+   sidewall and `TRamp::FieldEffect`, not a claim of 3D physics parity.
+
+The original 90%-crest one-shot weak-shot boost remains capped at 64 Q6,
+unchanged. The flight diagnostics now distinguish `ramp_short_entries`,
+`ramp_short_crests`, `ramp_right_entries`, `ramp_right_crests` and
+`ramp_steer_ticks`, saturating at 65535. A test-matrix exercises
+entrance width and negative off-corridor shots on both source ramps,
+36 real-table attempts on the curved ramp, 60 on the flat elevated
+route, and exclusions for shooter, tilt, kickback, reverse and
+off-corridor paths. Changes to full 3D sidewall collisions, field
+forces/damping, original ramp end-mask transitions, and physical
+V20 speed/feel remain **UNVERIFIED OR UNIMPLEMENTED** until measured.
+Do not widen assistance to the whole table or silently teleport a
+legitimate bad shot to a crest.
+
+
 #### Elevated s_ramp9 passage fix, source comparison (2026-11-09)
 
 **Follow-up tests after continued owner-reported obstruction:** A single
