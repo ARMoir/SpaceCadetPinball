@@ -473,7 +473,8 @@ static void right_ramp_stress_tests(void)
             /* The flat source TRamp needs layer transition, never an
              * artificial curve correction or uphill speed boost. */
             assert(!g.ramp_steer_ticks && !g.ramp_entry_by_group[0]);
-            assert(g.ramp_entry_by_group[1]>=1);
+            assert(g.ramp_entry_by_group[1]==1);
+            assert(g.ramp_crest_by_group[1]==1);
             successes++;
         }
     }
@@ -621,6 +622,13 @@ static void rising_ramp_real_table_tests(void)
             if(exited) exits++;
             if(g.ramp_crest_assists) assists++;
             assert(g.balls==3 && g.ramp_crest_assists<=1);
+            /* One source entry and one true 90% crossing per legal shot,
+             * never a phantom second entry/crest from steering. */
+            assert(g.ramp_entry_by_group[0]==1);
+            assert(g.ramp_crest_by_group[0]==1);
+            assert(!g.ramp_entry_by_group[1] &&
+                   !g.ramp_crest_by_group[1]);
+            assert(g.ramp_steer_ticks>0);
             shots++;
         }
     }
@@ -628,11 +636,10 @@ static void rising_ramp_real_table_tests(void)
            "exited=%d assisted=%d / %d trials\n",
            entries,crest,exits,assists,shots);
     fflush(stdout);
-    assert(shots==36 && entries>=12);
-    /* A physical path should be climbable with the imported walls
-     * enabled; if not, fail CI instead of silently accepting a blocked
-     * 18-plane ramp just because the synthetic isolated policy passes. */
-    assert(crest>=1 && exits>=1);
+    /* All 36 reproducible on-ramp trajectories must actually exit.
+     * A 90% crest alone is insufficient to claim the path is playable.
+     * Do not accept regressions back to the earlier 0/36 behavior. */
+    assert(shots==36 && entries==36 && crest==36 && exits==36);
 }
 
 int main(int argc,char **argv)
