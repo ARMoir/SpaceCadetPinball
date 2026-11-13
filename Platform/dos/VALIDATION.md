@@ -9,6 +9,24 @@ do not imply complete gameplay or final V20 hardware certification.
 Source resource SHA-256 and the complete import inventory are in data/IMPORT.json.
 
 ## Completed
+
+**2026-11-13 F-002 ramp-specific audit and hardware diagnostics:**
+The original source resource has only two TRamp components: group101
+(18 rising planes) and group105 (2 flat elevated planes). New
+regressions catch the former 3px-vs-5px group105 fast-bounds error
+and the finite-path endpoint gaps, and cover both allowed and
+off-corridor entry offsets. A full-source-table group101
+36-shot collision sweep (not hand-placed intermediate positions)
+initially recorded **0 crests**, even though the ball entered.
+Per-substep logging proved an original ground rail reversed the
+ball before it could climb; restoring the group101 elevated plane
+mask removed that reflection but exposed the missing turn guidance.
+A bounded source-tangent-only steering approximation has been added
+for group101; group105 remains flat, with no added speed or steering.
+All original collision/mission systems and real V20 acceptance are
+still distinct from emulator checks. `/record` now exposes separate
+per-ramp entry/crest statistics and number of steering corrections.
+
 **2026-11-13 source-color RGBI conversion and /sourceart selector
 (F-007):** Added a third packed 32768-byte Tandy background
 `TABLESRC.TGA` and a static alternate selection command.
