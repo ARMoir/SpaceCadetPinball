@@ -55,6 +55,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_menu_art.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_video_blitter.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_video_modes.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_enhance_table.py
