@@ -785,6 +785,28 @@ before considering larger artificial variance.
 
 ### F-007 Rendering, audio and frame rate
 
+**2026-11-12 source-guided Tandy board sharpening:** The original
+`TABLE.TGA` is a 320x200 RGBI image, while `VGA.DAT` preserves more
+tonal detail from the same source-color Windows table. An optional fourth
+**offline-only** pass in `enhance_table.py` samples the VGA1 palette and
+per-pixel luminance gradients. Where an actual high-contrast source edge
+crosses existing gray/white metal, it adjusts at most one shade among
+RGBI 8/7/15, and bridges one-pixel gaps only between already continuous
+white metal contours. No new black paint or interpolated coordinates are
+allowed; the fixed 320x200 silhouette is preserved. Changes are limited
+to source-gray metal in the playfield away from colored lamps/targets.
+Source-colored/black pixels, original `TABLE.TGA`, collision pack,
+sprite images/positions, palette, HUD and gameplay are all unchanged.
+`TABLE3D.TGA` remains a 32768-byte four-bank image, regenerated
+with `--vga-source VGA.DAT` in CI. Using a higher-color source does **not**
+mean Tandy can display more than its original 16 RGBI colors.
+`/classic` remains the baseline comparison. Positive/negative
+regressions check source edge contrast, protection of lamp art, identical
+Tandy bank packing and deterministic real-asset generation. **Real CRT
+sharpness and visual preference remain UNVERIFIED** until owner A/B
+testing; the V20 performs no extra rendering work.
+
+
 **2026-11-09 compact-font correction:** The 3x5 HUD/menu N bitmap
 had a disconnected lower left stroke, making the letter difficult to
 read at native Tandy resolution. The bitmap now retains an unbroken
