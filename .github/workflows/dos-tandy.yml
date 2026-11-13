@@ -90,8 +90,14 @@ jobs:
           python Platform/dos/run_tests.py --emulator $emu --original --video tandy --auto-video
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_AUTO_SUMMARY.TXT
-          # Verify the explicit /tandy override on a Tandy BIOS as well.
+          # Verify explicit /tandy selects owner-approved sourceart.
           python Platform/dos/run_tests.py --emulator $emu --original --video tandy
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_DEFAULT_SUMMARY.TXT
+          Copy-Item build/dos/SCREEN-TANDY.BIN build/dos/SCREEN-TANDY-DEFAULT.BIN
+          # Preserve the previous 3D baseline for game-counter and pixel
+          # parity checks. VGA /rgbi's default remains the same 3D art.
+          python Platform/dos/run_tests.py --emulator $emu --original --video tandy --art 3d
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_SUMMARY.TXT
           # Standard VGA machines must support both explicit and auto mode.
