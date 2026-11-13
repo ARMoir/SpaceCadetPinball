@@ -274,6 +274,22 @@ validate kickback returns before replacing the legacy proxies.
 
 #### Full two-TRamp source audit (2026-11-13)
 
+**Measured native-regression outcome after fixes:** The real imported
+CMP2 table with normal collision groups enabled passed **36/36**
+controlled rising group101 entries, **36/36** 90%-crest crossings,
+and **36/36** true exits at least two projected pixels beyond original
+wall1302 along the outgoing source tangent. The curved ramp required
+bounded heading correction; 26 weaker shots received the already-existing
+one-shot 90% boost. The flat elevated group105 retained **60/60** actual
+upper-right clearance trajectories without steering or boost. Additional
+positive and negative tests exercise width margins, finite segment joins,
+off-lane, descending, shooter, kickback, tilt, and delayed exit masks.
+These are deterministic native DOS tests with original geometry, **not**
+evidence that every organically played shot succeeds on a real 7 MHz V20.
+Physical shot feel, ramp sidewalls, true 3D collision-mask transitions,
+timing, and eventual return trajectories remain open F-002 work.
+
+
 The imported Windows `PINBALL.DAT` has **two actual TRamp components**:
 source group **101** (18 rising triangular planes, ~19px projected) and
 source group **105** (`s_ramp9`, two flat z=-5 elevated planes,
