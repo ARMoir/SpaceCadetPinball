@@ -10,6 +10,30 @@ Source resource SHA-256 and the complete import inventory are in data/IMPORT.jso
 
 ## Completed
 
+**2026-11-13 F-002 ramp exit evidence:** Full original CMP2 table
+under native Open Watcom DOSBox-X physics, with all static walls,
+one-ways, slings, bumpers and both ramps enabled:
+group101 18-plane rising ramp completed **36/36 entries, 36/36
+90%-crests and 36/36 genuine ramp exits** at four launch speeds,
+three one-pixel entry offsets, three direction deviations each.
+The exit assertion requires travel at least two pixels past the
+original 1302 exit endpoint in the final segment's forward direction
+while staying within a 5px exit corridor, not simply reaching the
+progress threshold. 26/36 shots used the preexisting capped
+90%-crest weak-shot assist, while stronger shots frequently needed
+none; bounded lateral steering was required to follow the 18-plane
+path. The flat group105 upper-right elevated route remained
+**60/60 completed shots** across the prior four-speed, five-offset,
+three-angle suite with no artificial steering or velocity boost.
+Entrance tests also prove source-group-specific 3px/5px bounds,
+positive left/right entry and negative off-corridor, shooter,
+descending and fake exit-mask paths. The rigorous asserts now
+require all 36 rising trajectories to reach the **true exit** so a
+future regression to 0/36 cannot pass. These are reproducible,
+controlled shots on imported source geometry, not random/natural
+flipper paths, full source-height physics, or a physical Tandy
+performance certification. Hardware ramp behavior remains UNVERIFIED.
+
 **2026-11-13 F-002 ramp-specific audit and hardware diagnostics:**
 The original source resource has only two TRamp components: group101
 (18 rising planes) and group105 (2 flat elevated planes). New
