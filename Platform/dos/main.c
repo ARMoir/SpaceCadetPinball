@@ -508,6 +508,10 @@ int main(int argc,char **argv)
         fprintf(report,"# oneway_blocks=%u oneway_passes=%u ramp_entries=%u ramp_layer_ticks=%u physics_variations=%u\n",
                 game.oneway_blocks,game.oneway_passes,game.ramp_entries,
                 game.ramp_layer_ticks,game.physics_variations);
+        fprintf(report,"# ramp_short_entries=%u ramp_short_crests=%u ramp_right_entries=%u ramp_right_crests=%u ramp_steer_ticks=%u\n",
+                game.ramp_entry_by_group[0],game.ramp_crest_by_group[0],
+                game.ramp_entry_by_group[1],game.ramp_crest_by_group[1],
+                game.ramp_steer_ticks);
         fprintf(report,"# vga_colors=%d wall_crossings=%u\n",vga_colors,game.wall_crossings);
         fclose(report);
     }
