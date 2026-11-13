@@ -170,12 +170,15 @@ static void panel_frame(int x,int y,int w,int ht)
 static void score_digit(int x,int y,unsigned digit)
 {
     static const unsigned char colors[4]={0,1,13,15};
-    unsigned i;
+    unsigned row,col,source=0;
     if(digit>9) return;
-    for(i=0;i<40;i++) {
-        unsigned char b=score_digits[digit][i>>2];
-        unsigned c=(b>>(6U-2U*(i&3U)))&3U;
-        if(c) pixel(x+(int)(i%5U),y+(int)(i/5U),colors[c]);
+    /* Original 5x8 glyph pixels, but no div/mod-5 in the hot loop. */
+    for(row=0;row<8U;row++) {
+        for(col=0;col<5U;col++,source++) {
+            unsigned char b=score_digits[digit][source>>2];
+            unsigned c=(b>>(6U-2U*(source&3U)))&3U;
+            if(c) pixel(x+(int)col,y+(int)row,colors[c]);
+        }
     }
 }
 
