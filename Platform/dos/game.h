@@ -116,6 +116,12 @@ typedef struct {
     unsigned char ramp_exit_ticks; /* F-002: bounded elevated exit clearance */
     unsigned short ramp_layer_ticks; /* source layer-mask uses */
     unsigned short ramp_crest_assists,sling_backflow_redirects; /* F-002 */
+    /* F-002: distinguish BOTH original TRamps during hardware recordings.
+     * The steering correction is bounded to the rising 18-plane ramp;
+     * the flat elevated return requires no invented velocity changes. */
+    unsigned short ramp_entry_by_group[2],ramp_crest_by_group[2];
+    unsigned short ramp_steer_ticks;
+    unsigned char ramp_crest_seen;
     /* F-008: tiny fixed-point watchdog; no per-frame allocations. */
     short stuck_x,stuck_y,stuck_minx,stuck_maxx,stuck_miny,stuck_maxy;
     unsigned short stuck_ticks,stuck_stage_ticks;
