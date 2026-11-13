@@ -84,7 +84,8 @@ static void contain_outer_left(Game *g,const Table *t)
  * ball-width corridor. No position or score changes. */
 static void assist_ramp_crest(Game *g,const Table *t)
 {
-    int i,j,found=-1,best=5*FP+1,forward=0;
+    int i,j,found=-1,forward=0;
+    long best2=5L*FP*5L*FP+1L;
     short progress=0,tx=0,ty=0;
     if(g->ramp_exit_ticks) g->ramp_exit_ticks--;
     if(g->waiting || g->over || g->tilted || g->in_shooter ||
@@ -99,16 +100,30 @@ static void assist_ramp_crest(Game *g,const Table *t)
             const RampSegment *e=&r->segments[j];
             long dx=(long)g->x-e->x,dy=(long)g->y-e->y;
             long along=(dx*e->tx+dy*e->ty)/256;
-            int distance;
-            if(along<0 || along>e->length) continue;
-            distance=(int)labs((dx*e->ty-dy*e->tx)/256);
-            /* The original group105 path is 7.4px wide at entry and
-             * 4.8px at exit. A ~3px-radius ball can have its CENTER
-             * up to 5px off the middle yet remain on the raised plane.
-             * Keep the original 3px detector for rising group101. */
-            if(distance>(r->group==105?5*FP:3*FP) ||
-               distance>=best) continue;
-            best=distance; found=i; progress=(short)(e->start+along);
+            long limit=(r->group==105?5L:3L)*FP;
+            long distance2;
+            /* F-002: the rising ramp has 18 very short triangle portals.
+             * Their straight-line projections meet at sharp corners.
+             * Rejecting along<0 or along>length throws away a valid ball
+             * near a JOIN even when its center is within one ball radius
+             * of the actual finite source path. Clamp the nearest point
+             * to an endpoint, then compare squared distance (no runtime
+             * square root or fabricated movement). Avoid treating the
+             * infinite extension of a segment as part of the ramp. */
+            if(along<0 || along>e->length) {
+                long cx=along<0?e->x:e->ex;
+                long cy=along<0?e->y:e->ey;
+                long sx=(long)g->x-cx,sy=(long)g->y-cy;
+                distance2=sx*sx+sy*sy;
+                along=along<0?0:e->length;
+            } else {
+                long cross=(dx*e->ty-dy*e->tx)/256;
+                distance2=cross*cross;
+            }
+            /* 3px group101 rising and 5px group105 elevated corridors
+             * match the original bounded source midline policy. */
+            if(distance2>limit*limit || distance2>=best2) continue;
+            best2=distance2; found=i; progress=(short)(e->start+along);
             tx=e->tx; ty=e->ty;
             forward=(int)(((long)g->vx*tx+(long)g->vy*ty)/256);
         }
