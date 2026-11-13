@@ -61,6 +61,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_enhance_table.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/test_source_art.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/verify_vga_art.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Platform/dos/test_vga_art.py
@@ -75,6 +77,11 @@ jobs:
           python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --vga-source build/dos/VGA.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           if ((Get-Item build/dos/TABLE3D.TGA).Length -ne 32768) { throw 'Wrong enhanced artwork size' }
+          # Offline only: WolfensteinCGA-style color-pair matching, original
+          # source colors, preserved thin details; no V20 conversion cost.
+          python Platform/dos/source_art.py --vga build/dos/VGA.DAT --pack build/dos/TABLE.DAT --classic build/dos/TABLE.TGA --output build/dos/TABLESRC.TGA --preview build/dos/PREVIEWSRC.png
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-Item build/dos/TABLESRC.TGA).Length -ne 32768) { throw 'Wrong source-art size' }
       - name: Run Tandy09 and VGA13 DOS gameplay, video and parity tests
         shell: pwsh
         run: |
@@ -97,6 +104,18 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_VGA_AUTO_SUMMARY.TXT
           python Platform/dos/verify_video_modes.py build/dos
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          # A/B rendering: exactly the same source-color-paired RGBI board
+          # and gameplay counters on Tandy 09h and VGA 13h, no new renderer.
+          python Platform/dos/run_tests.py --emulator $emu --original --video tandy --art sourceart
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_TANDY_SOURCE_SUMMARY.TXT
+          python Platform/dos/run_tests.py --emulator $emu --original --video vga --rgbi --art sourceart
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item build/dos/RUN_SUMMARY.TXT build/dos/RUN_VGA_SOURCE_SUMMARY.TXT
+          python Platform/dos/verify_video_modes.py build/dos --sourceart
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Platform/dos/verify_source_art_gameplay.py build/dos
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Verify source-color VGA graphics and gameplay
         shell: pwsh
@@ -153,7 +172,7 @@ jobs:
           path: runtime
       - name: Create release archive
         working-directory: runtime
-        run: zip -9 ../CADET.zip CADET.EXE TABLE.DAT TABLE.TGA TABLE3D.TGA VGA.DAT MENU.DAT
+        run: zip -9 ../CADET.zip CADET.EXE TABLE.DAT TABLE.TGA TABLE3D.TGA TABLESRC.TGA VGA.DAT MENU.DAT
       - name: Publish tested prototype build
         uses: actions/github-script@v7
         with:
@@ -167,7 +186,7 @@ jobs:
               name: `DOS Space Cadet build ${context.runNumber}`,
               prerelease: true,
               draft: true,
-              body: `Tested DOS/Tandy and VGA prototype from ${context.sha}.\n\nDownload CADET.zip and extract all six files together. Run CADET.EXE from that directory. SCORES.DAT is created locally; preserve your existing scores when updating.\n\nOriginal assets with simplified physics/rules; real V20 timing remains unverified. Validation logs: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              body: `Tested DOS/Tandy and VGA prototype from ${context.sha}.\n\nDownload CADET.zip and extract all seven files together. Run CADET.EXE from that directory. SCORES.DAT is created locally; preserve your existing scores when updating.\n\nOriginal assets with simplified physics/rules; real V20 timing remains unverified. Validation logs: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             });
             await github.rest.repos.uploadReleaseAsset({
               ...context.repo,
