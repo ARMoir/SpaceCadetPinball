@@ -51,7 +51,8 @@ static void feed(Game *g,const Table *t)
 {
     short x,y;
     shooter_seat(t,&x,&y);
-    g->ramp_active=g->ramp_used=0; g->ramp_ticks=0; g->ramp_progress=0;
+    g->ramp_active=g->ramp_used=g->ramp_crest_seen=0;
+    g->ramp_ticks=0; g->ramp_progress=0;
     g->ramp_exit_ticks=0;
     g->physics_variation_cooldown=0;
     g->sling_chain_side=g->sling_chain_hits=g->sling_chain_time=0;
