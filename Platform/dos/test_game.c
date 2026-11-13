@@ -470,6 +470,10 @@ static void right_ramp_stress_tests(void)
             fflush(stdout);
             assert(cleared && g.balls==3 && g.ramp_entries>=1 &&
                    g.ramp_layer_ticks>=8 && !g.ramp_crest_assists);
+            /* The flat source TRamp needs layer transition, never an
+             * artificial curve correction or uphill speed boost. */
+            assert(!g.ramp_steer_ticks && !g.ramp_entry_by_group[0]);
+            assert(g.ramp_entry_by_group[1]>=1);
             successes++;
         }
     }
@@ -532,6 +536,7 @@ static void ramp_corridor_width_tests(void)
                        r->group,side,g.x/FP,g.y/FP,
                        g.vx,g.vy,g.ramp_entries,g.ramp_active);
             assert(g.ramp_entries==1 && g.ramp_active==(unsigned)(index+1));
+            assert(g.ramp_entry_by_group[index]==1);
             /* Both source ramps elevate the ball's CollisionMask.
              * Previously only group105 did so in the DOS projection. */
             assert(g.ramp_layer_ticks>=1);
@@ -549,6 +554,8 @@ static void ramp_corridor_width_tests(void)
                    r->group,side,g.ramp_entries,g.ramp_active,g.ramp_layer_ticks);
             fflush(stdout);
             assert(!g.ramp_entries && !g.ramp_active && !g.ramp_layer_ticks);
+            assert(!g.ramp_steer_ticks &&
+                   !g.ramp_entry_by_group[0] && !g.ramp_entry_by_group[1]);
         }
     }
     puts("STAGE: both real TRamp entry corridors and negative side exits");
