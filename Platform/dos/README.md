@@ -82,6 +82,16 @@ parity and actual 7.16 MHz V20 timings remain **UNVERIFIED**.
 
 ## November 9 source-ramp clearance and contact feel (F-002/F-006)## November 13: source-based ramp traversal audit (F-002)
 
+**Native DOS regression:** original CMP2 table, 36/36 real short-ramp
+entries, 36/36 90%-crests and **36/36 physically exited beyond the
+source wall1302**, across speed/offset/angle variations. The separate
+upper-right suite passed **60/60** uphill-equivalent flat elevated
+passages, with no boost or steering. The two results are controlled
+in-engine shots, **not** a guarantee of every player's shot or physical
+Tandy timing. The newer test asserts actual ramp exit rather than
+treating 90% progress as completion.
+
+
 The Windows source contains two TRamp objects: **group101**, a short
 18-segment rising curve on the left, and **group105**, the long flat
 upper-right elevated path. Cadet now uses both source paths to handle
