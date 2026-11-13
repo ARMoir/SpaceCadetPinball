@@ -19,10 +19,24 @@ static void mode(unsigned char value)
     memset(&r,0,sizeof(r)); r.h.ah=0; r.h.al=value; int86(0x10,&r,&r);
 }
 
-/* Tandy video is four 8KB banks with two pixels per byte. VGA 13h is
- * a linear 64000-byte framebuffer (one 0..15 palette index per pixel). */
+/* WolfensteinCGA-style precomputation: the DOS screen layout is fixed for
+ * each selected video mode. Resolve the expensive Tandy four-bank row math
+ * (or VGA's 320-byte stride) ONCE at startup, not for each moving sprite.
+ * One table is shared by both backends to conserve 8086 DGROUP space.
+ * Offsets fit in an unsigned 16-bit word (VGA last row starts at 63680). */
+static unsigned video_row[200];
+
+static void init_video_rows(void)
+{
+    unsigned y;
+    for(y=0;y<200U;y++)
+        video_row[y]=vga_mode?y*320U:
+            (unsigned)((y&3U)*8192U+(y>>2)*160U);
+}
+
+/* Tandy mode 09h: four 8KB banks, two 4-bit pixels per byte. */
 static unsigned address(int x,int y)
-{ return (unsigned)((y&3)*8192+(y>>2)*160+(x>>1)); }
+{ return video_row[y]+((unsigned)x>>1); }
 
 static int detect_vga(void)
 {
@@ -76,19 +90,23 @@ static void restore(int x,int y,int w,int h)
         /* Match Tandy's two-pixel dirty-rectangle granularity exactly:
          * this prevents subtly different flipper/ball restores on VGA. */
         for(row=y;row<y+h;row++) {
-            a=(unsigned)row*320U+(unsigned)(start*2);
+            a=video_row[row]+(unsigned)(start*2);
             _fmemcpy(video+a,background+a,(unsigned)((end-start)*2));
         }
     } else {
         for(row=y;row<y+h;row++) {
-            a=address(start*2,row);
+            a=video_row[row]+(unsigned)start;
             _fmemcpy(video+a,background+a,end-start);
         }
     }
 }
 
-/* Draw a sprite by scanline. The Tandy's interleaved banks make a
- * pixel() call (with modulo and address calculation) expensive on a V20. */
+/* Tandy sprites have one pixel per source byte, 255 = transparent.
+ * Process two destination pixels per B800h byte when aligned. For an
+ * opaque pair we can write the packed byte outright, saving BOTH video
+ * reads and one video write. Mixed/transparent pairs preserve the other
+ * nibble exactly, including on odd x coordinates and clipped edges.
+ * VGA stays linear and preserves the original pixel-for-pixel semantics. */
 static void sprite(const Sprite *s,int x,int y)
 {
     int xx,yy,start,end,dst_y;
@@ -102,23 +120,36 @@ static void sprite(const Sprite *s,int x,int y)
         if(x+end>320) end=320-x;
         if(start>=end) continue;
         if(vga_mode) {
-            /* Linear VGA writes with a transparent source sprite.
-             * No per-pixel multiplication or division on this hot path. */
-            a=(unsigned)dst_y*320U+(unsigned)(x+start);
+            a=video_row[dst_y]+(unsigned)(x+start);
             for(xx=start;xx<end;xx++,a++)
                 if(p[xx]!=255) video[a]=p[xx];
             continue;
         }
-        a=address(x+start,dst_y);
-        for(xx=start;xx<end;xx++) {
-            unsigned char c=p[xx];
-            if(c!=255) {
-                unsigned char old=video[a];
-                if((x+xx)&1) video[a]=(old&0xf0)|c;
-                else video[a]=(old&0x0f)|(unsigned char)(c<<4);
-            }
-            if((x+xx)&1) a++;
+
+        xx=start;
+        a=video_row[dst_y]+((unsigned)(x+start)>>1);
+        /* Left clipped/unaligned nibble: retain the neighboring pixel. */
+        if((x+xx)&1) {
+            unsigned char c=p[xx++];
+            if(c!=255) video[a]=(video[a]&0xf0)|c;
+            a++;
         }
+        /* Aligned, whole-byte destination writes: no per-pixel VRAM RMW. */
+        while(xx+1<end) {
+            unsigned char left=p[xx],right=p[xx+1];
+            if(left==255) {
+                if(right!=255) video[a]=(video[a]&0xf0)|right;
+            } else if(right==255) {
+                video[a]=(video[a]&0x0f)|(unsigned char)(left<<4);
+            } else {
+                video[a]=(unsigned char)((left<<4)|right);
+            }
+            xx+=2;
+            a++;
+        }
+        /* Right edge ends in a high nibble, preserve its low nibble. */
+        if(xx<end && p[xx]!=255)
+            video[a]=(video[a]&0x0f)|(unsigned char)(p[xx]<<4);
     }
 }
 
