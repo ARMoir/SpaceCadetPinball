@@ -52,7 +52,18 @@ static int load_background(int *enhanced)
         int result=load_vga_art();
         if(result>=0) { *enhanced=0; return result; }
     }
-    if(*enhanced) f=fopen("TABLE3D.TGA","rb");
+    /* 0=unmodified RGBI, 1=offline 3D, 2=offline source-color pairing.
+     * All assets share the exact 32K Tandy bank format; no decoder,
+     * additional framebuffer or pixel conversion runs on the V20.
+     * A missing optional style falls back to 3D, then classic. */
+    if(*enhanced==2) {
+        f=fopen("TABLESRC.TGA","rb");
+        if(!f) {
+            puts("Source art not found: trying TABLE3D.TGA.");
+            *enhanced=1;
+        }
+    }
+    if(!f && *enhanced==1) f=fopen("TABLE3D.TGA","rb");
     if(!f) {
         if(*enhanced)
             puts("Enhanced table not found: using original TABLE.TGA.");
