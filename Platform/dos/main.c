@@ -53,7 +53,7 @@ int main(int argc,char **argv)
 {
     unsigned last,now,frame=0,input,previous_input=0;
     unsigned long old_score=~0UL,slow_frames=0;
-    int i,smoke=0,record=0,enhanced=1,old_x=-10,old_y=-10,old_balls=-1,old_wait=-1,old_over=-1;
+    int i,smoke=0,record=0,enhanced=2,art_selected=0,old_x=-10,old_y=-10,old_balls=-1,old_wait=-1,old_over=-1;
     int old_new=0,event,next_x,next_y,ball_changed,ball_redraw;
     int event_bumper=0,sound_event,lights_damage;
     unsigned short prev_nudges=0,prev_slings[2]={0,0};
@@ -84,9 +84,9 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"/vga")) video_choice=1;
         else if(!strcmp(argv[i],"/rgbi")) rgbi_mode=1;
         else if(!strcmp(argv[i],"/sourceball")) source_ball=1;
-        else if(!strcmp(argv[i],"/classic")) enhanced=0;
-        else if(!strcmp(argv[i],"/3d")) enhanced=1;
-        else if(!strcmp(argv[i],"/sourceart")) enhanced=2;
+        else if(!strcmp(argv[i],"/classic")) { enhanced=0; art_selected=1; }
+        else if(!strcmp(argv[i],"/3d")) { enhanced=1; art_selected=1; }
+        else if(!strcmp(argv[i],"/sourceart")) { enhanced=2; art_selected=1; }
         else { puts("Usage: CADET [/smoke] [/record] [/nosound] [/nolights] [/noshake] [/nomouse] [/tandy|/vga] [/classic|/3d|/sourceart] [/rgbi] [/sourceball]"); return 1; }
     }
     if(sizeof(short)!=2 || sizeof(long)!=4 || sizeof(Edge)!=18) return 1;
@@ -96,6 +96,10 @@ int main(int argc,char **argv)
     }
     vga_mode=(video_choice==1 ||
               (video_choice<0 && detect_vga()));
+    /* F-007: owner-verified sourceart is the Tandy default. Keep VGA\'s
+     * existing original-color default, or 3D if /rgbi is requested.
+     * Explicit art options override either auto selection. */
+    if(vga_mode && !art_selected) enhanced=1;
     /* Precompute the fixed video layout before the first sprite/HUD write. */
     init_video_rows();
     if(!table_load(&table,"TABLE.DAT")) {
