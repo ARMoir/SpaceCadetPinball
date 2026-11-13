@@ -142,7 +142,8 @@ def main():
         if a.art=='sourceart' and not rich:
             capture+='-SOURCE'
         if rich: png(directory/'SMOKE-VGA-COLOR.png',pixels,palette)
-        else: png(directory/('SMOKE-'+capture+'.png'),pixels)
+        elif a.art=='sourceart': png(directory/('SMOKE-'+capture+'.png'),pixels)
+        else: png(directory/('SMOKE-VGA.png' if a.video=='vga' else 'SMOKE.png'),pixels)
         # Retain both display dumps for pixel-for-pixel parity validation.
         (directory/('SCREEN-'+capture+'.BIN')).write_bytes(raw)
         summary.append("result=PASS")
