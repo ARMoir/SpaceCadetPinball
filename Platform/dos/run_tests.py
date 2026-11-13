@@ -106,9 +106,13 @@ def main():
         counters=validate_smoke(report, original=a.original)
         # The source-color VGA backend supersedes RGBI selection unless
         # /rgbi is given; otherwise the selected Tandy art must be loaded.
-        if a.art!='default' and not (a.video=='vga' and not a.rgbi):
-            if '# art='+a.art+' ' not in report:
-                raise RuntimeError('Wrong RGBI board selected: '+a.art)
+        if not (a.video=='vga' and not a.rgbi):
+            # With no explicit artwork switch, Tandy now defaults to
+            # sourceart; VGA's 16-color /rgbi default remains 3D.
+            expected_art=(a.art if a.art!='default' else
+                          ('3d' if a.video=='vga' else 'sourceart'))
+            if '# art='+expected_art+' ' not in report:
+                raise RuntimeError('Wrong RGBI board selected: '+expected_art)
         expected_vga=int(a.video=='vga')
         if counters.get('video_vga')!=expected_vga:
             raise RuntimeError('Game chose wrong video mode; expected VGA=%d' % expected_vga)
