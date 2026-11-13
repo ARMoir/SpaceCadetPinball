@@ -264,14 +264,18 @@ behavior remains to be tested. See [F-001](FIDELITY.md).
    Full Tilt CADET.DAT is not supported. `make_demo.py` produces an asset-free
    diagnostic table, not Space Cadet.
 4. Generate the optional, CPU-free enhanced static background on your PC:
-   `python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png`.
-   GitHub Actions already runs this step and packages both looks.
-5. Copy **`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`, `VGA.DAT`, and `MENU.DAT`** into
+   `python Platform/dos/enhance_table.py --table build/dos/TABLE.TGA --pack build/dos/TABLE.DAT --vga-source build/dos/VGA.DAT --output build/dos/TABLE3D.TGA --preview build/dos/PREVIEW3D.png`.
+   The additional source-faithful RGBI version is generated with
+   `python Platform/dos/source_art.py --vga build/dos/VGA.DAT --pack build/dos/TABLE.DAT --classic build/dos/TABLE.TGA --output build/dos/TABLESRC.TGA --preview build/dos/PREVIEWSRC.png`.
+   GitHub Actions runs both offline operations and packages all three looks.
+5. Copy **`CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`, `TABLESRC.TGA`, `VGA.DAT`, and `MENU.DAT`** into
    the same DOS directory. `CADET` uses the enhanced background by default;
    `CADET /classic` loads the original unmodified background.
-   `CADET /3d` requests the enhanced style explicitly. Both modes now
-   preserve the source-derived metallic ball without extra shadow pixels.
-   If `TABLE3D.TGA` is missing, the game automatically uses `TABLE.TGA`.
+   `CADET /3d` requests the enhanced style explicitly; `CADET /sourceart`
+   loads the source-color-matched Tandy rendition. All styles preserve the
+   same metallic ball without extra shadow pixels. Missing `TABLESRC.TGA`
+   falls back to `TABLE3D.TGA`, then `TABLE.TGA`; a missing default
+   `TABLE3D.TGA` falls back to `TABLE.TGA`.
    **Both video backends use exactly these same raw 32768-byte Tandy-bank
    source images.** VGA expands the selected image once at startup, into
    its linear 64000-byte background. No additional VGA assets are required.
@@ -339,6 +343,8 @@ on pause, menu and exit, with no full-screen redraw.
 | `CADET /tandy` | Force the original **Tandy/PCjr BIOS mode 09h**, 320x200, 16 colors, banked B800h framebuffer |
 | `CADET /vga /classic` | Standard VGA with the untouched original artwork |
 | `CADET /tandy /3d` | Tandy graphics with the enhanced static-shaded artwork |
+| `CADET /tandy /sourceart` | Tandy graphics with original VGA1-guided two-color RGBI artwork, baked offline |
+| `CADET /vga /rgbi /sourceart` | The identical 16-color source-art background in VGA mode (without `/rgbi`, source-color VGA art takes precedence) |
 
 These are **standard BIOS graphics modes**, not custom VGA timings, VESA,
 or unchained VGA. `/vga` refuses to run if the VGA BIOS detection fails,
@@ -692,10 +698,12 @@ Compiler: https://github.com/open-watcom/open-watcom-v2
 
 ## Runtime-only downloads and published builds (2026-11-08)
 
-The Actions **CADET** artifact downloads as **CADET.zip** with exactly five
-files at its root: `CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`, `VGA.DAT`.
-The enhanced image preserves the default appearance; `/classic` selects the
-original background. Extract all five together and run CADET from that
+The Actions **CADET** artifact downloads as **CADET.zip** with exactly seven
+files at its root: `CADET.EXE`, `TABLE.DAT`, `TABLE.TGA`, `TABLE3D.TGA`,
+`TABLESRC.TGA`, `VGA.DAT`, and `MENU.DAT`. The enhanced image preserves
+the default appearance; `/classic` selects the unmodified RGBI baseline
+and `/sourceart` selects the source-guided alternative. Extract all seven
+together and run CADET from that
 folder. Keep an existing `SCORES.DAT`: scores are created locally and never
 bundled. No emulator, test program, Python, maps or logs are needed to play.
 
@@ -768,7 +776,40 @@ Closed gates collide and render at these actual entrance lines, replacing
 legacy stand-ins. `/record` adds `spent_gate_blocks`. Score and ball/player
 digits have also been corrected to upright orientation offline.
 
-### V20 renderer micro-optimizations (2026-11-12)### Sharper original-color-guided Tandy playfield (F-007)
+### V20 renderer micro-optimizations (2026-11-12)### Source-faithful Tandy image, using WolfensteinCGA color-pair ideas (F-007)
+
+`CADET /tandy /sourceart` loads `TABLESRC.TGA`, a third **optional**
+prepacked 32768-byte table image. Its source is the existing `VGA.DAT`
+built from the original Windows `PINBALL.DAT`. Unlike `/3d`, the new
+generator starts from the higher-color *source projection* itself.
+It evaluates pairs of actual Tandy RGBI colors and alternates two colors
+on a fixed 2x2 pattern where the local source is sufficiently uniform.
+This can make the average CRT appearance of midtones resemble the
+Windows artwork more closely. On one-pixel rails, edges, high-contrast
+decals, and colored lamps it chooses a solid color rather than producing
+a jagged dither. The original backdrop geometry, HUD region and video
+coordinates are not rescaled or blurred.
+
+This is inspired by the palette-pair search in
+[jhhoward/WolfensteinCGA](https://github.com/jhhoward/WolfensteinCGA),
+not its raycaster or generated code. No Wolfenstein assets or source
+files are copied. **There is still an offline color conversion:** the
+Tandy does not gain extra colors, and a single pixel remains one of its
+16 RGBI colors. `/3d` remains the default, and `/classic` still loads
+the earlier 16-color conversion unchanged. Only the static background
+changes. No additional DOS framebuffer, executable decoder, CPU cycles
+per frame, RAM, sprites, collisions, physics or scoring are introduced.
+The optional asset costs 32 KB of disk/CF space in the ZIP.
+
+The build/test workflow checks file packing, palette bounds, large flat
+midtone pairs, fine one-pixel lines, deterministic generation, source
+pack/geometry integrity, two DOSBox-X video modes, 64,000-pixel Tandy/VGA
+frame parity and unchanged game counters. **Which look is clearest on the
+physical IBM/CRT display remains to be tested.** Compare:
+`CADET /tandy /classic`, `CADET /tandy /3d`, and
+`CADET /tandy /sourceart`.
+
+### Sharper original-color-guided Tandy playfield (F-007)
 
 The default `TABLE3D.TGA` now gains a **build-time** contrast refinement
 guided by the higher-color source pixels in `VGA.DAT`. Only existing
