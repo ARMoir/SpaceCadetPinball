@@ -21,8 +21,14 @@ The CI emulator workflow runs `CADET /tandy /sourceart` and
 pixels, plus gameplay counters against the default art. The
 generator makes no runtime modifications to the DOS video pipeline.
 A 7.16 MHz V20 performance improvement is **not claimed**:
-only the static appearance differs, and image quality is still
-**UNVERIFIED** on physical Tandy/IBM monitors.
+only the static appearance differs. The owner provided a photograph of
+`/sourceart` displayed on a physical Tandy with an IBM PCjr color display
+and reported that the artwork looks significantly better. At the owner's
+request, the no-switch Tandy default is now `/sourceart`; `/3d` and
+`/classic` remain explicit choices. Source-color VGA's default is
+unchanged; VGA `/rgbi` still defaults to `/3d`. Emulator tests additionally
+compare no-switch Tandy output against explicit `/sourceart` pixel-for-pixel.
+Sustained V20 performance and side-by-side physical timing remain **UNVERIFIED**.
 
 
 **2026-11-12 source-guided RGBI board sharpening (F-007):**
