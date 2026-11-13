@@ -42,6 +42,8 @@ def main():
     p.add_argument('--auto-video',action='store_true',
                    help='Use BIOS video auto-detection instead of an explicit switch')
     p.add_argument('--rgbi',action='store_true',help='Force legacy 16-color VGA for Tandy parity tests')
+    p.add_argument('--art',choices=('default','classic','3d','sourceart'),default='default',
+                   help='Select a prepacked RGBI board to smoke-test')
     a=p.parse_args()
     directory=a.directory.resolve()
     summary=[
@@ -53,10 +55,11 @@ def main():
             " emulation, NOT a physical hardware benchmark",
         "video="+a.video,
         "video_selection="+("auto" if a.auto_video else "explicit"),
+        "art_selection="+a.art,
         "video_cycles_per_ms="+str(a.cycles),
         "original_table="+str(int(a.original)),
     ]
-    for asset in ("CADET.EXE","TEST.EXE","TABLE.DAT","TABLE.TGA","TABLE3D.TGA","VGA.DAT"):
+    for asset in ("CADET.EXE","TEST.EXE","TABLE.DAT","TABLE.TGA","TABLE3D.TGA","TABLESRC.TGA","VGA.DAT"):
         target=directory/asset
         if target.is_file():
             summary.append("%s bytes=%d sha256=%s" % (
@@ -72,6 +75,7 @@ def main():
         test_command='test.exe'+(' /original' if a.original else '')+' > TEST.LOG'
         video_switch='' if a.auto_video else ' /'+a.video
         if a.rgbi: video_switch+=' /rgbi'
+        if a.art!='default': video_switch+=' /'+a.art
         for label,cycles,command,marker in [('CORE',100000,test_command,'TEST.OK'),
                                          ('VIDEO',a.cycles,'cadet.exe /smoke'+video_switch,'SMOKE.TXT')]:
             commands=[str(a.emulator.resolve()),'-conf',str(conf),'-fastlaunch','-exit',
@@ -100,6 +104,11 @@ def main():
         report=(directory/'SMOKE.TXT').read_text().strip()
         print(report)
         counters=validate_smoke(report, original=a.original)
+        # The source-color VGA backend supersedes RGBI selection unless
+        # /rgbi is given; otherwise the selected Tandy art must be loaded.
+        if a.art!='default' and not (a.video=='vga' and not a.rgbi):
+            if '# art='+a.art+' ' not in report:
+                raise RuntimeError('Wrong RGBI board selected: '+a.art)
         expected_vga=int(a.video=='vga')
         if counters.get('video_vga')!=expected_vga:
             raise RuntimeError('Game chose wrong video mode; expected VGA=%d' % expected_vga)
@@ -130,8 +139,10 @@ def main():
                 row.append(color)
             pixels.append(row)
         capture='VGA-COLOR' if rich else ('VGA' if a.video=='vga' else 'TANDY')
+        if a.art=='sourceart' and not rich:
+            capture+='-SOURCE'
         if rich: png(directory/'SMOKE-VGA-COLOR.png',pixels,palette)
-        else: png(directory/('SMOKE-VGA.png' if a.video=='vga' else 'SMOKE.png'),pixels)
+        else: png(directory/('SMOKE-'+capture+'.png'),pixels)
         # Retain both display dumps for pixel-for-pixel parity validation.
         (directory/('SCREEN-'+capture+'.BIN')).write_bytes(raw)
         summary.append("result=PASS")
