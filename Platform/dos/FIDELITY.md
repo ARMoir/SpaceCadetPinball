@@ -784,6 +784,36 @@ before considering larger artificial variance.
   Avoid random path perturbations that hide collision problems.
 
 ### F-007 Rendering, audio and frame rate
+**2026-11-13 separate WolfensteinCGA-inspired source-color Tandy art:**
+`/sourceart` selects `TABLESRC.TGA` in Tandy 09h (and VGA 13h with
+`/rgbi`); the existing `/3d` remains the default and `/classic`
+still uses the unchanged original RGBI reduction. The new offline
+`source_art.py` reads the same source-derived VGA1 pack, validates all
+thirteen sprites and SCP2 geometry, then matches its projected
+320x200 source RGB palette to genuine RGBI solid colors or weighted
+two-color 2x2 checkers. Candidate color pairs are penalized for
+high contrast and extreme luminance differences, and color pairs
+are *not* used near high-contrast single-pixel source edges
+(especially thin rails, lettering and illuminated inserts).
+True black borders and HUD/right-margin art remain stable. No new
+image rescaling, geometry, hidden surfaces or invented source sprites
+are added. Inspired by the palette-pair lookup strategy in
+`jhhoward/WolfensteinCGA`'s offline `cgaify.cpp`; no code or graphics
+are copied. This **still requires build-time conversion** because
+the Tandy has 16 RGBI colors rather than a 256-entry VGA palette.
+The output is the exact same 32768-byte packed banked image format,
+and the 16-bit loader simply reads one chosen image once at startup.
+Missing `TABLESRC.TGA` falls back to 3D, then classic; malformed
+present images still fail validation. The extra image occupies
+32 KB on disk but **does not add DOS memory or frame CPU usage**.
+Static art only: physics, source collision geometry, imported
+sprite frames, scoring and original full-color VGA mode remain
+unchanged. F-007 regressions exercise palette-pair selection,
+single-pixel lines, 8K-bank/nibble output, bad files, unchanged
+gameplay counters and full 16-color Tandy/VGA screenshot parity.
+**Visual quality on physical Tandy and speed acceptance remain
+UNVERIFIED** pending the owner's A/B test.
+
 
 **2026-11-12 source-guided Tandy board sharpening:** The original
 `TABLE.TGA` is a 320x200 RGBI image, while `VGA.DAT` preserves more
